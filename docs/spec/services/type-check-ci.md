@@ -1,6 +1,6 @@
 # 型検査CI仕様
 
-- ステータス: Implemented
+- ステータス: Verified
 - 最終更新日: 2026-10-26
 - 関連Issue: なし
 - 関連仕様: なし
@@ -115,11 +115,11 @@ docker compose exec backend go vet ./...
 
 ## 進捗
 
-- 完了: 仕様作成、ワークフロー実装、YAML構文確認、ローカル検証。
-- 残作業: GitHub上のワークフロー実行確認。
+- 完了: 仕様作成、ワークフロー実装、YAML構文確認、ローカル検証、GitHub Actions実行確認。
+- 残作業: なし。
 - ブロッカー: なし。
-- 検証結果: YAML構文、`npm ci`、`npm run typecheck`、`go test ./...`、`go vet ./...`が成功。
-- 関連Pull Request・コミット: 未作成。
+- 検証結果: ローカルとGitHub Actionsの両方で`npm ci`、`npm run typecheck`、`go test ./...`、`go vet ./...`が成功。GitHub Actions実行: `https://github.com/SUPPORTERZ-hackathon/Matching-Meal/actions/runs/40216736966`。
+- 関連Pull Request・コミット: `e260474`。
 
 ## 自己レビュー
 
