@@ -1,0 +1,11 @@
+.env
+.env.*
+!.env.example
+node_modules/
+.next/
+*.tsbuildinfo
+backend/tmp/
+.DS_Store
+
+.next-build/
+next-env.d.ts

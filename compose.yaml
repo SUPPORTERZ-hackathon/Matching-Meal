@@ -1,0 +1,86 @@
+name: meal-app
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-3000}:3000"
+    environment:
+      BACKEND_URL: http://backend:8080
+      DEV_ALLOWED_ORIGIN: ${DEV_ALLOWED_ORIGIN:-}
+      NEXT_TELEMETRY_DISABLED: "1"
+    volumes:
+      - ./frontend:/app
+      - frontend_modules:/app/node_modules
+      - frontend_next:/app/.next
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 90s
+  backend:
+    build: ./backend
+    environment:
+      PGHOST: db
+      PGPORT: "5432"
+      PGUSER: ${POSTGRES_USER:?Copy .env.example to .env}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?Copy .env.example to .env}
+      PGDATABASE: ${POSTGRES_DB:?Copy .env.example to .env}
+      PGSSLMODE: disable
+      HOTPEPPER_API_KEY: ${HOTPEPPER_API_KEY:-}
+    volumes:
+      - ./backend:/app
+      - go_modules:/go/pkg/mod
+      - go_cache:/root/.cache/go-build
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/api/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 60s
+  db:
+    image: postgres:17-bookworm
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?Copy .env.example to .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Copy .env.example to .env}
+      POSTGRES_DB: ${POSTGRES_DB:?Copy .env.example to .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  migrate:
+    image: migrate/migrate:v4.18.3
+    volumes:
+      - ./backend/migrations:/migrations:ro
+    environment:
+      PGUSER: ${POSTGRES_USER:?Copy .env.example to .env}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?Copy .env.example to .env}
+      PGDATABASE: ${POSTGRES_DB:?Copy .env.example to .env}
+    entrypoint: ["/bin/sh", "-c"]
+    command: ['exec migrate -path=/migrations -database="postgres://db:5432/$$PGDATABASE?sslmode=disable" up']
+    depends_on:
+      db:
+        condition: service_healthy
+  tunnel:
+    image: cloudflare/cloudflared:2026.3.0
+    profiles: ["tunnel"]
+    command: tunnel --no-autoupdate --url http://frontend:3000
+    depends_on:
+      - frontend
+volumes:
+  frontend_modules:
+  frontend_next:
+  go_modules:
+  go_cache:
+  postgres_data:
