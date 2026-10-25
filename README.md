@@ -343,6 +343,17 @@ docker compose restart frontend backend
 | コードの変更一覧 | `git status` |
 | コードの差分 | `git diff` |
 
-## 12. 開発環境の範囲
+## 12. GitHub Actionsによる型検査
+
+コードをGitHubへpushしたとき、Pull Requestを更新したとき、またはActions画面から手動実行したときに、`Type Check`ワークフローが自動実行されます。
+
+| ジョブ | 検査内容 |
+| --- | --- |
+| Frontend Type Check | `npm ci`、`npm run typecheck` |
+| Backend Type Check | `go test ./...`、`go vet ./...` |
+
+2つのジョブは並行して実行されます。失敗した場合はGitHubのPull Requestまたは「Actions」タブで、失敗したジョブとコマンドのログを確認してください。デプロイ処理は含まれていません。
+
+## 13. 開発環境の範囲
 
 このComposeはホットリロード付きのローカル開発用です。本番用のデプロイ設定は含みません。Node.js 24・Go 1.26・PostgreSQL 17の系列を指定し、JSとGoの依存ライブラリはロックファイルで共有します。コンテナのパッチ更新は取得時点で変わるため、完全に同一のイメージが必要になった段階でdigest固定を検討します。
