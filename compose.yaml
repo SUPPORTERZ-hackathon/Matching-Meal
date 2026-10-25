@@ -1,4 +1,4 @@
-name: meal-app
+name: matching-meal
 services:
   frontend:
     build: ./frontend

@@ -55,15 +55,15 @@ git config --global user.email "あなたのメールアドレス"
 プロジェクトを保存したいフォルダで実行します。
 
 ```bash
-git clone https://github.com/SUPPORTERZ-hackathon/Matching-Meal.git meal_app
-cd meal_app
+git clone https://github.com/SUPPORTERZ-hackathon/Matching-Meal.git Matching-Meal
+cd Matching-Meal
 ```
 
 `clone`はコードのコピーをPCに取得する操作です。認証を求められた場合はGitHubの認証画面の案内に従ってください。アカウントのパスワードをターミナルに直接入れる方式は使いません。アクセスできない場合はチームに権限を確認してください。
 
-すでに取得済みの場合、再度cloneせず既存の`meal_app`フォルダを開きます。
+すでに取得済みの場合、再度cloneせず既存の`Matching-Meal`フォルダを開きます。
 
-**以下は、特に指定がない限り `compose.yaml` と `README.md` がある `meal_app` フォルダ内で実行します。** `pwd` で現在位置、`ls` でファイルを確認できます。
+**以下は、特に指定がない限り `compose.yaml` と `README.md` がある `Matching-Meal` フォルダ内で実行します。** `pwd` で現在位置、`ls` でファイルを確認できます。
 
 ### 3-2. 設定ファイルを作る
 
@@ -179,7 +179,7 @@ docker compose down
 ## 6. ファイルの案内
 
 ```text
-meal_app/
+Matching-Meal/
 ├── frontend/
 │   ├── src/app/             # ページ、全体レイアウト、CSS
 │   ├── src/components/ui/   # shadcn/uiの部品
@@ -329,7 +329,7 @@ docker compose restart frontend backend
 
 ## 11. よく使うコマンド早見表
 
-すべて`meal_app`フォルダで実行します。
+すべて`Matching-Meal`フォルダで実行します。
 
 | やりたいこと | コマンド |
 | --- | --- |
