@@ -1,0 +1,867 @@
+import { useEffect, useRef, useState, type ReactNode } from "react";
+
+type Screen =
+  | "home"
+  | "scan"
+  | "create"
+  | "waiting"
+  | "join"
+  | "participant-waiting"
+  | "genre"
+  | "vote-wait"
+  | "shop-wait"
+  | "genre-result"
+  | "shop"
+  | "final";
+
+const photos = {
+  ramen:
+    "https://images.unsplash.com/photo-1591325418441-ff678baf78ef?auto=format&fit=crop&w=900&q=85",
+  sushi:
+    "https://images.unsplash.com/photo-1727056354046-763e34286a8a?auto=format&fit=crop&w=900&q=85",
+  table:
+    "https://images.unsplash.com/photo-1553944384-ffdc4fd8f2fa?auto=format&fit=crop&w=900&q=85",
+  shop:
+    "https://images.unsplash.com/photo-1734313276354-75c96b3c0c36?auto=format&fit=crop&w=900&q=85",
+};
+
+const Icon = ({
+  children,
+  size = 20,
+}: {
+  children: ReactNode;
+  size?: number;
+}) => (
+  <svg
+    aria-hidden="true"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    {children}
+  </svg>
+);
+
+const Pin = () => (
+  <Icon>
+    <path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z" />
+    <circle cx="12" cy="10" r="2.5" />
+  </Icon>
+);
+const Users = () => (
+  <Icon>
+    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+  </Icon>
+);
+const Arrow = () => (
+  <Icon>
+    <path d="m9 18 6-6-6-6" />
+  </Icon>
+);
+const Undo = () => (
+  <Icon>
+    <path d="M9 7 4 12l5 5" />
+    <path d="M20 17a7 7 0 0 0-7-7H4" />
+  </Icon>
+);
+const MapIcon = () => (
+  <Icon>
+    <path d="m3 6 5-3 8 3 5-3v15l-5 3-8-3-5 3V6Z" />
+    <path d="M8 3v15M16 6v15" />
+  </Icon>
+);
+const Copy = () => (
+  <Icon>
+    <rect width="13" height="13" x="9" y="9" rx="2" />
+    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+  </Icon>
+);
+const QrIcon = () => (
+  <Icon>
+    <rect width="7" height="7" x="3" y="3" rx="1" />
+    <rect width="7" height="7" x="14" y="3" rx="1" />
+    <rect width="7" height="7" x="3" y="14" rx="1" />
+    <path d="M14 14h3v3h-3zM20 14v3M17 20h3M14 20h1" />
+  </Icon>
+);
+const Camera = () => (
+  <Icon size={28}>
+    <path d="M14.5 4 16 7h3a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h3l1.5-3h5Z" />
+    <circle cx="12" cy="13" r="3" />
+  </Icon>
+);
+const Back = () => (
+  <Icon>
+    <path d="m15 18-6-6 6-6" />
+  </Icon>
+);
+
+function Button({
+  children,
+  onClick,
+  variant = "primary",
+  disabled = false,
+}: {
+  children: ReactNode;
+  onClick?: () => void;
+  variant?: "primary" | "secondary" | "ghost" | "dark";
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      className={`btn btn-${variant}`}
+      onClick={onClick}
+      disabled={disabled}
+      type="button"
+    >
+      {children}
+    </button>
+  );
+}
+
+function Logo({ compact = false }: { compact?: boolean }) {
+  return (
+    <div className={`logo ${compact ? "logo-compact" : ""}`}>
+      <span className="logo-mark">M</span>
+      <span>メシマッチ</span>
+    </div>
+  );
+}
+
+function Steps({ active }: { active: number }) {
+  const items = ["ルーム作成", "ジャンル", "お店", "決定"];
+  return (
+    <div className="steps" aria-label="進捗">
+      {items.map((item, index) => (
+        <div
+          key={item}
+          className={`step ${index < active ? "done" : ""} ${index === active ? "active" : ""}`}
+        >
+          <span>{index < active ? "✓" : index + 1}</span>
+          <small>{item}</small>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Shell({
+  children,
+  active,
+  onHome,
+}: {
+  children: ReactNode;
+  active?: number;
+  onHome: () => void;
+}) {
+  return (
+    <main className="app-shell">
+      <header className="topbar">
+        <button className="logo-button" onClick={onHome} type="button">
+          <Logo compact />
+        </button>
+        <span className="room-chip">Room #2481</span>
+      </header>
+      <div className="content-scroll">
+        {active !== undefined && <Steps active={active} />}
+        <div className="screen">{children}</div>
+      </div>
+    </main>
+  );
+}
+
+function Home({ go }: { go: (screen: Screen) => void }) {
+  return (
+    <main className="home">
+      <div className="home-glow" />
+      <div className="home-content">
+        <Logo />
+        <div className="hero-visual">
+          <div className="hero-card hero-left">
+            <img src={photos.sushi} alt="色とりどりの寿司" />
+          </div>
+          <div className="hero-card hero-center">
+            <img src={photos.ramen} alt="湯気の立つラーメン" />
+            <span className="heart">♥</span>
+          </div>
+          <div className="hero-card hero-right">
+            <img src={photos.table} alt="みんなで囲む食卓" />
+          </div>
+        </div>
+        <div className="hero-copy">
+          <p className="eyebrow">もう「どこ行く？」で迷わない</p>
+          <h1>
+            みんなで決める、
+            <br />
+            <em>ご飯選び！</em>
+          </h1>
+          <p>好きな料理を選ぶだけ。みんなの「食べたい」が重なるお店を見つけよう。</p>
+        </div>
+        <div className="home-actions">
+          <Button onClick={() => go("create")}>
+            ルームを作成する <Arrow />
+          </Button>
+          <Button variant="secondary" onClick={() => go("scan")}>
+            <QrIcon /> QRコードから参加する
+          </Button>
+        </div>
+        <p className="microcopy">登録不要・すぐにはじめられます</p>
+      </div>
+    </main>
+  );
+}
+
+function Scan({ go }: { go: (screen: Screen) => void }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [cameraState, setCameraState] = useState<
+    "idle" | "active" | "denied" | "invalid"
+  >("idle");
+
+  useEffect(() => {
+    return () => {
+      const stream = videoRef.current?.srcObject as MediaStream | null;
+      stream?.getTracks().forEach((track) => track.stop());
+    };
+  }, []);
+
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+      });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+      setCameraState("active");
+    } catch {
+      setCameraState("denied");
+    }
+  };
+
+  return (
+    <main className="app-shell scan-screen">
+      <header className="scan-header">
+        <button
+          className="back-button"
+          onClick={() => go("home")}
+          type="button"
+          aria-label="ホームに戻る"
+        >
+          <Back />
+        </button>
+        <Logo compact />
+        <span className="header-spacer" />
+      </header>
+      <div className="content-scroll">
+        <div className="screen scan-content">
+          <div className="title-block center">
+            <span className="kicker">QR SCAN</span>
+            <h1>ルームに参加</h1>
+            <p>参加するルームのQRコードを読み取ってください</p>
+          </div>
+
+          <section className="camera-card">
+            <video
+              ref={videoRef}
+              className={`camera-video ${cameraState === "active" ? "visible" : ""}`}
+              muted
+              playsInline
+              aria-label="QRコード読み取り用カメラプレビュー"
+            />
+            <div className="camera-overlay">
+              <div className="scan-frame">
+                <i /><i /><i /><i />
+                {cameraState === "active" && <span className="scan-line" />}
+              </div>
+            </div>
+            {cameraState !== "active" && (
+              <div className="camera-placeholder">
+                <span><Camera /></span>
+                {cameraState === "idle" ? (
+                  <>
+                    <strong>カメラを起動してください</strong>
+                    <small>QRコードの読み取りにのみ使用します</small>
+                    <button onClick={startCamera} type="button">カメラを許可する</button>
+                  </>
+                ) : (
+                  <>
+                    <strong>
+                      {cameraState === "denied"
+                        ? "カメラを利用できません"
+                        : "有効なQRコードではありません"}
+                    </strong>
+                    <small>
+                      {cameraState === "denied"
+                        ? "端末の設定からカメラへのアクセスを許可してください"
+                        : "メシマッチの招待QRコードを読み取ってください"}
+                    </small>
+                    <button onClick={startCamera} type="button">もう一度試す</button>
+                  </>
+                )}
+              </div>
+            )}
+          </section>
+
+          {cameraState === "active" && (
+            <div className="scan-status">
+              <span className="scan-dot" />
+              QRコードを探しています…
+              <button onClick={() => setCameraState("invalid")} type="button">
+                読み取り失敗
+              </button>
+            </div>
+          )}
+
+          <div className="demo-join">
+            <div>
+              <strong>カメラが使えない場合</strong>
+              <span>デモ用の招待から次の画面を確認できます</span>
+            </div>
+            <Button variant="secondary" onClick={() => go("join")}>
+              <QrIcon /> デモ用ルームに参加する <Arrow />
+            </Button>
+          </div>
+
+          <button className="text-back" onClick={() => go("home")} type="button">
+            <Back /> ホームに戻る
+          </button>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+function Create({
+  go,
+  home,
+  hostName,
+  setHostName,
+}: {
+  go: (s: Screen) => void;
+  home: () => void;
+  hostName: string;
+  setHostName: (name: string) => void;
+}) {
+  const [distance, setDistance] = useState("1.5");
+  const [touched, setTouched] = useState(false);
+  const invalid = touched && hostName.trim().length < 2;
+  return (
+    <Shell active={0} onHome={home}>
+      <div className="title-block">
+        <span className="kicker">STEP 1</span>
+        <h1>どこで集まる？</h1>
+        <p>お店を探す中心地点を決めましょう。</p>
+      </div>
+      <section className="form-card">
+        <label htmlFor="host-name">
+          あなたのニックネーム <span className="required">必須</span>
+        </label>
+        <input
+          id="host-name"
+          className={`text-input ${invalid ? "invalid" : ""}`}
+          placeholder="例：ゆうき"
+          maxLength={12}
+          value={hostName}
+          onChange={(event) => setHostName(event.target.value)}
+        />
+        <div className="field-meta">
+          <span className={invalid ? "error" : ""}>
+            {invalid ? "2文字以上で入力してください" : "参加者一覧に表示される名前です"}
+          </span>
+          <span>{hostName.length}/12</span>
+        </div>
+      </section>
+      <section className="form-card">
+        <label>集合場所</label>
+        <div className="input-wrap">
+          <Pin />
+          <input defaultValue="渋谷駅" aria-label="集合場所" />
+          <button className="clear" type="button">
+            ×
+          </button>
+        </div>
+        <button className="location-btn" type="button">
+          <span className="target">⌖</span> 現在地を使う
+        </button>
+      </section>
+      <section className="form-card">
+        <div className="label-row">
+          <label htmlFor="range">検索範囲</label>
+          <strong>{distance} km</strong>
+        </div>
+        <input
+          id="range"
+          className="range"
+          type="range"
+          min="0.5"
+          max="3"
+          step="0.5"
+          value={distance}
+          onChange={(event) => setDistance(event.target.value)}
+        />
+        <div className="range-labels">
+          <span>0.5km</span>
+          <span>3km</span>
+        </div>
+        <p className="hint">徒歩約20分以内のお店を探します</p>
+      </section>
+      <div className="sticky-action">
+        <Button
+          onClick={() => {
+            setTouched(true);
+            if (hostName.trim().length >= 2) go("waiting");
+          }}
+        >
+          ルームを作成する <Arrow />
+        </Button>
+      </div>
+    </Shell>
+  );
+}
+
+function Waiting({
+  go,
+  home,
+  hostName,
+  isHost = true,
+  participantName = "",
+}: {
+  go: (s: Screen) => void;
+  home: () => void;
+  hostName: string;
+  isHost?: boolean;
+  participantName?: string;
+}) {
+  const [copied, setCopied] = useState(false);
+  const members = isHost
+    ? [
+        [hostName || "ゆうき", "ホスト", (hostName || "ゆうき").slice(0, 2)],
+        ["みさき", "", "MI"],
+        ["けんた", "", "KE"],
+      ]
+    : [
+        ["ゆうき", "ホスト", "YU"],
+        [
+          participantName || "ゲスト",
+          "あなた",
+          (participantName || "ゲスト").slice(0, 2),
+        ],
+        ["けんた", "", "KE"],
+      ];
+
+  return (
+    <Shell active={0} onHome={home}>
+      <div className="title-block center">
+        <span className="live"><i /> 参加者を待っています</span>
+        <h1>友達を招待しよう</h1>
+        <p>QRコードかリンクをシェアしてください。</p>
+      </div>
+      <section className="invite-card">
+        <div className="qr" aria-label="参加用QRコード">
+          <div className="qr-pattern" />
+          <Logo compact />
+        </div>
+        <button className="expand-link" type="button">
+          QRコードを拡大
+        </button>
+        <div className="url-row">
+          <span>meshimatch.app/j/2481</span>
+          <button
+            onClick={() => {
+              navigator.clipboard?.writeText("https://meshimatch.app/j/2481");
+              setCopied(true);
+            }}
+            type="button"
+          >
+            <Copy /> {copied ? "コピー済み" : "コピー"}
+          </button>
+        </div>
+      </section>
+      <section className="members">
+        <div className="section-head">
+          <h2>参加メンバー</h2>
+          <span>
+            <Users /> 3人
+          </span>
+        </div>
+        {members.map(([name, role, initials], i) => (
+          <div className="member" key={name}>
+            <span className={`avatar avatar-${i}`}>{initials}</span>
+            <strong>{name}</strong>
+            {role && <small>{role}</small>}
+            <i className="online" />
+          </div>
+        ))}
+      </section>
+      <div className="sticky-action">
+        {isHost ? (
+          <>
+            <Button onClick={() => go("genre")}>
+              投票を開始する <Arrow />
+            </Button>
+            <p className="host-note">ホストのあなただけが開始できます</p>
+          </>
+        ) : (
+          <div className="participant-waiting-action">
+            <div>
+              <span className="scan-dot" />
+              投票開始を待っています…
+            </div>
+            <p>ルーム作成者が開始するまで、この画面のままお待ちください</p>
+          </div>
+        )}
+      </div>
+    </Shell>
+  );
+}
+
+function Join({
+  go,
+  home,
+  name,
+  setName,
+}: {
+  go: (s: Screen) => void;
+  home: () => void;
+  name: string;
+  setName: (name: string) => void;
+}) {
+  const [touched, setTouched] = useState(false);
+  const invalid = touched && name.trim().length < 2;
+  return (
+    <Shell onHome={home}>
+      <div className="join-visual">
+        <div className="room-icon">
+          <Users />
+        </div>
+        <span className="kicker">招待されています</span>
+        <h1>ゆうきさんのルーム</h1>
+        <p>
+          <Pin /> 渋谷駅から1.5km
+        </p>
+      </div>
+      <section className="form-card join-card">
+        <label htmlFor="nickname">ニックネーム</label>
+        <input
+          id="nickname"
+          className={invalid ? "invalid" : ""}
+          placeholder="例：みさき"
+          maxLength={12}
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+        />
+        <div className="field-meta">
+          <span className={invalid ? "error" : ""}>
+            {invalid ? "2文字以上で入力してください" : "ルーム内で表示される名前です"}
+          </span>
+          <span>{name.length}/12</span>
+        </div>
+      </section>
+      <div className="sticky-action">
+        <Button
+          onClick={() => {
+            setTouched(true);
+            if (name.trim().length >= 2) go("participant-waiting");
+          }}
+        >
+          参加する <Arrow />
+        </Button>
+      </div>
+    </Shell>
+  );
+}
+
+function VoteHeader({ current, total }: { current: number; total: number }) {
+  return (
+    <div className="vote-meta">
+      <span>
+        {current} / {total}
+      </span>
+      <div className="progress">
+        <i style={{ width: `${(current / total) * 100}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function GenreVote({ go, home }: { go: (s: Screen) => void; home: () => void }) {
+  const [index, setIndex] = useState(0);
+  const genres = [
+    { name: "ラーメン", sub: "濃厚スープで満たされたい", image: photos.ramen },
+    { name: "お寿司", sub: "今日はちょっと贅沢に", image: photos.sushi },
+    { name: "みんなでごはん", sub: "わいわい楽しみたい", image: photos.table },
+  ];
+  const vote = () => (index >= 2 ? go("vote-wait") : setIndex(index + 1));
+  const item = genres[index];
+  return (
+    <Shell active={1} onHome={home}>
+      <div className="vote-title">
+        <div>
+          <span className="kicker">ジャンル投票</span>
+          <h1>今日は何食べたい？</h1>
+        </div>
+        <VoteHeader current={index + 1} total={3} />
+      </div>
+      <div className="swipe-stack">
+        <div className="back-card" />
+        <article className="food-card">
+          <img src={item.image} alt={item.name} />
+          <div className="image-shade" />
+          <div className="food-label">
+            <span>おすすめ</span>
+            <h2>{item.name}</h2>
+            <p>{item.sub}</p>
+          </div>
+        </article>
+      </div>
+      <p className="swipe-hint">カードを左右にスワイプして選べます</p>
+      <div className="vote-actions genre-vote-actions">
+        <button className="round-btn skip" onClick={vote} type="button">
+          <span>×</span>
+          見送り
+        </button>
+        <button
+          className="undo-btn"
+          onClick={() => setIndex(Math.max(0, index - 1))}
+          disabled={index === 0}
+          type="button"
+        >
+          <Undo />
+          戻す
+        </button>
+        <button className="round-btn like" onClick={vote} type="button">
+          <span>♥</span>
+          食べたい
+        </button>
+      </div>
+    </Shell>
+  );
+}
+
+function VoteWait({
+  go,
+  home,
+  next = "genre-result",
+}: {
+  go: (s: Screen) => void;
+  home: () => void;
+  next?: Screen;
+}) {
+  return (
+    <Shell active={next === "genre-result" ? 1 : 2} onHome={home}>
+      <div className="waiting-state">
+        <div className="success-ring">
+          <span>✓</span>
+          <i />
+          <b />
+        </div>
+        <span className="kicker">投票完了！</span>
+        <h1>みんなの投票を<br />待っています</h1>
+        <p>全員が投票すると、自動で結果が表示されます。</p>
+      </div>
+      <section className="status-card">
+        <div className="status-count">
+          <div>
+            <strong>2</strong>
+            <span>/ 3人</span>
+          </div>
+          <small>あと1人</small>
+        </div>
+        <div className="progress large">
+          <i style={{ width: "66%" }} />
+        </div>
+        <div className="mini-members">
+          <span className="avatar avatar-0">YU<i>✓</i></span>
+          <span className="avatar avatar-1">MI<i>✓</i></span>
+          <span className="avatar avatar-2 muted">KE<i>…</i></span>
+        </div>
+      </section>
+      <div className="sticky-action demo-action">
+        <Button variant="ghost" onClick={() => go(next)}>
+          デモ：全員の投票を完了する
+        </Button>
+      </div>
+    </Shell>
+  );
+}
+
+function GenreResult({ go, home }: { go: (s: Screen) => void; home: () => void }) {
+  return (
+    <Shell active={1} onHome={home}>
+      <div className="result-hero">
+        <span className="confetti c1" />
+        <span className="confetti c2" />
+        <span className="confetti c3" />
+        <p className="eyebrow">みんなの気分がマッチ！</p>
+        <h1>今日のごはんは…</h1>
+        <div className="result-image">
+          <img src={photos.ramen} alt="決定したジャンル、ラーメン" />
+          <span>♥</span>
+        </div>
+        <h2>ラーメン</h2>
+        <p>に決まりました！</p>
+      </div>
+      <section className="ranking-card">
+        <h3>投票結果</h3>
+        {[
+          ["ラーメン", "3票", "100%"],
+          ["焼肉", "2票", "66%"],
+          ["お寿司", "1票", "33%"],
+        ].map(([name, count, width], i) => (
+          <div className="rank" key={name}>
+            <span>{i + 1}</span>
+            <div>
+              <strong>{name}</strong>
+              <div className="rankbar"><i style={{ width }} /></div>
+            </div>
+            <b>{count}</b>
+          </div>
+        ))}
+      </section>
+      <div className="sticky-action">
+        <Button onClick={() => go("shop")}>
+          このジャンルでお店を探す <Arrow />
+        </Button>
+      </div>
+    </Shell>
+  );
+}
+
+function ShopVote({ go, home }: { go: (s: Screen) => void; home: () => void }) {
+  return (
+    <Shell active={2} onHome={home}>
+      <div className="vote-title">
+        <div>
+          <span className="kicker">お店投票</span>
+          <h1>どのお店にする？</h1>
+        </div>
+        <VoteHeader current={1} total={4} />
+      </div>
+      <article className="shop-card">
+        <div className="shop-image">
+          <img src={photos.shop} alt="麺屋あかつきの特製ラーメン" />
+          <span className="match-badge">98% MATCH</span>
+        </div>
+        <div className="shop-info">
+          <span className="genre-chip">ラーメン</span>
+          <h2>麺屋 あかつき</h2>
+          <div className="business-hours">
+            <span>営業時間</span>
+            <strong>11:30〜14:00、17:00〜23:00</strong>
+          </div>
+          <div className="detail-grid">
+            <p><Pin /><span><small>集合場所から</small><strong>徒歩 6分・420m</strong></span></p>
+            <p><span className="yen">¥</span><span><small>予算</small><strong>¥1,000〜1,500</strong></span></p>
+          </div>
+          <p className="access">渋谷駅ハチ公口から徒歩5分</p>
+        </div>
+      </article>
+      <div className="vote-actions shop-actions">
+        <button className="round-btn skip" onClick={() => go("shop-wait")} type="button">
+          <span>×</span>見送り
+        </button>
+        <button className="round-btn like" onClick={() => go("shop-wait")} type="button">
+          <span>♥</span>ここがいい
+        </button>
+      </div>
+      <button className="details-link" type="button">お店の詳細を見る <Arrow /></button>
+    </Shell>
+  );
+}
+
+function Final({ home }: { home: () => void }) {
+  return (
+    <Shell active={3} onHome={home}>
+      <div className="final-top">
+        <span className="celebrate">決定！</span>
+        <h1>みんなの「行きたい」が<br />マッチしました！</h1>
+      </div>
+      <article className="final-card">
+        <div className="final-image">
+          <img src={photos.shop} alt="決定したお店、麺屋あかつき" />
+          <span>BEST MATCH <b>98%</b></span>
+        </div>
+        <div className="final-info">
+          <span className="genre-chip">ラーメン</span>
+          <h2>麺屋 あかつき</h2>
+          <div className="business-hours">
+            <span>営業時間</span>
+            <strong>11:30〜14:00、17:00〜23:00</strong>
+          </div>
+          <hr />
+          <p><Pin /><span><small>住所</small>東京都渋谷区道玄坂1-12-3</span></p>
+          <p><span className="yen">¥</span><span><small>予算</small>¥1,000〜1,500</span></p>
+          <p><MapIcon /><span><small>アクセス</small>渋谷駅ハチ公口から徒歩5分</span></p>
+        </div>
+      </article>
+      <section className="vote-summary">
+        <span>♥</span>
+        <div><strong>3人全員が「行きたい！」</strong><small>満場一致で決まりました</small></div>
+      </section>
+      <div className="sticky-action">
+        <Button variant="dark">
+          <MapIcon /> Googleマップで開く
+        </Button>
+        <p className="host-note">お店の場所・経路を確認できます</p>
+      </div>
+    </Shell>
+  );
+}
+
+export default function App() {
+  const [screen, setScreen] = useState<Screen>(() => {
+    const isInviteUrl =
+      window.location.pathname.startsWith("/j/") ||
+      new URLSearchParams(window.location.search).has("room");
+    return isInviteUrl ? "join" : "home";
+  });
+  const [hostName, setHostName] = useState("");
+  const [participantName, setParticipantName] = useState("");
+  const home = () => setScreen("home");
+  if (screen === "home") return <Home go={setScreen} />;
+  if (screen === "scan") return <Scan go={setScreen} />;
+  if (screen === "create")
+    return (
+      <Create
+        go={setScreen}
+        home={home}
+        hostName={hostName}
+        setHostName={setHostName}
+      />
+    );
+  if (screen === "waiting")
+    return <Waiting go={setScreen} home={home} hostName={hostName} />;
+  if (screen === "join")
+    return (
+      <Join
+        go={setScreen}
+        home={home}
+        name={participantName}
+        setName={setParticipantName}
+      />
+    );
+  if (screen === "participant-waiting")
+    return (
+      <Waiting
+        go={setScreen}
+        home={home}
+        hostName="ゆうき"
+        isHost={false}
+        participantName={participantName}
+      />
+    );
+  if (screen === "genre") return <GenreVote go={setScreen} home={home} />;
+  if (screen === "vote-wait")
+    return <VoteWait go={setScreen} home={home} next="genre-result" />;
+  if (screen === "shop-wait")
+    return <VoteWait go={setScreen} home={home} next="final" />;
+  if (screen === "genre-result") return <GenreResult go={setScreen} home={home} />;
+  if (screen === "shop") return <ShopVote go={setScreen} home={home} />;
+  return <Final home={home} />;
+}

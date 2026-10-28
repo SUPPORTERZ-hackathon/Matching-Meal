@@ -183,6 +183,7 @@ Matching-Meal/
 ├── frontend/
 │   ├── src/app/             # ページ、全体レイアウト、CSS
 │   ├── src/components/ui/   # shadcn/uiの部品
+│   ├── src/components/common/ # メシマッチの共通UI
 │   ├── src/lib/             # 共通処理
 │   ├── components.json     # shadcn/ui設定
 │   ├── next.config.ts      # API転送・開発設定
