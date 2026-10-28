@@ -1,0 +1,17 @@
+import type { Metadata, Viewport } from "next";
+import { GENRES } from "@/features/genre-vote/genres";
+import { GenreVoteScreen } from "@/features/genre-vote/genre-vote-screen";
+import { GENRE_ICON_PATH, GENRE_MANIFEST_PATH, GENRE_THEME_COLOR, PROTOTYPE_ROOM_ID } from "@/features/genre-vote/prototype-config";
+
+export const metadata: Metadata = {
+  title: "ジャンル投票 | メシマッチ",
+  description: `${GENRES.length}ジャンルから今日の食べたい気分を選ぶUIプロトタイプ。`,
+  manifest: GENRE_MANIFEST_PATH,
+  appleWebApp: { capable: true, title: "メシマッチ", statusBarStyle: "default" },
+  icons: { apple: `${GENRE_ICON_PATH}/apple-180.png`, icon: `${GENRE_ICON_PATH}/icon-192.png` },
+};
+export const viewport: Viewport = { themeColor: GENRE_THEME_COLOR };
+
+export default function GenreVotePage() {
+  return <GenreVoteScreen genres={GENRES} roomId={PROTOTYPE_ROOM_ID} />;
+}
