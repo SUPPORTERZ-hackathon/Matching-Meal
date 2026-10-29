@@ -1,7 +1,7 @@
 import { AppHeader } from "@/components/common/app-header";
 import { PageContainer } from "@/components/common/page-container";
 import { ParticipantAvatar } from "@/components/common/participant-avatar";
-import { StepProgress } from "@/components/common/step-progress";
+import { StepProgress, type MealStep } from "@/components/common/step-progress";
 import { summarizeParticipants, type WaitingParticipant } from "./waiting-state";
 import { VoteCompletionMark } from "./vote-completion-mark";
 import styles from "./genre-vote-waiting.module.css";
@@ -9,9 +9,13 @@ import styles from "./genre-vote-waiting.module.css";
 export type GenreVoteWaitingScreenProps = {
   participants: readonly WaitingParticipant[];
   roomId?: string;
+  currentStep?: MealStep;
+  voteSubject?: "ジャンル" | "店舗";
 };
 
-export function GenreVoteWaitingScreen({ participants, roomId }: GenreVoteWaitingScreenProps) {
+export function GenreVoteWaitingScreen({ participants, roomId, currentStep = "genre", voteSubject = "ジャンル" }: GenreVoteWaitingScreenProps) {
+  const headingId = `${currentStep}-waiting-heading`;
+  const statusId = `${currentStep}-waiting-status`;
   const { total, completed, remaining, percentage, allComplete } = summarizeParticipants(participants);
   const remainingLabel = total === 0 ? "確認待ち" : allComplete ? "全員完了" : `あと${remaining}人`;
   const announcement = total === 0 ? "参加者情報がありません。"
@@ -20,12 +24,12 @@ export function GenreVoteWaitingScreen({ participants, roomId }: GenreVoteWaitin
   return (
     <div className={styles.background}>
       <PageContainer className={styles.page} header={<AppHeader roomNumber={roomId} className={styles.header} />}>
-        <StepProgress currentStep="genre" />
+        <StepProgress currentStep={currentStep} />
         <div className={styles.content}>
-          <section className={styles.hero} aria-labelledby="genre-waiting-heading">
+          <section className={styles.hero} aria-labelledby={headingId}>
             <VoteCompletionMark />
             <p className={styles.kicker}>投票完了！</p>
-            <h1 id="genre-waiting-heading">
+            <h1 id={headingId}>
               <span>みんなの投票{allComplete ? "が" : "を"}</span>
               <span>{allComplete ? "完了しました" : "待っています"}</span>
             </h1>
@@ -34,8 +38,8 @@ export function GenreVoteWaitingScreen({ participants, roomId }: GenreVoteWaitin
             </p>
           </section>
 
-          <section className={`meal-card ${styles.statusCard}`} aria-labelledby="genre-waiting-status">
-            <h2 id="genre-waiting-status" className="sr-only">投票状況</h2>
+          <section className={`meal-card ${styles.statusCard}`} aria-labelledby={statusId}>
+            <h2 id={statusId} className="sr-only">投票状況</h2>
             <div className={styles.statusCount}>
               <p className={styles.count}><strong>{completed}</strong><span>/ {total}人</span></p>
               <p className={styles.remaining}>{remainingLabel}</p>
@@ -43,7 +47,7 @@ export function GenreVoteWaitingScreen({ participants, roomId }: GenreVoteWaitin
             <div
               className={styles.progressTrack}
               role="progressbar"
-              aria-label="参加者のジャンル投票完了状況"
+              aria-label={`参加者の${voteSubject}投票完了状況`}
               aria-valuemin={0}
               aria-valuemax={total || 1}
               aria-valuenow={completed}
