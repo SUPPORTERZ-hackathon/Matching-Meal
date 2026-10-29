@@ -1,12 +1,18 @@
 # ジャンル投票待機画面・UIプロトタイプ
 
 - Status: Verified
-- Last updated: 2026-10-29
+- Last updated: 2026-10-30
 - Related issue: None
-- Related specifications: genre-vote.md, ../components/common-ui.md, ../themes/design-system.md
+- Related specifications: genre-vote.md, genre-result.md, ../components/common-ui.md, ../themes/design-system.md
 - Implementation files: frontend/src/app/genre-vote-waiting/, frontend/src/app/ui-preview/genre-vote-waiting/, frontend/src/features/genre-vote-waiting/, frontend/src/features/genre-vote/genre-vote-screen.tsx, frontend/src/features/genre-vote/genre-vote.module.css, frontend/src/features/genre-vote/genre-vote-prototype.tsx, frontend/src/app/genre-vote/page.tsx, frontend/package.json
 
 ## 目的・対象範囲・承認
+
+### 結果画面への開発用接続（2026-10-30）
+
+今回の結果画面実装依頼により、開発プレビューだけに全員完了→モック結果の導線を追加する。既存の人数切替は維持する。通常待機の人数/演出/表示構成は変更せず、全員完了時の「結果画面は準備中」を「投票結果の受信を待っています」に修正する。後述の結果未実装という記録は過去の状態であり、今回の接続/結果仕様は[genre-result.md](genre-result.md)を正とする。実同期/集計は引き続き未実装。
+
+- Progress：接続のブラウザー確認に成功。既存の3/3表示は画面内に留まり、明示したモック接続操作で結果画面へ到達。既存の待機演出/人数/軽減設定と16ジャンルからの遷移も回帰検証済み。詳細は結果側の検証記録を参照。
 
 2026-10-29のユーザーの実装依頼を承認根拠とする。Figma画像08に近い待機画面、入力された参加者状態に連動する人数・バー・アバター、開発専用の操作プレビュー、16件投票後の接続を実装する。本書の技術的補足は依頼の範囲に限定する。
 

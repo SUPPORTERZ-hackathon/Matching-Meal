@@ -15,7 +15,7 @@ export function GenreVoteWaitingScreen({ participants, roomId }: GenreVoteWaitin
   const { total, completed, remaining, percentage, allComplete } = summarizeParticipants(participants);
   const remainingLabel = total === 0 ? "確認待ち" : allComplete ? "全員完了" : `あと${remaining}人`;
   const announcement = total === 0 ? "参加者情報がありません。"
-    : `${total}人中${completed}人が投票完了。${remainingLabel}。${allComplete ? "結果画面は準備中です。" : "みんなの投票を待っています。"}`;
+    : `${total}人中${completed}人が投票完了。${remainingLabel}。${allComplete ? "投票結果の受信を待っています。" : "みんなの投票を待っています。"}`;
 
   return (
     <div className={styles.background}>
@@ -30,7 +30,7 @@ export function GenreVoteWaitingScreen({ participants, roomId }: GenreVoteWaitin
               <span>{allComplete ? "完了しました" : "待っています"}</span>
             </h1>
             <p className={styles.description}>
-              {allComplete ? "全員の投票が完了しました。結果画面は準備中です。" : "全員が投票すると、自動で結果が表示されます。"}
+              {allComplete ? "全員の投票が完了しました。投票結果の受信を待っています。" : "全員が投票すると、自動で結果が表示されます。"}
             </p>
           </section>
 
