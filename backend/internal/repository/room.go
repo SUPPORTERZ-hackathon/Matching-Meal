@@ -28,7 +28,10 @@ type RoomRepository interface {
 
 type RoomTransaction interface {
 	FindByJoinCodeForUpdate(ctx context.Context, joinCode string) (domain.Room, error)
+	FindByIDForUpdate(ctx context.Context, roomID string) (domain.Room, error)
 	CountParticipants(ctx context.Context, roomID string) (int, error)
+	ListParticipants(ctx context.Context, roomID string) ([]domain.Participant, error)
 	InsertParticipant(ctx context.Context, participant domain.Participant, sessionTokenHash []byte) (domain.Participant, error)
 	IncrementRoomVersion(ctx context.Context, roomID string) (domain.Room, error)
+	UpdateRoomStatus(ctx context.Context, roomID string, status domain.RoomStatus) (domain.Room, error)
 }

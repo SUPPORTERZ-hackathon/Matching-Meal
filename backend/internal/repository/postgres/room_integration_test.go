@@ -67,6 +67,77 @@ func TestRoomStateIntegration(t *testing.T) {
 	}
 }
 
+func TestRoomStartGenreVotingConcurrencyIntegration(t *testing.T) {
+	if os.Getenv(integrationTestEnvironment) != "1" {
+		t.Skip("set INTEGRATION_TEST=1 to run PostgreSQL integration tests")
+	}
+
+	ctx := context.Background()
+	pool, err := pgxpool.New(ctx, "")
+	if err != nil {
+		t.Fatalf("connect to PostgreSQL: %v", err)
+	}
+	t.Cleanup(pool.Close)
+
+	repository := roompostgres.NewRoomRepository(pool)
+	roomService := service.NewRoomService(repository, security.RandomGenerator{}, service.SystemClock{})
+	created, err := roomService.Create(ctx, "ホスト")
+	if err != nil {
+		t.Fatalf("create room: %v", err)
+	}
+	t.Cleanup(func() {
+		if _, err := pool.Exec(context.Background(), "DELETE FROM rooms WHERE id = $1", created.Room.ID); err != nil {
+			t.Errorf("clean up room: %v", err)
+		}
+	})
+	if _, err := roomService.Join(ctx, created.Room.JoinCode, "先行メンバー"); err != nil {
+		t.Fatalf("join initial member: %v", err)
+	}
+
+	startLine := make(chan struct{})
+	var waitGroup sync.WaitGroup
+	var started service.GetRoomStateResult
+	var startError error
+	var concurrentJoinError error
+	waitGroup.Add(2)
+	go func() {
+		defer waitGroup.Done()
+		<-startLine
+		started, startError = roomService.StartGenreVoting(ctx, created.Room.ID, created.SessionToken)
+	}()
+	go func() {
+		defer waitGroup.Done()
+		<-startLine
+		_, concurrentJoinError = roomService.Join(ctx, created.Room.JoinCode, "同時メンバー")
+	}()
+	close(startLine)
+	waitGroup.Wait()
+
+	if startError != nil {
+		t.Fatalf("start genre voting: %v", startError)
+	}
+	expectedParticipantCount := 2
+	if concurrentJoinError == nil {
+		expectedParticipantCount = 3
+	} else if !errors.Is(concurrentJoinError, service.ErrRoomNotJoinable) {
+		t.Fatalf("concurrent join error = %v", concurrentJoinError)
+	}
+	if started.Room.Status != domain.RoomStatusGenreVoting || len(started.Participants) != expectedParticipantCount {
+		t.Fatalf("started state = %+v, expected participants = %d", started, expectedParticipantCount)
+	}
+
+	repeated, err := roomService.StartGenreVoting(ctx, created.Room.ID, created.SessionToken)
+	if err != nil {
+		t.Fatalf("repeat start genre voting: %v", err)
+	}
+	if repeated.Room.Version != started.Room.Version || len(repeated.Participants) != expectedParticipantCount {
+		t.Fatalf("repeated state = %+v, started state = %+v", repeated, started)
+	}
+	if _, err := roomService.Join(ctx, created.Room.JoinCode, "開始後メンバー"); !errors.Is(err, service.ErrRoomNotJoinable) {
+		t.Fatalf("join after start error = %v, want ErrRoomNotJoinable", err)
+	}
+}
+
 const integrationTestEnvironment = "INTEGRATION_TEST"
 
 func TestRoomJoinConcurrencyIntegration(t *testing.T) {

@@ -1,6 +1,7 @@
 package httptransport
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -65,6 +66,32 @@ func (handlerClockStub) Now() time.Time {
 	return time.Date(2026, time.October, 29, 9, 0, 0, 0, time.UTC)
 }
 
+func TestRegisterRoomRoutes(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := NewRoomHandler(service.NewRoomService(handlerRepositoryStub{}, &handlerGeneratorStub{}, handlerClockStub{}))
+	router := gin.New()
+
+	RegisterRoomRoutes(router, handler)
+
+	expectedRoutes := map[string]bool{
+		"POST /api/v1/rooms":                             false,
+		"POST /api/v1/rooms/:roomRef/participants":       false,
+		"GET /api/v1/rooms/:roomId":                      false,
+		"POST /api/v1/rooms/:roomRef/genre-voting/start": false,
+	}
+	for _, route := range router.Routes() {
+		key := route.Method + " " + route.Path
+		if _, exists := expectedRoutes[key]; exists {
+			expectedRoutes[key] = true
+		}
+	}
+	for route, registered := range expectedRoutes {
+		if !registered {
+			t.Fatalf("route %s was not registered", route)
+		}
+	}
+}
+
 func TestRoomHandlerCreate(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	generator := &handlerGeneratorStub{}
@@ -124,8 +151,16 @@ func (stub *joinHandlerTransactionStub) FindByJoinCodeForUpdate(_ context.Contex
 	return stub.room, nil
 }
 
+func (stub *joinHandlerTransactionStub) FindByIDForUpdate(_ context.Context, _ string) (domain.Room, error) {
+	return stub.room, nil
+}
+
 func (stub *joinHandlerTransactionStub) CountParticipants(_ context.Context, _ string) (int, error) {
 	return 1, nil
+}
+
+func (stub *joinHandlerTransactionStub) ListParticipants(_ context.Context, _ string) ([]domain.Participant, error) {
+	return nil, errors.New("unexpected participant list")
 }
 
 func (stub *joinHandlerTransactionStub) InsertParticipant(_ context.Context, participant domain.Participant, _ []byte) (domain.Participant, error) {
@@ -135,6 +170,10 @@ func (stub *joinHandlerTransactionStub) InsertParticipant(_ context.Context, par
 func (stub *joinHandlerTransactionStub) IncrementRoomVersion(_ context.Context, _ string) (domain.Room, error) {
 	stub.room.Version++
 	return stub.room, nil
+}
+
+func (stub *joinHandlerTransactionStub) UpdateRoomStatus(_ context.Context, _ string, _ domain.RoomStatus) (domain.Room, error) {
+	return domain.Room{}, errors.New("unexpected status update")
 }
 
 type joinHandlerGeneratorStub struct{}
@@ -163,7 +202,7 @@ func TestRoomHandlerJoin(t *testing.T) {
 	router.Use(func(context *gin.Context) {
 		context.Set(requestIDContextKey, "request-id")
 	})
-	router.POST("/api/v1/rooms/:joinCode/participants", handler.Join)
+	router.POST("/api/v1/rooms/:roomRef/participants", handler.Join)
 
 	request := httptest.NewRequest(http.MethodPost, "/api/v1/rooms/eb9ty3ts/participants", strings.NewReader(`{"nickname":"ひかる"}`))
 	request.Header.Set("Content-Type", "application/json")
@@ -283,5 +322,166 @@ func TestRoomHandlerGetStateRejectsMissingAuthorization(t *testing.T) {
 
 	if recorder.Code != http.StatusUnauthorized {
 		t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
+	}
+}
+
+type startHandlerRepositoryStub struct {
+	room         domain.Room
+	participants []domain.Participant
+}
+
+func (startHandlerRepositoryStub) Create(_ context.Context, _ repository.CreateRoomParams) (domain.Room, domain.Participant, error) {
+	return domain.Room{}, domain.Participant{}, errors.New("unexpected create")
+}
+
+func (stub startHandlerRepositoryStub) FindParticipantBySessionTokenHash(_ context.Context, _ []byte) (domain.Participant, error) {
+	return stub.participants[0], nil
+}
+
+func (startHandlerRepositoryStub) FindStateByID(_ context.Context, _ string) (domain.Room, []domain.Participant, error) {
+	return domain.Room{}, nil, errors.New("unexpected room state lookup")
+}
+
+func (stub startHandlerRepositoryStub) WithinTransaction(ctx context.Context, operation func(repository.RoomTransaction) error) error {
+	return operation(&startHandlerTransactionStub{room: stub.room, participants: stub.participants})
+}
+
+type startHandlerTransactionStub struct {
+	room         domain.Room
+	participants []domain.Participant
+}
+
+func (stub *startHandlerTransactionStub) FindByJoinCodeForUpdate(_ context.Context, _ string) (domain.Room, error) {
+	return domain.Room{}, errors.New("unexpected join code lookup")
+}
+
+func (stub *startHandlerTransactionStub) FindByIDForUpdate(_ context.Context, _ string) (domain.Room, error) {
+	return stub.room, nil
+}
+
+func (stub *startHandlerTransactionStub) CountParticipants(_ context.Context, _ string) (int, error) {
+	return len(stub.participants), nil
+}
+
+func (stub *startHandlerTransactionStub) ListParticipants(_ context.Context, _ string) ([]domain.Participant, error) {
+	return stub.participants, nil
+}
+
+func (stub *startHandlerTransactionStub) InsertParticipant(_ context.Context, _ domain.Participant, _ []byte) (domain.Participant, error) {
+	return domain.Participant{}, errors.New("unexpected participant insert")
+}
+
+func (stub *startHandlerTransactionStub) IncrementRoomVersion(_ context.Context, _ string) (domain.Room, error) {
+	return domain.Room{}, errors.New("unexpected version increment")
+}
+
+func (stub *startHandlerTransactionStub) UpdateRoomStatus(_ context.Context, _ string, status domain.RoomStatus) (domain.Room, error) {
+	stub.room.Status = status
+	stub.room.Version++
+	return stub.room, nil
+}
+
+func TestRoomHandlerStartGenreVoting(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	roomID := "550e8400-e29b-41d4-a716-446655440000"
+	now := handlerClockStub{}.Now()
+	participants := []domain.Participant{
+		{ID: "host-id", RoomID: roomID, Role: domain.ParticipantRoleHost},
+		{ID: "member-id", RoomID: roomID, Role: domain.ParticipantRoleMember},
+	}
+	roomService := service.NewRoomService(startHandlerRepositoryStub{
+		room:         domain.Room{ID: roomID, Status: domain.RoomStatusLobby, Version: 2, ExpiresAt: now.Add(time.Hour)},
+		participants: participants,
+	}, &handlerGeneratorStub{}, handlerClockStub{})
+	handler := NewRoomHandler(roomService)
+	router := gin.New()
+	var logOutput bytes.Buffer
+	router.Use(gin.LoggerWithWriter(&logOutput))
+	router.Use(func(context *gin.Context) { context.Set(requestIDContextKey, "request-id") })
+	router.POST("/api/v1/rooms/:roomRef/genre-voting/start", handler.StartGenreVoting)
+
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/rooms/"+roomID+"/genre-voting/start", nil)
+	request.Header.Set("Authorization", "Bearer sensitive-host-token")
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
+	}
+	var response roomStateResponse
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if response.Data.Room.Status != domain.RoomStatusGenreVoting || response.Data.Room.Version != 3 {
+		t.Fatalf("response = %+v", response.Data)
+	}
+	if strings.Contains(logOutput.String(), "sensitive-host-token") {
+		t.Fatal("Authorization token was written to the request log")
+	}
+}
+
+func TestRoomHandlerStartGenreVotingErrors(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	roomID := "550e8400-e29b-41d4-a716-446655440000"
+	now := handlerClockStub{}.Now()
+	tests := []struct {
+		name           string
+		roomStatus     domain.RoomStatus
+		participants   []domain.Participant
+		expectedStatus int
+		expectedCode   string
+	}{
+		{
+			name: "member cannot start", roomStatus: domain.RoomStatusLobby,
+			participants: []domain.Participant{
+				{ID: "member-id", RoomID: roomID, Role: domain.ParticipantRoleMember},
+				{ID: "host-id", RoomID: roomID, Role: domain.ParticipantRoleHost},
+			},
+			expectedStatus: http.StatusForbidden, expectedCode: "HOST_REQUIRED",
+		},
+		{
+			name: "one participant", roomStatus: domain.RoomStatusLobby,
+			participants: []domain.Participant{
+				{ID: "host-id", RoomID: roomID, Role: domain.ParticipantRoleHost},
+			},
+			expectedStatus: http.StatusConflict, expectedCode: "NOT_ENOUGH_PARTICIPANTS",
+		},
+		{
+			name: "invalid transition", roomStatus: domain.RoomStatusRestaurantVoting,
+			participants: []domain.Participant{
+				{ID: "host-id", RoomID: roomID, Role: domain.ParticipantRoleHost},
+				{ID: "member-id", RoomID: roomID, Role: domain.ParticipantRoleMember},
+			},
+			expectedStatus: http.StatusConflict, expectedCode: "INVALID_ROOM_TRANSITION",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			roomService := service.NewRoomService(startHandlerRepositoryStub{
+				room:         domain.Room{ID: roomID, Status: test.roomStatus, Version: 2, ExpiresAt: now.Add(time.Hour)},
+				participants: test.participants,
+			}, &handlerGeneratorStub{}, handlerClockStub{})
+			handler := NewRoomHandler(roomService)
+			router := gin.New()
+			router.Use(func(context *gin.Context) { context.Set(requestIDContextKey, "request-id") })
+			router.POST("/api/v1/rooms/:roomRef/genre-voting/start", handler.StartGenreVoting)
+
+			request := httptest.NewRequest(http.MethodPost, "/api/v1/rooms/"+roomID+"/genre-voting/start", nil)
+			request.Header.Set("Authorization", "Bearer participant-token")
+			recorder := httptest.NewRecorder()
+			router.ServeHTTP(recorder, request)
+
+			if recorder.Code != test.expectedStatus {
+				t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
+			}
+			var response apiErrorResponse
+			if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+				t.Fatalf("decode response: %v", err)
+			}
+			if response.Error.Code != test.expectedCode {
+				t.Fatalf("error code = %q, want %q", response.Error.Code, test.expectedCode)
+			}
+		})
 	}
 }

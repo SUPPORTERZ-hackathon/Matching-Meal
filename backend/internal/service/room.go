@@ -17,12 +17,15 @@ const (
 )
 
 var (
-	ErrRoomCapacityReached = errors.New("room capacity reached")
-	ErrRoomCodeGeneration  = errors.New("room code generation failed")
-	ErrRoomNotFound        = errors.New("room not found")
-	ErrRoomNotJoinable     = errors.New("room not joinable")
-	ErrUnauthorized        = errors.New("unauthorized")
-	ErrForbidden           = errors.New("forbidden")
+	ErrRoomCapacityReached   = errors.New("room capacity reached")
+	ErrRoomCodeGeneration    = errors.New("room code generation failed")
+	ErrRoomNotFound          = errors.New("room not found")
+	ErrRoomNotJoinable       = errors.New("room not joinable")
+	ErrUnauthorized          = errors.New("unauthorized")
+	ErrForbidden             = errors.New("forbidden")
+	ErrHostRequired          = errors.New("host required")
+	ErrNotEnoughParticipants = errors.New("not enough participants")
+	ErrInvalidRoomTransition = errors.New("invalid room transition")
 )
 
 type Clock interface {
@@ -222,4 +225,79 @@ func (service *RoomService) GetState(ctx context.Context, rawRoomID string, sess
 	return GetRoomStateResult{
 		Room: room, CurrentParticipantID: currentParticipant.ID, Participants: participants,
 	}, nil
+}
+
+func (service *RoomService) StartGenreVoting(ctx context.Context, rawRoomID string, sessionToken string) (GetRoomStateResult, error) {
+	operationContext, cancel := context.WithTimeout(ctx, roomOperationTimeout)
+	defer cancel()
+
+	roomID, err := domain.NormalizeRoomID(rawRoomID)
+	if err != nil {
+		return GetRoomStateResult{}, err
+	}
+	if sessionToken == "" {
+		return GetRoomStateResult{}, ErrUnauthorized
+	}
+	currentParticipant, err := service.repository.FindParticipantBySessionTokenHash(
+		operationContext,
+		security.HashSessionToken(sessionToken),
+	)
+	if errors.Is(err, repository.ErrParticipantNotFound) {
+		return GetRoomStateResult{}, ErrUnauthorized
+	}
+	if err != nil {
+		return GetRoomStateResult{}, err
+	}
+	if currentParticipant.RoomID != roomID {
+		return GetRoomStateResult{}, ErrForbidden
+	}
+	if currentParticipant.Role != domain.ParticipantRoleHost {
+		return GetRoomStateResult{}, ErrHostRequired
+	}
+
+	var result GetRoomStateResult
+	err = service.repository.WithinTransaction(operationContext, func(transaction repository.RoomTransaction) error {
+		room, err := transaction.FindByIDForUpdate(operationContext, roomID)
+		if errors.Is(err, repository.ErrRoomNotFound) {
+			return ErrRoomNotFound
+		}
+		if err != nil {
+			return err
+		}
+		if room.Status == domain.RoomStatusExpired || !service.clock.Now().Before(room.ExpiresAt) {
+			return ErrRoomNotFound
+		}
+
+		switch room.Status {
+		case domain.RoomStatusLobby:
+			participantCount, err := transaction.CountParticipants(operationContext, roomID)
+			if err != nil {
+				return err
+			}
+			if participantCount < 2 {
+				return ErrNotEnoughParticipants
+			}
+			room, err = transaction.UpdateRoomStatus(operationContext, roomID, domain.RoomStatusGenreVoting)
+			if err != nil {
+				return err
+			}
+		case domain.RoomStatusGenreVoting:
+			// A repeated request is successful without changing the version.
+		default:
+			return ErrInvalidRoomTransition
+		}
+
+		participants, err := transaction.ListParticipants(operationContext, roomID)
+		if err != nil {
+			return err
+		}
+		result = GetRoomStateResult{
+			Room: room, CurrentParticipantID: currentParticipant.ID, Participants: participants,
+		}
+		return nil
+	})
+	if err != nil {
+		return GetRoomStateResult{}, err
+	}
+	return result, nil
 }

@@ -1,6 +1,6 @@
 # ルーム・参加者モデル
 
-- Status: Approved
+- Status: Verified
 - Last updated: 2026-10-29
 - Related issue: None
 - Related specifications: ../services/room-lifecycle.md, ../screens/genre-vote.md
@@ -147,9 +147,11 @@ None。参加者上限20人、最小2人、有効期限24時間は本仕様レ�
 - 検証: 実PostgreSQLへ25件を同時参加させ、ホストを含む20人だけが保存され、残りは定員エラーになること、全員が異なる参加者IDと32バイトのトークンハッシュを持つことを確認。
 - 完了: UUID形式のルームID検証、セッショントークンハッシュ照合、ルームと参加者一覧の読み取りを実装。参加者は`joined_at`、同時刻は`id`の昇順で取得。
 - 検証: 実PostgreSQLで同一ニックネームのホストとメンバーを別IDとして取得し、Bearerトークンに対応する現在参加者IDと参加順序を確認。
-- 残作業: 投票開始のモデル・リポジトリ実装と検証。
+- 完了: ルーム行を`SELECT ... FOR UPDATE`でロックし、参加と投票開始を直列化。状態更新とversion加算を同一トランザクションで実装。
+- 検証: 実PostgreSQLで参加と開始の同時実行、開始後参加拒否、開始再送時のversion維持を確認。全Goテスト、vet、race検査に成功。
+- 残作業: なし。PR作成は未実施。
 - ブロッカー: なし。
-- 関連Issue・PR・コミット: 本変更コミット（ルーム状態取得API）、PR未作成。
+- 関連Issue・PR・コミット: `ae8f14ca`（ルーム状態取得API）、本変更コミット（ジャンル投票開始API）、PR未作成。
 
 ## Self-Review
 

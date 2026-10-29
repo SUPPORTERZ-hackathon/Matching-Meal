@@ -13,6 +13,11 @@ import (
 	"meal/backend/internal/service"
 )
 
+const (
+	roomIDParam  = "roomId"
+	roomRefParam = "roomRef"
+)
+
 type RoomHandler struct {
 	service *service.RoomService
 }
@@ -69,6 +74,13 @@ func NewRoomHandler(roomService *service.RoomService) *RoomHandler {
 	return &RoomHandler{service: roomService}
 }
 
+func RegisterRoomRoutes(routes gin.IRoutes, handler *RoomHandler) {
+	routes.POST("/api/v1/rooms", handler.Create)
+	routes.POST("/api/v1/rooms/:roomRef/participants", handler.Join)
+	routes.GET("/api/v1/rooms/:roomId", handler.GetState)
+	routes.POST("/api/v1/rooms/:roomRef/genre-voting/start", handler.StartGenreVoting)
+}
+
 func (handler *RoomHandler) Create(context *gin.Context) {
 	var request createRoomRequest
 	if err := context.ShouldBindJSON(&request); err != nil {
@@ -104,7 +116,7 @@ func (handler *RoomHandler) Join(context *gin.Context) {
 		context.JSON(http.StatusBadRequest, errorResponse("INVALID_REQUEST", "入力内容を確認してください。", requestID(context)))
 		return
 	}
-	result, err := handler.service.Join(context.Request.Context(), context.Param("joinCode"), request.Nickname)
+	result, err := handler.service.Join(context.Request.Context(), context.Param(roomRefParam), request.Nickname)
 	switch {
 	case errors.Is(err, domain.ErrInvalidJoinCode), errors.Is(err, domain.ErrInvalidNickname):
 		context.JSON(http.StatusBadRequest, errorResponse("INVALID_REQUEST", "参加コードまたはニックネームを確認してください。", requestID(context)))
@@ -138,7 +150,7 @@ func (handler *RoomHandler) GetState(context *gin.Context) {
 		return
 	}
 
-	result, err := handler.service.GetState(context.Request.Context(), context.Param("roomId"), sessionToken)
+	result, err := handler.service.GetState(context.Request.Context(), context.Param(roomIDParam), sessionToken)
 	switch {
 	case errors.Is(err, domain.ErrInvalidRoomID):
 		context.JSON(http.StatusBadRequest, errorResponse("INVALID_REQUEST", "ルームIDを確認してください。", requestID(context)))
@@ -151,6 +163,48 @@ func (handler *RoomHandler) GetState(context *gin.Context) {
 		return
 	case errors.Is(err, service.ErrRoomNotFound):
 		context.JSON(http.StatusNotFound, errorResponse("ROOM_NOT_FOUND", "ルームが見つかりません。", requestID(context)))
+		return
+	case errors.Is(err, stdcontext.DeadlineExceeded):
+		context.JSON(http.StatusServiceUnavailable, errorResponse("SERVICE_UNAVAILABLE", "時間をおいて再度お試しください。", requestID(context)))
+		return
+	case err != nil:
+		context.Error(err)
+		context.JSON(http.StatusInternalServerError, errorResponse("INTERNAL_ERROR", "処理を完了できませんでした。", requestID(context)))
+		return
+	}
+
+	context.JSON(http.StatusOK, newRoomStateResponse(result))
+}
+
+func (handler *RoomHandler) StartGenreVoting(context *gin.Context) {
+	sessionToken, ok := bearerToken(context.GetHeader("Authorization"))
+	if !ok {
+		context.JSON(http.StatusUnauthorized, errorResponse("UNAUTHORIZED", "認証情報を確認してください。", requestID(context)))
+		return
+	}
+
+	result, err := handler.service.StartGenreVoting(context.Request.Context(), context.Param(roomRefParam), sessionToken)
+	switch {
+	case errors.Is(err, domain.ErrInvalidRoomID):
+		context.JSON(http.StatusBadRequest, errorResponse("INVALID_REQUEST", "ルームIDを確認してください。", requestID(context)))
+		return
+	case errors.Is(err, service.ErrUnauthorized):
+		context.JSON(http.StatusUnauthorized, errorResponse("UNAUTHORIZED", "認証情報を確認してください。", requestID(context)))
+		return
+	case errors.Is(err, service.ErrForbidden):
+		context.JSON(http.StatusForbidden, errorResponse("FORBIDDEN", "このルームを操作する権限がありません。", requestID(context)))
+		return
+	case errors.Is(err, service.ErrHostRequired):
+		context.JSON(http.StatusForbidden, errorResponse("HOST_REQUIRED", "ホストだけが投票を開始できます。", requestID(context)))
+		return
+	case errors.Is(err, service.ErrRoomNotFound):
+		context.JSON(http.StatusNotFound, errorResponse("ROOM_NOT_FOUND", "ルームが見つかりません。", requestID(context)))
+		return
+	case errors.Is(err, service.ErrNotEnoughParticipants):
+		context.JSON(http.StatusConflict, errorResponse("NOT_ENOUGH_PARTICIPANTS", "投票開始には2人以上の参加者が必要です。", requestID(context)))
+		return
+	case errors.Is(err, service.ErrInvalidRoomTransition):
+		context.JSON(http.StatusConflict, errorResponse("INVALID_ROOM_TRANSITION", "現在のルーム状態では投票を開始できません。", requestID(context)))
 		return
 	case errors.Is(err, stdcontext.DeadlineExceeded):
 		context.JSON(http.StatusServiceUnavailable, errorResponse("SERVICE_UNAVAILABLE", "時間をおいて再度お試しください。", requestID(context)))

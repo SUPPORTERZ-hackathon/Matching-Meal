@@ -1,6 +1,6 @@
 # ルーム作成・参加・投票開始サービス
 
-- Status: Approved
+- Status: Verified
 - Last updated: 2026-10-29
 - Related issue: None
 - Related specifications: ../models/rooms-and-participants.md, ../screens/genre-vote.md
@@ -257,9 +257,13 @@ None。API形状、人数、期限、固定方式は本仕様レビューで承�
 - 完了: `GET /api/v1/rooms/{roomId}`を実装。BearerトークンのSHA-256ハッシュによる参加者認証、別ルームのアクセス拒否、有効期限判定、参加順の一覧取得をHandler、Service、Repositoryへ分離。
 - 調査: Context7未接続のため、Gin公式のパスパラメータ資料（https://gin-gonic.com/en/docs/routing/param-in-path/）とpgx公式Goパッケージ資料（https://pkg.go.dev/github.com/jackc/pgx/v5）を参照。
 - 検証: Docker内の`go test ./...`と`go vet ./...`に成功。実PostgreSQLで同一ニックネーム2名、現在参加者ID、参加者順序、既存の同時参加制御を確認。
-- 残作業: ジャンル投票開始APIの実装と検証。
+- 完了: `POST /api/v1/rooms/{roomId}/genre-voting/start`を実装。ホスト権限、2人以上の開始条件、`lobby`から`genre_voting`への遷移、再送時の冪等性を実装。
+- 調査: Context7未接続のため、PostgreSQL公式の行ロック資料（https://www.postgresql.org/docs/17/explicit-locking.html）とpgx公式Goパッケージ資料（https://pkg.go.dev/github.com/jackc/pgx/v5）を参照。
+- 検証: 実PostgreSQLで参加と開始を同時実行し、ロック取得順に応じて参加者集合が確定することを確認。開始の再送でversionが増えないこと、開始後の参加が409になることを確認。
+- 検証: 実HTTPで作成、参加、開始、再送、開始後参加拒否、ヘルスチェックを確認。`go test ./...`、`go vet ./...`、`go test -race ./...`に成功し、AuthorizationトークンがGinのリクエストログへ出ないことを自動テストで確認。
+- 残作業: なし。PR作成は未実施。
 - ブロッカー: なし。
-- 関連Issue・PR・コミット: 本変更コミット（ルーム状態取得API）、PR未作成。
+- 関連Issue・PR・コミット: `ae8f14ca`（ルーム状態取得API）、本変更コミット（ジャンル投票開始API）、PR未作成。
 
 ## Self-Review
 

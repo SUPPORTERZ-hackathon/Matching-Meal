@@ -172,6 +172,26 @@ func (transaction *roomTransaction) FindByJoinCodeForUpdate(ctx context.Context,
 	return room, nil
 }
 
+func (transaction *roomTransaction) FindByIDForUpdate(ctx context.Context, roomID string) (domain.Room, error) {
+	var room domain.Room
+	err := transaction.tx.QueryRow(ctx, `
+		SELECT id, join_code, status, version, expires_at, created_at, updated_at
+		FROM rooms
+		WHERE id = $1
+		FOR UPDATE
+	`, roomID).Scan(
+		&room.ID, &room.JoinCode, &room.Status, &room.Version,
+		&room.ExpiresAt, &room.CreatedAt, &room.UpdatedAt,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.Room{}, repository.ErrRoomNotFound
+	}
+	if err != nil {
+		return domain.Room{}, fmt.Errorf("find room by id for update: %w", err)
+	}
+	return room, nil
+}
+
 func (transaction *roomTransaction) CountParticipants(ctx context.Context, roomID string) (int, error) {
 	var count int
 	if err := transaction.tx.QueryRow(ctx, `
@@ -182,6 +202,35 @@ func (transaction *roomTransaction) CountParticipants(ctx context.Context, roomI
 		return 0, fmt.Errorf("count room participants: %w", err)
 	}
 	return count, nil
+}
+
+func (transaction *roomTransaction) ListParticipants(ctx context.Context, roomID string) ([]domain.Participant, error) {
+	rows, err := transaction.tx.Query(ctx, `
+		SELECT id, room_id, nickname, role, joined_at
+		FROM participants
+		WHERE room_id = $1
+		ORDER BY joined_at ASC, id ASC
+	`, roomID)
+	if err != nil {
+		return nil, fmt.Errorf("query room participants: %w", err)
+	}
+	defer rows.Close()
+
+	participants := make([]domain.Participant, 0)
+	for rows.Next() {
+		var participant domain.Participant
+		if err := rows.Scan(
+			&participant.ID, &participant.RoomID, &participant.Nickname,
+			&participant.Role, &participant.JoinedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan room participant: %w", err)
+		}
+		participants = append(participants, participant)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("read room participants: %w", err)
+	}
+	return participants, nil
 }
 
 func (transaction *roomTransaction) InsertParticipant(ctx context.Context, participant domain.Participant, sessionTokenHash []byte) (domain.Participant, error) {
@@ -212,6 +261,26 @@ func (transaction *roomTransaction) IncrementRoomVersion(ctx context.Context, ro
 	}
 	if err != nil {
 		return domain.Room{}, fmt.Errorf("increment room version: %w", err)
+	}
+	return room, nil
+}
+
+func (transaction *roomTransaction) UpdateRoomStatus(ctx context.Context, roomID string, status domain.RoomStatus) (domain.Room, error) {
+	var room domain.Room
+	err := transaction.tx.QueryRow(ctx, `
+		UPDATE rooms
+		SET status = $2, version = version + 1, updated_at = NOW()
+		WHERE id = $1
+		RETURNING id, join_code, status, version, expires_at, created_at, updated_at
+	`, roomID, status).Scan(
+		&room.ID, &room.JoinCode, &room.Status, &room.Version,
+		&room.ExpiresAt, &room.CreatedAt, &room.UpdatedAt,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.Room{}, repository.ErrRoomNotFound
+	}
+	if err != nil {
+		return domain.Room{}, fmt.Errorf("update room status: %w", err)
 	}
 	return room, nil
 }

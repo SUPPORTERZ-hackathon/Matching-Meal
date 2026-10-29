@@ -56,9 +56,14 @@ type roomTransactionStub struct {
 	findError           error
 	participantCount    int
 	countError          error
+	participants        []domain.Participant
+	listError           error
 	insertError         error
 	incrementError      error
+	updateStatusError   error
+	updateStatusCalls   int
 	requestedJoinCode   string
+	requestedRoomID     string
 	insertedParticipant domain.Participant
 	insertedTokenHash   []byte
 }
@@ -68,8 +73,17 @@ func (stub *roomTransactionStub) FindByJoinCodeForUpdate(_ context.Context, join
 	return stub.room, stub.findError
 }
 
+func (stub *roomTransactionStub) FindByIDForUpdate(_ context.Context, roomID string) (domain.Room, error) {
+	stub.requestedRoomID = roomID
+	return stub.room, stub.findError
+}
+
 func (stub *roomTransactionStub) CountParticipants(_ context.Context, _ string) (int, error) {
 	return stub.participantCount, stub.countError
+}
+
+func (stub *roomTransactionStub) ListParticipants(_ context.Context, _ string) ([]domain.Participant, error) {
+	return stub.participants, stub.listError
 }
 
 func (stub *roomTransactionStub) InsertParticipant(_ context.Context, participant domain.Participant, sessionTokenHash []byte) (domain.Participant, error) {
@@ -87,6 +101,17 @@ func (stub *roomTransactionStub) IncrementRoomVersion(_ context.Context, _ strin
 		return domain.Room{}, stub.incrementError
 	}
 	room := stub.room
+	room.Version++
+	return room, nil
+}
+
+func (stub *roomTransactionStub) UpdateRoomStatus(_ context.Context, _ string, status domain.RoomStatus) (domain.Room, error) {
+	stub.updateStatusCalls++
+	if stub.updateStatusError != nil {
+		return domain.Room{}, stub.updateStatusError
+	}
+	room := stub.room
+	room.Status = status
 	room.Version++
 	return room, nil
 }
@@ -353,6 +378,98 @@ func TestRoomServiceGetStateRejectsMissingOrExpiredRoom(t *testing.T) {
 			_, err := roomService.GetState(context.Background(), roomID, "valid-token")
 			if !errors.Is(err, ErrRoomNotFound) {
 				t.Fatalf("GetState() error = %v, want ErrRoomNotFound", err)
+			}
+		})
+	}
+}
+
+func TestRoomServiceStartGenreVoting(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2026, time.October, 29, 9, 0, 0, 0, time.UTC)
+	roomID := "550e8400-e29b-41d4-a716-446655440000"
+	participants := []domain.Participant{
+		{ID: "host-id", RoomID: roomID, Role: domain.ParticipantRoleHost},
+		{ID: "member-id", RoomID: roomID, Role: domain.ParticipantRoleMember},
+	}
+	transaction := &roomTransactionStub{
+		room:             domain.Room{ID: roomID, Status: domain.RoomStatusLobby, Version: 2, ExpiresAt: now.Add(time.Hour)},
+		participantCount: 2,
+		participants:     participants,
+	}
+	repositoryStub := &roomRepositoryStub{
+		transaction:              transaction,
+		authenticatedParticipant: participants[0],
+	}
+	roomService := NewRoomService(repositoryStub, &generatorStub{}, clockStub{now: now})
+
+	result, err := roomService.StartGenreVoting(context.Background(), roomID, "host-token")
+	if err != nil {
+		t.Fatalf("StartGenreVoting() error = %v", err)
+	}
+	if result.Room.Status != domain.RoomStatusGenreVoting || result.Room.Version != 3 {
+		t.Fatalf("StartGenreVoting() room = %+v", result.Room)
+	}
+	if result.CurrentParticipantID != "host-id" || len(result.Participants) != 2 {
+		t.Fatalf("StartGenreVoting() result = %+v", result)
+	}
+	if transaction.requestedRoomID != roomID || transaction.updateStatusCalls != 1 {
+		t.Fatalf("transaction room = %q, updates = %d", transaction.requestedRoomID, transaction.updateStatusCalls)
+	}
+}
+
+func TestRoomServiceStartGenreVotingIsIdempotent(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2026, time.October, 29, 9, 0, 0, 0, time.UTC)
+	roomID := "550e8400-e29b-41d4-a716-446655440000"
+	host := domain.Participant{ID: "host-id", RoomID: roomID, Role: domain.ParticipantRoleHost}
+	transaction := &roomTransactionStub{
+		room:         domain.Room{ID: roomID, Status: domain.RoomStatusGenreVoting, Version: 3, ExpiresAt: now.Add(time.Hour)},
+		participants: []domain.Participant{host, {ID: "member-id", RoomID: roomID, Role: domain.ParticipantRoleMember}},
+	}
+	repositoryStub := &roomRepositoryStub{transaction: transaction, authenticatedParticipant: host}
+	roomService := NewRoomService(repositoryStub, &generatorStub{}, clockStub{now: now})
+
+	result, err := roomService.StartGenreVoting(context.Background(), roomID, "host-token")
+	if err != nil {
+		t.Fatalf("StartGenreVoting() error = %v", err)
+	}
+	if result.Room.Version != 3 || transaction.updateStatusCalls != 0 {
+		t.Fatalf("idempotent result = %+v, updates = %d", result, transaction.updateStatusCalls)
+	}
+}
+
+func TestRoomServiceStartGenreVotingRejectsInvalidConditions(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2026, time.October, 29, 9, 0, 0, 0, time.UTC)
+	roomID := "550e8400-e29b-41d4-a716-446655440000"
+	tests := []struct {
+		name             string
+		participantRole  domain.ParticipantRole
+		participantCount int
+		room             domain.Room
+		expectedError    error
+	}{
+		{name: "member", participantRole: domain.ParticipantRoleMember, room: domain.Room{ID: roomID, Status: domain.RoomStatusLobby, ExpiresAt: now.Add(time.Hour)}, expectedError: ErrHostRequired},
+		{name: "not enough participants", participantRole: domain.ParticipantRoleHost, participantCount: 1, room: domain.Room{ID: roomID, Status: domain.RoomStatusLobby, ExpiresAt: now.Add(time.Hour)}, expectedError: ErrNotEnoughParticipants},
+		{name: "invalid transition", participantRole: domain.ParticipantRoleHost, participantCount: 2, room: domain.Room{ID: roomID, Status: domain.RoomStatusRestaurantVoting, ExpiresAt: now.Add(time.Hour)}, expectedError: ErrInvalidRoomTransition},
+		{name: "expired", participantRole: domain.ParticipantRoleHost, participantCount: 2, room: domain.Room{ID: roomID, Status: domain.RoomStatusLobby, ExpiresAt: now}, expectedError: ErrRoomNotFound},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			transaction := &roomTransactionStub{room: test.room, participantCount: test.participantCount}
+			repositoryStub := &roomRepositoryStub{
+				transaction:              transaction,
+				authenticatedParticipant: domain.Participant{ID: "participant-id", RoomID: roomID, Role: test.participantRole},
+			}
+			roomService := NewRoomService(repositoryStub, &generatorStub{}, clockStub{now: now})
+			_, err := roomService.StartGenreVoting(context.Background(), roomID, "token")
+			if !errors.Is(err, test.expectedError) {
+				t.Fatalf("StartGenreVoting() error = %v, want %v", err, test.expectedError)
+			}
+			if transaction.updateStatusCalls != 0 {
+				t.Fatalf("status updates = %d, want 0", transaction.updateStatusCalls)
 			}
 		})
 	}
