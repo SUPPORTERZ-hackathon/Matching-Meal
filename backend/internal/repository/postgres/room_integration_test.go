@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"sort"
 	"sync"
 	"testing"
 
@@ -14,6 +15,57 @@ import (
 	"meal/backend/internal/security"
 	"meal/backend/internal/service"
 )
+
+func TestRoomStateIntegration(t *testing.T) {
+	if os.Getenv(integrationTestEnvironment) != "1" {
+		t.Skip("set INTEGRATION_TEST=1 to run PostgreSQL integration tests")
+	}
+
+	ctx := context.Background()
+	pool, err := pgxpool.New(ctx, "")
+	if err != nil {
+		t.Fatalf("connect to PostgreSQL: %v", err)
+	}
+	t.Cleanup(pool.Close)
+
+	repository := roompostgres.NewRoomRepository(pool)
+	roomService := service.NewRoomService(repository, security.RandomGenerator{}, service.SystemClock{})
+	created, err := roomService.Create(ctx, "同名")
+	if err != nil {
+		t.Fatalf("create room: %v", err)
+	}
+	t.Cleanup(func() {
+		if _, err := pool.Exec(context.Background(), "DELETE FROM rooms WHERE id = $1", created.Room.ID); err != nil {
+			t.Errorf("clean up room: %v", err)
+		}
+	})
+
+	joined, err := roomService.Join(ctx, created.Room.JoinCode, "同名")
+	if err != nil {
+		t.Fatalf("join room: %v", err)
+	}
+	state, err := roomService.GetState(ctx, created.Room.ID, joined.SessionToken)
+	if err != nil {
+		t.Fatalf("get room state: %v", err)
+	}
+	if state.CurrentParticipantID != joined.Participant.ID {
+		t.Fatalf("current participant id = %q, want %q", state.CurrentParticipantID, joined.Participant.ID)
+	}
+	if state.Room.Version != 2 || len(state.Participants) != 2 {
+		t.Fatalf("room state = %+v", state)
+	}
+	if state.Participants[0].Nickname != "同名" || state.Participants[1].Nickname != "同名" {
+		t.Fatalf("participant nicknames = %+v", state.Participants)
+	}
+	if !sort.SliceIsSorted(state.Participants, func(left int, right int) bool {
+		if state.Participants[left].JoinedAt.Equal(state.Participants[right].JoinedAt) {
+			return state.Participants[left].ID < state.Participants[right].ID
+		}
+		return state.Participants[left].JoinedAt.Before(state.Participants[right].JoinedAt)
+	}) {
+		t.Fatalf("participants are not sorted: %+v", state.Participants)
+	}
+}
 
 const integrationTestEnvironment = "INTEGRATION_TEST"
 

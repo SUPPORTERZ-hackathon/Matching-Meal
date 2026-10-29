@@ -57,3 +57,11 @@ func TestRandomGeneratorSessionToken(t *testing.T) {
 		t.Fatal("SessionToken() returned the hash as the plain token")
 	}
 }
+
+func TestHashSessionToken(t *testing.T) {
+	t.Parallel()
+	expected := sha256.Sum256([]byte("plain-token"))
+	if actual := HashSessionToken("plain-token"); string(actual) != string(expected[:]) {
+		t.Fatal("HashSessionToken() does not match SHA-256")
+	}
+}

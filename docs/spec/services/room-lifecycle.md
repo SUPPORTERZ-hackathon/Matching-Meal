@@ -254,9 +254,12 @@ None。API形状、人数、期限、固定方式は本仕様レビューで承�
 - 検証: 正常・不正リクエスト、ニックネーム検証、乱数形式、参加コード衝突再試行、トークンハッシュ引渡しの自動テストとローカルrace検査に成功。実PostgreSQLを使うAPIで201と既存`/api/health`の正常応答を確認。
 - 完了: `POST /api/v1/rooms/{joinCode}/participants`を案Aの行ロック方式で実装。期限・状態・定員はServiceで判断し、Repositoryはトランザクション操作を提供する責務分離を維持。
 - 検証: 小文字コード、同一ニックネーム、期限切れ、投票開始済み、定員到達、入力不正、HTTPレスポンスを自動テスト。実APIで同一ニックネームの2人が別IDで参加し、versionが2、3へ更新されることを確認。
-- 残作業: 状態取得、ジャンル投票開始APIの実装と検証。
+- 完了: `GET /api/v1/rooms/{roomId}`を実装。BearerトークンのSHA-256ハッシュによる参加者認証、別ルームのアクセス拒否、有効期限判定、参加順の一覧取得をHandler、Service、Repositoryへ分離。
+- 調査: Context7未接続のため、Gin公式のパスパラメータ資料（https://gin-gonic.com/en/docs/routing/param-in-path/）とpgx公式Goパッケージ資料（https://pkg.go.dev/github.com/jackc/pgx/v5）を参照。
+- 検証: Docker内の`go test ./...`と`go vet ./...`に成功。実PostgreSQLで同一ニックネーム2名、現在参加者ID、参加者順序、既存の同時参加制御を確認。
+- 残作業: ジャンル投票開始APIの実装と検証。
 - ブロッカー: なし。
-- 関連Issue・PR・コミット: None。
+- 関連Issue・PR・コミット: 本変更コミット（ルーム状態取得API）、PR未作成。
 
 ## Self-Review
 

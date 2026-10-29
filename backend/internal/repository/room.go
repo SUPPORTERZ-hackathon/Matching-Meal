@@ -8,8 +8,9 @@ import (
 )
 
 var (
-	ErrJoinCodeConflict = errors.New("join code conflict")
-	ErrRoomNotFound     = errors.New("room not found")
+	ErrJoinCodeConflict    = errors.New("join code conflict")
+	ErrParticipantNotFound = errors.New("participant not found")
+	ErrRoomNotFound        = errors.New("room not found")
 )
 
 type CreateRoomParams struct {
@@ -20,6 +21,8 @@ type CreateRoomParams struct {
 
 type RoomRepository interface {
 	Create(ctx context.Context, params CreateRoomParams) (domain.Room, domain.Participant, error)
+	FindParticipantBySessionTokenHash(ctx context.Context, sessionTokenHash []byte) (domain.Participant, error)
+	FindStateByID(ctx context.Context, roomID string) (domain.Room, []domain.Participant, error)
 	WithinTransaction(ctx context.Context, operation func(RoomTransaction) error) error
 }
 

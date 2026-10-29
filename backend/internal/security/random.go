@@ -57,6 +57,10 @@ func (RandomGenerator) SessionToken() (string, []byte, error) {
 		return "", nil, fmt.Errorf("generate session token: %w", err)
 	}
 	token := base64.RawURLEncoding.EncodeToString(bytes)
+	return token, HashSessionToken(token), nil
+}
+
+func HashSessionToken(token string) []byte {
 	hash := sha256.Sum256([]byte(token))
-	return token, hash[:], nil
+	return hash[:]
 }

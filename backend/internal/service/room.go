@@ -21,6 +21,8 @@ var (
 	ErrRoomCodeGeneration  = errors.New("room code generation failed")
 	ErrRoomNotFound        = errors.New("room not found")
 	ErrRoomNotJoinable     = errors.New("room not joinable")
+	ErrUnauthorized        = errors.New("unauthorized")
+	ErrForbidden           = errors.New("forbidden")
 )
 
 type Clock interface {
@@ -49,6 +51,12 @@ type JoinRoomResult struct {
 	Room         domain.Room
 	Participant  domain.Participant
 	SessionToken string
+}
+
+type GetRoomStateResult struct {
+	Room                 domain.Room
+	CurrentParticipantID string
+	Participants         []domain.Participant
 }
 
 func NewRoomService(roomRepository repository.RoomRepository, generator security.Generator, clock Clock) *RoomService {
@@ -172,4 +180,46 @@ func (service *RoomService) Join(ctx context.Context, rawJoinCode string, rawNic
 		return JoinRoomResult{}, err
 	}
 	return result, nil
+}
+
+func (service *RoomService) GetState(ctx context.Context, rawRoomID string, sessionToken string) (GetRoomStateResult, error) {
+	operationContext, cancel := context.WithTimeout(ctx, roomOperationTimeout)
+	defer cancel()
+
+	roomID, err := domain.NormalizeRoomID(rawRoomID)
+	if err != nil {
+		return GetRoomStateResult{}, err
+	}
+	if sessionToken == "" {
+		return GetRoomStateResult{}, ErrUnauthorized
+	}
+
+	currentParticipant, err := service.repository.FindParticipantBySessionTokenHash(
+		operationContext,
+		security.HashSessionToken(sessionToken),
+	)
+	if errors.Is(err, repository.ErrParticipantNotFound) {
+		return GetRoomStateResult{}, ErrUnauthorized
+	}
+	if err != nil {
+		return GetRoomStateResult{}, err
+	}
+	if currentParticipant.RoomID != roomID {
+		return GetRoomStateResult{}, ErrForbidden
+	}
+
+	room, participants, err := service.repository.FindStateByID(operationContext, roomID)
+	if errors.Is(err, repository.ErrRoomNotFound) {
+		return GetRoomStateResult{}, ErrRoomNotFound
+	}
+	if err != nil {
+		return GetRoomStateResult{}, err
+	}
+	if room.Status == domain.RoomStatusExpired || !service.clock.Now().Before(room.ExpiresAt) {
+		return GetRoomStateResult{}, ErrRoomNotFound
+	}
+
+	return GetRoomStateResult{
+		Room: room, CurrentParticipantID: currentParticipant.ID, Participants: participants,
+	}, nil
 }

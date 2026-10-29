@@ -89,6 +89,63 @@ func (roomRepository *RoomRepository) WithinTransaction(ctx context.Context, ope
 	return nil
 }
 
+func (roomRepository *RoomRepository) FindParticipantBySessionTokenHash(ctx context.Context, sessionTokenHash []byte) (domain.Participant, error) {
+	var participant domain.Participant
+	err := roomRepository.pool.QueryRow(ctx, `
+		SELECT id, room_id, nickname, role, joined_at
+		FROM participants
+		WHERE session_token_hash = $1
+	`, sessionTokenHash).Scan(
+		&participant.ID, &participant.RoomID, &participant.Nickname,
+		&participant.Role, &participant.JoinedAt,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.Participant{}, repository.ErrParticipantNotFound
+	}
+	if err != nil {
+		return domain.Participant{}, fmt.Errorf("find participant by session token hash: %w", err)
+	}
+	return participant, nil
+}
+
+func (roomRepository *RoomRepository) FindStateByID(ctx context.Context, roomID string) (domain.Room, []domain.Participant, error) {
+	rows, err := roomRepository.pool.Query(ctx, `
+		SELECT
+			r.id, r.join_code, r.status, r.version, r.expires_at, r.created_at, r.updated_at,
+			p.id, p.room_id, p.nickname, p.role, p.joined_at
+		FROM rooms r
+		JOIN participants p ON p.room_id = r.id
+		WHERE r.id = $1
+		ORDER BY p.joined_at ASC, p.id ASC
+	`, roomID)
+	if err != nil {
+		return domain.Room{}, nil, fmt.Errorf("query room state: %w", err)
+	}
+	defer rows.Close()
+
+	var room domain.Room
+	participants := make([]domain.Participant, 0)
+	for rows.Next() {
+		var participant domain.Participant
+		if err := rows.Scan(
+			&room.ID, &room.JoinCode, &room.Status, &room.Version,
+			&room.ExpiresAt, &room.CreatedAt, &room.UpdatedAt,
+			&participant.ID, &participant.RoomID, &participant.Nickname,
+			&participant.Role, &participant.JoinedAt,
+		); err != nil {
+			return domain.Room{}, nil, fmt.Errorf("scan room state: %w", err)
+		}
+		participants = append(participants, participant)
+	}
+	if err := rows.Err(); err != nil {
+		return domain.Room{}, nil, fmt.Errorf("read room state: %w", err)
+	}
+	if len(participants) == 0 {
+		return domain.Room{}, nil, repository.ErrRoomNotFound
+	}
+	return room, participants, nil
+}
+
 func rollback(tx pgx.Tx) {
 	rollbackContext, cancel := context.WithTimeout(context.Background(), transactionRollbackTimeout)
 	defer cancel()

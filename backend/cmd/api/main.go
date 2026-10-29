@@ -45,6 +45,7 @@ func main() {
 	})
 	router.POST("/api/v1/rooms", roomHandler.Create)
 	router.POST("/api/v1/rooms/:joinCode/participants", roomHandler.Join)
+	router.GET("/api/v1/rooms/:roomId", roomHandler.GetState)
 	server := &http.Server{Addr: ":8080", Handler: router, ReadHeaderTimeout: 5 * time.Second}
 	go func() {
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {

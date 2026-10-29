@@ -31,6 +31,14 @@ func (handlerRepositoryStub) WithinTransaction(_ context.Context, _ func(reposit
 	return errors.New("unexpected transaction")
 }
 
+func (handlerRepositoryStub) FindParticipantBySessionTokenHash(_ context.Context, _ []byte) (domain.Participant, error) {
+	return domain.Participant{}, errors.New("unexpected participant lookup")
+}
+
+func (handlerRepositoryStub) FindStateByID(_ context.Context, _ string) (domain.Room, []domain.Participant, error) {
+	return domain.Room{}, nil, errors.New("unexpected room state lookup")
+}
+
 type handlerGeneratorStub struct {
 	uuidCalls int
 }
@@ -98,6 +106,14 @@ func (stub joinHandlerRepositoryStub) Create(_ context.Context, _ repository.Cre
 
 func (stub joinHandlerRepositoryStub) WithinTransaction(ctx context.Context, operation func(repository.RoomTransaction) error) error {
 	return operation(&joinHandlerTransactionStub{room: stub.room})
+}
+
+func (joinHandlerRepositoryStub) FindParticipantBySessionTokenHash(_ context.Context, _ []byte) (domain.Participant, error) {
+	return domain.Participant{}, errors.New("unexpected participant lookup")
+}
+
+func (joinHandlerRepositoryStub) FindStateByID(_ context.Context, _ string) (domain.Room, []domain.Participant, error) {
+	return domain.Room{}, nil, errors.New("unexpected room state lookup")
 }
 
 type joinHandlerTransactionStub struct {
@@ -193,5 +209,79 @@ func TestRoomHandlerCreateRejectsInvalidRequest(t *testing.T) {
 	}
 	if response.Error.Code != "INVALID_REQUEST" || response.Error.RequestID != "request-id" {
 		t.Fatalf("error response = %+v", response.Error)
+	}
+}
+
+type stateHandlerRepositoryStub struct {
+	room         domain.Room
+	participants []domain.Participant
+}
+
+func (stateHandlerRepositoryStub) Create(_ context.Context, _ repository.CreateRoomParams) (domain.Room, domain.Participant, error) {
+	return domain.Room{}, domain.Participant{}, errors.New("unexpected create")
+}
+
+func (stateHandlerRepositoryStub) WithinTransaction(_ context.Context, _ func(repository.RoomTransaction) error) error {
+	return errors.New("unexpected transaction")
+}
+
+func (stub stateHandlerRepositoryStub) FindParticipantBySessionTokenHash(_ context.Context, _ []byte) (domain.Participant, error) {
+	return stub.participants[1], nil
+}
+
+func (stub stateHandlerRepositoryStub) FindStateByID(_ context.Context, _ string) (domain.Room, []domain.Participant, error) {
+	return stub.room, stub.participants, nil
+}
+
+func TestRoomHandlerGetState(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	roomID := "550e8400-e29b-41d4-a716-446655440000"
+	now := handlerClockStub{}.Now()
+	participants := []domain.Participant{
+		{ID: "host-id", RoomID: roomID, Nickname: "同名", Role: domain.ParticipantRoleHost},
+		{ID: "member-id", RoomID: roomID, Nickname: "同名", Role: domain.ParticipantRoleMember},
+	}
+	roomService := service.NewRoomService(stateHandlerRepositoryStub{
+		room:         domain.Room{ID: roomID, JoinCode: "EB9TY3TS", Status: domain.RoomStatusLobby, Version: 2, ExpiresAt: now.Add(time.Hour)},
+		participants: participants,
+	}, &handlerGeneratorStub{}, handlerClockStub{})
+	handler := NewRoomHandler(roomService)
+	router := gin.New()
+	router.Use(func(context *gin.Context) { context.Set(requestIDContextKey, "request-id") })
+	router.GET("/api/v1/rooms/:roomId", handler.GetState)
+
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/rooms/"+roomID, nil)
+	request.Header.Set("Authorization", "Bearer member-token")
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
+	}
+	var response roomStateResponse
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if response.Data.CurrentParticipantID != "member-id" || len(response.Data.Participants) != 2 {
+		t.Fatalf("response = %+v", response.Data)
+	}
+	if response.Data.Participants[0].Nickname != response.Data.Participants[1].Nickname {
+		t.Fatalf("same nicknames were not preserved: %+v", response.Data.Participants)
+	}
+}
+
+func TestRoomHandlerGetStateRejectsMissingAuthorization(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := NewRoomHandler(service.NewRoomService(handlerRepositoryStub{}, &handlerGeneratorStub{}, handlerClockStub{}))
+	router := gin.New()
+	router.Use(func(context *gin.Context) { context.Set(requestIDContextKey, "request-id") })
+	router.GET("/api/v1/rooms/:roomId", handler.GetState)
+
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/rooms/550e8400-e29b-41d4-a716-446655440000", nil)
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
 	}
 }

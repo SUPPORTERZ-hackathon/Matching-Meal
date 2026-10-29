@@ -4,6 +4,7 @@ import (
 	stdcontext "context"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -43,6 +44,14 @@ type roomSessionResponse struct {
 		Room         roomResponse        `json:"room"`
 		Participant  participantResponse `json:"participant"`
 		SessionToken string              `json:"sessionToken"`
+	} `json:"data"`
+}
+
+type roomStateResponse struct {
+	Data struct {
+		Room                 roomResponse          `json:"room"`
+		CurrentParticipantID string                `json:"currentParticipantId"`
+		Participants         []participantResponse `json:"participants"`
 	} `json:"data"`
 }
 
@@ -122,6 +131,39 @@ func (handler *RoomHandler) Join(context *gin.Context) {
 	context.JSON(http.StatusCreated, response)
 }
 
+func (handler *RoomHandler) GetState(context *gin.Context) {
+	sessionToken, ok := bearerToken(context.GetHeader("Authorization"))
+	if !ok {
+		context.JSON(http.StatusUnauthorized, errorResponse("UNAUTHORIZED", "認証情報を確認してください。", requestID(context)))
+		return
+	}
+
+	result, err := handler.service.GetState(context.Request.Context(), context.Param("roomId"), sessionToken)
+	switch {
+	case errors.Is(err, domain.ErrInvalidRoomID):
+		context.JSON(http.StatusBadRequest, errorResponse("INVALID_REQUEST", "ルームIDを確認してください。", requestID(context)))
+		return
+	case errors.Is(err, service.ErrUnauthorized):
+		context.JSON(http.StatusUnauthorized, errorResponse("UNAUTHORIZED", "認証情報を確認してください。", requestID(context)))
+		return
+	case errors.Is(err, service.ErrForbidden):
+		context.JSON(http.StatusForbidden, errorResponse("FORBIDDEN", "このルームを表示する権限がありません。", requestID(context)))
+		return
+	case errors.Is(err, service.ErrRoomNotFound):
+		context.JSON(http.StatusNotFound, errorResponse("ROOM_NOT_FOUND", "ルームが見つかりません。", requestID(context)))
+		return
+	case errors.Is(err, stdcontext.DeadlineExceeded):
+		context.JSON(http.StatusServiceUnavailable, errorResponse("SERVICE_UNAVAILABLE", "時間をおいて再度お試しください。", requestID(context)))
+		return
+	case err != nil:
+		context.Error(err)
+		context.JSON(http.StatusInternalServerError, errorResponse("INTERNAL_ERROR", "処理を完了できませんでした。", requestID(context)))
+		return
+	}
+
+	context.JSON(http.StatusOK, newRoomStateResponse(result))
+}
+
 func newRoomSessionResponse(room domain.Room, participant domain.Participant, sessionToken string) roomSessionResponse {
 	response := roomSessionResponse{}
 	response.Data.Room = roomResponse{
@@ -133,6 +175,30 @@ func newRoomSessionResponse(room domain.Room, participant domain.Participant, se
 	}
 	response.Data.SessionToken = sessionToken
 	return response
+}
+
+func newRoomStateResponse(result service.GetRoomStateResult) roomStateResponse {
+	response := roomStateResponse{}
+	response.Data.Room = roomResponse{
+		ID: result.Room.ID, JoinCode: result.Room.JoinCode, Status: result.Room.Status,
+		Version: result.Room.Version, ExpiresAt: result.Room.ExpiresAt,
+	}
+	response.Data.CurrentParticipantID = result.CurrentParticipantID
+	response.Data.Participants = make([]participantResponse, 0, len(result.Participants))
+	for _, participant := range result.Participants {
+		response.Data.Participants = append(response.Data.Participants, participantResponse{
+			ID: participant.ID, Nickname: participant.Nickname, Role: participant.Role,
+		})
+	}
+	return response
+}
+
+func bearerToken(authorization string) (string, bool) {
+	parts := strings.Fields(authorization)
+	if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") || parts[1] == "" {
+		return "", false
+	}
+	return parts[1], true
 }
 
 func errorResponse(code string, message string, requestID string) apiErrorResponse {

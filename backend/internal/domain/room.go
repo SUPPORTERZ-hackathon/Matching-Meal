@@ -36,6 +36,7 @@ const (
 var (
 	ErrInvalidJoinCode = errors.New("invalid join code")
 	ErrInvalidNickname = errors.New("invalid nickname")
+	ErrInvalidRoomID   = errors.New("invalid room id")
 )
 
 type Room struct {
@@ -81,4 +82,24 @@ func NormalizeJoinCode(value string) (string, error) {
 		}
 	}
 	return joinCode, nil
+}
+
+func NormalizeRoomID(value string) (string, error) {
+	roomID := strings.ToLower(strings.TrimSpace(value))
+	if len(roomID) != 36 {
+		return "", ErrInvalidRoomID
+	}
+	for index, character := range roomID {
+		switch index {
+		case 8, 13, 18, 23:
+			if character != '-' {
+				return "", ErrInvalidRoomID
+			}
+		default:
+			if !strings.ContainsRune("0123456789abcdef", character) {
+				return "", ErrInvalidRoomID
+			}
+		}
+	}
+	return roomID, nil
 }

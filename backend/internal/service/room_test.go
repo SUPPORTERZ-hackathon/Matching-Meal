@@ -11,10 +11,27 @@ import (
 )
 
 type roomRepositoryStub struct {
-	errors           []error
-	calls            []repository.CreateRoomParams
-	transaction      *roomTransactionStub
-	transactionCalls int
+	errors                   []error
+	calls                    []repository.CreateRoomParams
+	transaction              *roomTransactionStub
+	transactionCalls         int
+	authenticatedParticipant domain.Participant
+	authenticationError      error
+	stateRoom                domain.Room
+	stateParticipants        []domain.Participant
+	stateError               error
+	requestedTokenHash       []byte
+	requestedRoomID          string
+}
+
+func (stub *roomRepositoryStub) FindParticipantBySessionTokenHash(_ context.Context, sessionTokenHash []byte) (domain.Participant, error) {
+	stub.requestedTokenHash = sessionTokenHash
+	return stub.authenticatedParticipant, stub.authenticationError
+}
+
+func (stub *roomRepositoryStub) FindStateByID(_ context.Context, roomID string) (domain.Room, []domain.Participant, error) {
+	stub.requestedRoomID = roomID
+	return stub.stateRoom, stub.stateParticipants, stub.stateError
 }
 
 func (stub *roomRepositoryStub) Create(_ context.Context, params repository.CreateRoomParams) (domain.Room, domain.Participant, error) {
@@ -249,5 +266,94 @@ func TestRoomServiceJoinRejectsInvalidInputBeforeTransaction(t *testing.T) {
 	}
 	if repositoryStub.transactionCalls != 0 {
 		t.Fatalf("transaction calls = %d, want 0", repositoryStub.transactionCalls)
+	}
+}
+
+func TestRoomServiceGetState(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2026, time.October, 29, 9, 0, 0, 0, time.UTC)
+	roomID := "550e8400-e29b-41d4-a716-446655440000"
+	participants := []domain.Participant{
+		{ID: "host-id", RoomID: roomID, Nickname: "同名", Role: domain.ParticipantRoleHost},
+		{ID: "member-id", RoomID: roomID, Nickname: "同名", Role: domain.ParticipantRoleMember},
+	}
+	repositoryStub := &roomRepositoryStub{
+		authenticatedParticipant: participants[1],
+		stateRoom:                domain.Room{ID: roomID, JoinCode: "EB9TY3TS", Status: domain.RoomStatusLobby, Version: 2, ExpiresAt: now.Add(time.Hour)},
+		stateParticipants:        participants,
+	}
+	roomService := NewRoomService(repositoryStub, &generatorStub{}, clockStub{now: now})
+
+	result, err := roomService.GetState(context.Background(), " 550E8400-E29B-41D4-A716-446655440000 ", "plain-token")
+	if err != nil {
+		t.Fatalf("GetState() error = %v", err)
+	}
+	if repositoryStub.requestedRoomID != roomID {
+		t.Fatalf("requested room id = %q", repositoryStub.requestedRoomID)
+	}
+	if len(repositoryStub.requestedTokenHash) != 32 {
+		t.Fatalf("token hash length = %d, want 32", len(repositoryStub.requestedTokenHash))
+	}
+	if result.CurrentParticipantID != "member-id" || len(result.Participants) != 2 {
+		t.Fatalf("GetState() result = %+v", result)
+	}
+}
+
+func TestRoomServiceGetStateRejectsUnauthorizedAndForbidden(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2026, time.October, 29, 9, 0, 0, 0, time.UTC)
+	roomID := "550e8400-e29b-41d4-a716-446655440000"
+	otherRoomID := "6ba7b810-9dad-41d1-80b4-00c04fd430c8"
+	tests := []struct {
+		name          string
+		token         string
+		participant   domain.Participant
+		authError     error
+		expectedError error
+	}{
+		{name: "empty token", expectedError: ErrUnauthorized},
+		{name: "unknown token", token: "unknown", authError: repository.ErrParticipantNotFound, expectedError: ErrUnauthorized},
+		{name: "participant from another room", token: "valid", participant: domain.Participant{RoomID: otherRoomID}, expectedError: ErrForbidden},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			repositoryStub := &roomRepositoryStub{authenticatedParticipant: test.participant, authenticationError: test.authError}
+			roomService := NewRoomService(repositoryStub, &generatorStub{}, clockStub{now: now})
+			_, err := roomService.GetState(context.Background(), roomID, test.token)
+			if !errors.Is(err, test.expectedError) {
+				t.Fatalf("GetState() error = %v, want %v", err, test.expectedError)
+			}
+		})
+	}
+}
+
+func TestRoomServiceGetStateRejectsMissingOrExpiredRoom(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2026, time.October, 29, 9, 0, 0, 0, time.UTC)
+	roomID := "550e8400-e29b-41d4-a716-446655440000"
+	tests := []struct {
+		name       string
+		room       domain.Room
+		stateError error
+	}{
+		{name: "missing", stateError: repository.ErrRoomNotFound},
+		{name: "expired", room: domain.Room{ID: roomID, ExpiresAt: now}},
+		{name: "marked expired", room: domain.Room{ID: roomID, Status: domain.RoomStatusExpired, ExpiresAt: now.Add(time.Hour)}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			repositoryStub := &roomRepositoryStub{
+				authenticatedParticipant: domain.Participant{ID: "participant-id", RoomID: roomID},
+				stateRoom:                test.room, stateParticipants: []domain.Participant{{ID: "participant-id"}}, stateError: test.stateError,
+			}
+			roomService := NewRoomService(repositoryStub, &generatorStub{}, clockStub{now: now})
+			_, err := roomService.GetState(context.Background(), roomID, "valid-token")
+			if !errors.Is(err, ErrRoomNotFound) {
+				t.Fatalf("GetState() error = %v, want ErrRoomNotFound", err)
+			}
+		})
 	}
 }
