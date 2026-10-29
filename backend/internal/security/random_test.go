@@ -9,6 +9,23 @@ import (
 	"meal/backend/internal/domain"
 )
 
+func TestRandomGeneratorSelectIndex(t *testing.T) {
+	t.Parallel()
+	generator := RandomGenerator{}
+	for range 100 {
+		index, err := generator.SelectIndex(3)
+		if err != nil {
+			t.Fatalf("SelectIndex() error = %v", err)
+		}
+		if index < 0 || index >= 3 {
+			t.Fatalf("SelectIndex() = %d, want [0, 3)", index)
+		}
+	}
+	if _, err := generator.SelectIndex(0); err == nil {
+		t.Fatal("SelectIndex(0) error = nil")
+	}
+}
+
 func TestRandomGeneratorUUID(t *testing.T) {
 	t.Parallel()
 	generator := RandomGenerator{}

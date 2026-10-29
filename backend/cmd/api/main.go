@@ -28,8 +28,11 @@ func main() {
 	defer pool.Close()
 	randomGenerator := security.RandomGenerator{}
 	roomRepository := postgres.NewRoomRepository(pool)
+	genreVotingRepository := postgres.NewGenreVotingRepository(pool)
 	roomService := service.NewRoomService(roomRepository, randomGenerator, service.SystemClock{})
+	genreVotingService := service.NewGenreVotingService(genreVotingRepository, roomRepository, randomGenerator, service.SystemClock{})
 	roomHandler := httptransport.NewRoomHandler(roomService)
+	genreVotingHandler := httptransport.NewGenreVotingHandler(genreVotingService)
 	router := gin.New()
 	router.Use(httptransport.RequestID(randomGenerator), gin.Logger(), gin.Recovery())
 	router.GET("/api/health", func(c *gin.Context) {
@@ -44,6 +47,7 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{"status": "ok", "database": "ok"})
 	})
 	httptransport.RegisterRoomRoutes(router, roomHandler)
+	httptransport.RegisterGenreVotingRoutes(router, genreVotingHandler)
 	server := &http.Server{Addr: ":8080", Handler: router, ReadHeaderTimeout: 5 * time.Second}
 	go func() {
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
