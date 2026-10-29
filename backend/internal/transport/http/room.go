@@ -1,6 +1,7 @@
 package httptransport
 
 import (
+	stdcontext "context"
 	"errors"
 	"net/http"
 	"time"
@@ -19,6 +20,10 @@ type createRoomRequest struct {
 	Nickname string `json:"nickname" binding:"required"`
 }
 
+type joinRoomRequest struct {
+	Nickname string `json:"nickname" binding:"required"`
+}
+
 type roomResponse struct {
 	ID        string            `json:"id"`
 	JoinCode  string            `json:"joinCode"`
@@ -33,7 +38,7 @@ type participantResponse struct {
 	Role     domain.ParticipantRole `json:"role"`
 }
 
-type createRoomResponse struct {
+type roomSessionResponse struct {
 	Data struct {
 		Room         roomResponse        `json:"room"`
 		Participant  participantResponse `json:"participant"`
@@ -70,22 +75,64 @@ func (handler *RoomHandler) Create(context *gin.Context) {
 		context.JSON(http.StatusInternalServerError, errorResponse("ROOM_CODE_GENERATION_FAILED", "ルームを作成できませんでした。", requestID(context)))
 		return
 	}
+	if errors.Is(err, stdcontext.DeadlineExceeded) {
+		context.JSON(http.StatusServiceUnavailable, errorResponse("SERVICE_UNAVAILABLE", "時間をおいて再度お試しください。", requestID(context)))
+		return
+	}
 	if err != nil {
 		context.Error(err)
 		context.JSON(http.StatusInternalServerError, errorResponse("INTERNAL_ERROR", "処理を完了できませんでした。", requestID(context)))
 		return
 	}
 
-	response := createRoomResponse{}
+	response := newRoomSessionResponse(result.Room, result.Participant, result.SessionToken)
+	context.JSON(http.StatusCreated, response)
+}
+
+func (handler *RoomHandler) Join(context *gin.Context) {
+	var request joinRoomRequest
+	if err := context.ShouldBindJSON(&request); err != nil {
+		context.JSON(http.StatusBadRequest, errorResponse("INVALID_REQUEST", "入力内容を確認してください。", requestID(context)))
+		return
+	}
+	result, err := handler.service.Join(context.Request.Context(), context.Param("joinCode"), request.Nickname)
+	switch {
+	case errors.Is(err, domain.ErrInvalidJoinCode), errors.Is(err, domain.ErrInvalidNickname):
+		context.JSON(http.StatusBadRequest, errorResponse("INVALID_REQUEST", "参加コードまたはニックネームを確認してください。", requestID(context)))
+		return
+	case errors.Is(err, service.ErrRoomNotFound):
+		context.JSON(http.StatusNotFound, errorResponse("ROOM_NOT_FOUND", "ルームが見つかりません。", requestID(context)))
+		return
+	case errors.Is(err, service.ErrRoomNotJoinable):
+		context.JSON(http.StatusConflict, errorResponse("ROOM_NOT_JOINABLE", "このルームには現在参加できません。", requestID(context)))
+		return
+	case errors.Is(err, service.ErrRoomCapacityReached):
+		context.JSON(http.StatusConflict, errorResponse("ROOM_CAPACITY_REACHED", "このルームにはこれ以上参加できません。", requestID(context)))
+		return
+	case errors.Is(err, stdcontext.DeadlineExceeded):
+		context.JSON(http.StatusServiceUnavailable, errorResponse("SERVICE_UNAVAILABLE", "時間をおいて再度お試しください。", requestID(context)))
+		return
+	case err != nil:
+		context.Error(err)
+		context.JSON(http.StatusInternalServerError, errorResponse("INTERNAL_ERROR", "処理を完了できませんでした。", requestID(context)))
+		return
+	}
+
+	response := newRoomSessionResponse(result.Room, result.Participant, result.SessionToken)
+	context.JSON(http.StatusCreated, response)
+}
+
+func newRoomSessionResponse(room domain.Room, participant domain.Participant, sessionToken string) roomSessionResponse {
+	response := roomSessionResponse{}
 	response.Data.Room = roomResponse{
-		ID: result.Room.ID, JoinCode: result.Room.JoinCode, Status: result.Room.Status,
-		Version: result.Room.Version, ExpiresAt: result.Room.ExpiresAt,
+		ID: room.ID, JoinCode: room.JoinCode, Status: room.Status,
+		Version: room.Version, ExpiresAt: room.ExpiresAt,
 	}
 	response.Data.Participant = participantResponse{
-		ID: result.Participant.ID, Nickname: result.Participant.Nickname, Role: result.Participant.Role,
+		ID: participant.ID, Nickname: participant.Nickname, Role: participant.Role,
 	}
-	response.Data.SessionToken = result.SessionToken
-	context.JSON(http.StatusCreated, response)
+	response.Data.SessionToken = sessionToken
+	return response
 }
 
 func errorResponse(code string, message string, requestID string) apiErrorResponse {

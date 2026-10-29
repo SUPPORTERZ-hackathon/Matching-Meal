@@ -11,8 +11,10 @@ import (
 )
 
 type roomRepositoryStub struct {
-	errors []error
-	calls  []repository.CreateRoomParams
+	errors           []error
+	calls            []repository.CreateRoomParams
+	transaction      *roomTransactionStub
+	transactionCalls int
 }
 
 func (stub *roomRepositoryStub) Create(_ context.Context, params repository.CreateRoomParams) (domain.Room, domain.Participant, error) {
@@ -25,6 +27,51 @@ func (stub *roomRepositoryStub) Create(_ context.Context, params repository.Crea
 	params.Room.UpdatedAt = params.Room.CreatedAt
 	params.Host.JoinedAt = params.Room.CreatedAt
 	return params.Room, params.Host, nil
+}
+
+func (stub *roomRepositoryStub) WithinTransaction(_ context.Context, operation func(repository.RoomTransaction) error) error {
+	stub.transactionCalls++
+	return operation(stub.transaction)
+}
+
+type roomTransactionStub struct {
+	room                domain.Room
+	findError           error
+	participantCount    int
+	countError          error
+	insertError         error
+	incrementError      error
+	requestedJoinCode   string
+	insertedParticipant domain.Participant
+	insertedTokenHash   []byte
+}
+
+func (stub *roomTransactionStub) FindByJoinCodeForUpdate(_ context.Context, joinCode string) (domain.Room, error) {
+	stub.requestedJoinCode = joinCode
+	return stub.room, stub.findError
+}
+
+func (stub *roomTransactionStub) CountParticipants(_ context.Context, _ string) (int, error) {
+	return stub.participantCount, stub.countError
+}
+
+func (stub *roomTransactionStub) InsertParticipant(_ context.Context, participant domain.Participant, sessionTokenHash []byte) (domain.Participant, error) {
+	stub.insertedParticipant = participant
+	stub.insertedTokenHash = sessionTokenHash
+	if stub.insertError != nil {
+		return domain.Participant{}, stub.insertError
+	}
+	participant.JoinedAt = time.Date(2026, time.October, 29, 10, 0, 0, 0, time.UTC)
+	return participant, nil
+}
+
+func (stub *roomTransactionStub) IncrementRoomVersion(_ context.Context, _ string) (domain.Room, error) {
+	if stub.incrementError != nil {
+		return domain.Room{}, stub.incrementError
+	}
+	room := stub.room
+	room.Version++
+	return room, nil
 }
 
 type generatorStub struct {
@@ -120,5 +167,87 @@ func TestRoomServiceCreateRejectsInvalidNicknameBeforePersistence(t *testing.T) 
 	}
 	if len(repositoryStub.calls) != 0 {
 		t.Fatalf("repository calls = %d, want 0", len(repositoryStub.calls))
+	}
+}
+
+func TestRoomServiceJoin(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2026, time.October, 29, 9, 0, 0, 0, time.UTC)
+	transaction := &roomTransactionStub{
+		room: domain.Room{
+			ID: "room-id", JoinCode: "EB9TY3TS", Status: domain.RoomStatusLobby,
+			Version: 1, ExpiresAt: now.Add(time.Hour),
+		},
+		participantCount: 1,
+	}
+	repositoryStub := &roomRepositoryStub{transaction: transaction}
+	generator := &generatorStub{
+		uuids: []string{"participant-id"}, token: "plain-token", hash: []byte("token-hash"),
+	}
+	roomService := NewRoomService(repositoryStub, generator, clockStub{now: now})
+
+	result, err := roomService.Join(context.Background(), " eb9ty3ts ", " ひかる ")
+	if err != nil {
+		t.Fatalf("Join() error = %v", err)
+	}
+	if transaction.requestedJoinCode != "EB9TY3TS" {
+		t.Fatalf("requested join code = %q", transaction.requestedJoinCode)
+	}
+	if result.Room.Version != 2 || result.Participant.Role != domain.ParticipantRoleMember {
+		t.Fatalf("Join() result = %+v", result)
+	}
+	if result.Participant.Nickname != "ひかる" || result.SessionToken != "plain-token" {
+		t.Fatalf("Join() result = %+v", result)
+	}
+	if transaction.insertedParticipant.ID != "participant-id" || string(transaction.insertedTokenHash) != "token-hash" {
+		t.Fatalf("inserted participant = %+v, hash = %q", transaction.insertedParticipant, transaction.insertedTokenHash)
+	}
+}
+
+func TestRoomServiceJoinRejectsUnavailableRoom(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2026, time.October, 29, 9, 0, 0, 0, time.UTC)
+	tests := []struct {
+		name          string
+		room          domain.Room
+		findError     error
+		count         int
+		expectedError error
+	}{
+		{name: "not found", findError: repository.ErrRoomNotFound, expectedError: ErrRoomNotFound},
+		{name: "expired", room: domain.Room{Status: domain.RoomStatusLobby, ExpiresAt: now}, expectedError: ErrRoomNotFound},
+		{name: "voting started", room: domain.Room{Status: domain.RoomStatusGenreVoting, ExpiresAt: now.Add(time.Hour)}, expectedError: ErrRoomNotJoinable},
+		{name: "capacity reached", room: domain.Room{Status: domain.RoomStatusLobby, ExpiresAt: now.Add(time.Hour)}, count: domain.MaxRoomParticipants, expectedError: ErrRoomCapacityReached},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			transaction := &roomTransactionStub{room: test.room, findError: test.findError, participantCount: test.count}
+			repositoryStub := &roomRepositoryStub{transaction: transaction}
+			roomService := NewRoomService(repositoryStub, &generatorStub{}, clockStub{now: now})
+
+			_, err := roomService.Join(context.Background(), "EB9TY3TS", "同名OK")
+			if !errors.Is(err, test.expectedError) {
+				t.Fatalf("Join() error = %v, want %v", err, test.expectedError)
+			}
+			if transaction.insertedParticipant.ID != "" {
+				t.Fatalf("participant inserted on rejected join: %+v", transaction.insertedParticipant)
+			}
+		})
+	}
+}
+
+func TestRoomServiceJoinRejectsInvalidInputBeforeTransaction(t *testing.T) {
+	t.Parallel()
+	repositoryStub := &roomRepositoryStub{}
+	roomService := NewRoomService(repositoryStub, &generatorStub{}, clockStub{})
+
+	_, err := roomService.Join(context.Background(), "invalid", "ひかる")
+	if !errors.Is(err, domain.ErrInvalidJoinCode) {
+		t.Fatalf("Join() error = %v, want ErrInvalidJoinCode", err)
+	}
+	if repositoryStub.transactionCalls != 0 {
+		t.Fatalf("transaction calls = %d, want 0", repositoryStub.transactionCalls)
 	}
 }

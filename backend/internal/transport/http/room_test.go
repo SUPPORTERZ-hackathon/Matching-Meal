@@ -3,6 +3,7 @@ package httptransport
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -24,6 +25,10 @@ func (handlerRepositoryStub) Create(_ context.Context, params repository.CreateR
 	params.Room.UpdatedAt = storedAt
 	params.Host.JoinedAt = storedAt
 	return params.Room, params.Host, nil
+}
+
+func (handlerRepositoryStub) WithinTransaction(_ context.Context, _ func(repository.RoomTransaction) error) error {
+	return errors.New("unexpected transaction")
 }
 
 type handlerGeneratorStub struct {
@@ -71,7 +76,7 @@ func TestRoomHandlerCreate(t *testing.T) {
 	if recorder.Code != http.StatusCreated {
 		t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
 	}
-	var response createRoomResponse
+	var response roomSessionResponse
 	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
@@ -80,6 +85,87 @@ func TestRoomHandlerCreate(t *testing.T) {
 	}
 	if response.Data.Participant.Role != domain.ParticipantRoleHost || response.Data.SessionToken != "plain-token" {
 		t.Fatalf("response = %+v", response.Data)
+	}
+}
+
+type joinHandlerRepositoryStub struct {
+	room domain.Room
+}
+
+func (stub joinHandlerRepositoryStub) Create(_ context.Context, _ repository.CreateRoomParams) (domain.Room, domain.Participant, error) {
+	return domain.Room{}, domain.Participant{}, errors.New("unexpected create")
+}
+
+func (stub joinHandlerRepositoryStub) WithinTransaction(ctx context.Context, operation func(repository.RoomTransaction) error) error {
+	return operation(&joinHandlerTransactionStub{room: stub.room})
+}
+
+type joinHandlerTransactionStub struct {
+	room domain.Room
+}
+
+func (stub *joinHandlerTransactionStub) FindByJoinCodeForUpdate(_ context.Context, _ string) (domain.Room, error) {
+	return stub.room, nil
+}
+
+func (stub *joinHandlerTransactionStub) CountParticipants(_ context.Context, _ string) (int, error) {
+	return 1, nil
+}
+
+func (stub *joinHandlerTransactionStub) InsertParticipant(_ context.Context, participant domain.Participant, _ []byte) (domain.Participant, error) {
+	return participant, nil
+}
+
+func (stub *joinHandlerTransactionStub) IncrementRoomVersion(_ context.Context, _ string) (domain.Room, error) {
+	stub.room.Version++
+	return stub.room, nil
+}
+
+type joinHandlerGeneratorStub struct{}
+
+func (joinHandlerGeneratorStub) UUID() (string, error) {
+	return "participant-id", nil
+}
+
+func (joinHandlerGeneratorStub) JoinCode() (string, error) {
+	return "", errors.New("unexpected join code generation")
+}
+
+func (joinHandlerGeneratorStub) SessionToken() (string, []byte, error) {
+	return "member-token", []byte("member-token-hash"), nil
+}
+
+func TestRoomHandlerJoin(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	now := handlerClockStub{}.Now()
+	roomService := service.NewRoomService(joinHandlerRepositoryStub{room: domain.Room{
+		ID: "room-id", JoinCode: "EB9TY3TS", Status: domain.RoomStatusLobby,
+		Version: 1, ExpiresAt: now.Add(time.Hour),
+	}}, joinHandlerGeneratorStub{}, handlerClockStub{})
+	handler := NewRoomHandler(roomService)
+	router := gin.New()
+	router.Use(func(context *gin.Context) {
+		context.Set(requestIDContextKey, "request-id")
+	})
+	router.POST("/api/v1/rooms/:joinCode/participants", handler.Join)
+
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/rooms/eb9ty3ts/participants", strings.NewReader(`{"nickname":"ひかる"}`))
+	request.Header.Set("Content-Type", "application/json")
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusCreated {
+		t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
+	}
+	var response roomSessionResponse
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if response.Data.Room.Version != 2 || response.Data.Participant.Role != domain.ParticipantRoleMember {
+		t.Fatalf("response = %+v", response.Data)
+	}
+	if response.Data.SessionToken != "member-token" {
+		t.Fatalf("session token = %q", response.Data.SessionToken)
 	}
 }
 

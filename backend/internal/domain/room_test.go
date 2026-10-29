@@ -40,3 +40,37 @@ func TestNormalizeNickname(t *testing.T) {
 		})
 	}
 }
+
+func TestNormalizeJoinCode(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		input     string
+		expected  string
+		expectsOK bool
+	}{
+		{name: "normalizes lowercase and whitespace", input: " eb9ty3ts ", expected: "EB9TY3TS", expectsOK: true},
+		{name: "rejects short code", input: "ABC", expectsOK: false},
+		{name: "rejects ambiguous character", input: "ABCDEF0H", expectsOK: false},
+		{name: "rejects symbol", input: "ABCDEF-H", expectsOK: false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			actual, err := NormalizeJoinCode(test.input)
+			if test.expectsOK {
+				if err != nil {
+					t.Fatalf("NormalizeJoinCode() error = %v", err)
+				}
+				if actual != test.expected {
+					t.Fatalf("NormalizeJoinCode() = %q, want %q", actual, test.expected)
+				}
+				return
+			}
+			if !errors.Is(err, ErrInvalidJoinCode) {
+				t.Fatalf("NormalizeJoinCode() error = %v, want ErrInvalidJoinCode", err)
+			}
+		})
+	}
+}

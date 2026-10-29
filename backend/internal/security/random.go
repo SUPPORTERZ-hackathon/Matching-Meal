@@ -11,7 +11,6 @@ import (
 )
 
 const (
-	joinCodeAlphabet   = "23456789ABCDEFGHJKMNPQRSTVWXYZ"
 	uuidByteLength     = 16
 	uuidVersionIndex   = 6
 	uuidVariantIndex   = 8
@@ -41,13 +40,13 @@ func (RandomGenerator) UUID() (string, error) {
 
 func (RandomGenerator) JoinCode() (string, error) {
 	code := make([]byte, domain.RoomJoinCodeLength)
-	alphabetLength := big.NewInt(int64(len(joinCodeAlphabet)))
+	alphabetLength := big.NewInt(int64(len(domain.RoomJoinCodeAlphabet)))
 	for index := range code {
 		value, err := rand.Int(rand.Reader, alphabetLength)
 		if err != nil {
 			return "", fmt.Errorf("generate join code: %w", err)
 		}
-		code[index] = joinCodeAlphabet[value.Int64()]
+		code[index] = domain.RoomJoinCodeAlphabet[value.Int64()]
 	}
 	return string(code), nil
 }

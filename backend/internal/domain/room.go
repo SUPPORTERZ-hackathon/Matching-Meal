@@ -17,11 +17,13 @@ const (
 	RoomStatusDecided          RoomStatus = "decided"
 	RoomStatusExpired          RoomStatus = "expired"
 
-	RoomJoinCodeLength  = 8
-	NicknameMaxLength   = 20
-	SessionTokenBytes   = 32
-	InitialRoomVersion  = 1
-	DefaultRoomLifetime = 24 * time.Hour
+	RoomJoinCodeLength   = 8
+	RoomJoinCodeAlphabet = "23456789ABCDEFGHJKMNPQRSTVWXYZ"
+	MaxRoomParticipants  = 20
+	NicknameMaxLength    = 20
+	SessionTokenBytes    = 32
+	InitialRoomVersion   = 1
+	DefaultRoomLifetime  = 24 * time.Hour
 )
 
 type ParticipantRole string
@@ -31,7 +33,10 @@ const (
 	ParticipantRoleMember ParticipantRole = "member"
 )
 
-var ErrInvalidNickname = errors.New("invalid nickname")
+var (
+	ErrInvalidJoinCode = errors.New("invalid join code")
+	ErrInvalidNickname = errors.New("invalid nickname")
+)
 
 type Room struct {
 	ID        string
@@ -63,4 +68,17 @@ func NormalizeNickname(value string) (string, error) {
 		}
 	}
 	return nickname, nil
+}
+
+func NormalizeJoinCode(value string) (string, error) {
+	joinCode := strings.ToUpper(strings.TrimSpace(value))
+	if utf8.RuneCountInString(joinCode) != RoomJoinCodeLength {
+		return "", ErrInvalidJoinCode
+	}
+	for _, character := range joinCode {
+		if !strings.ContainsRune(RoomJoinCodeAlphabet, character) {
+			return "", ErrInvalidJoinCode
+		}
+	}
+	return joinCode, nil
 }
