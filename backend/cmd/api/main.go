@@ -11,6 +11,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"meal/backend/internal/repository/postgres"
+	"meal/backend/internal/security"
+	"meal/backend/internal/service"
+	httptransport "meal/backend/internal/transport/http"
 )
 
 func main() {
@@ -21,8 +26,12 @@ func main() {
 		log.Fatal("database configuration failed")
 	}
 	defer pool.Close()
+	randomGenerator := security.RandomGenerator{}
+	roomRepository := postgres.NewRoomRepository(pool)
+	roomService := service.NewRoomService(roomRepository, randomGenerator, service.SystemClock{})
+	roomHandler := httptransport.NewRoomHandler(roomService)
 	router := gin.New()
-	router.Use(gin.Logger(), gin.Recovery())
+	router.Use(httptransport.RequestID(randomGenerator), gin.Logger(), gin.Recovery())
 	router.GET("/api/health", func(c *gin.Context) {
 		probe, cancel := context.WithTimeout(c.Request.Context(), 2*time.Second)
 		defer cancel()
@@ -34,6 +43,7 @@ func main() {
 		}
 		c.JSON(http.StatusOK, gin.H{"status": "ok", "database": "ok"})
 	})
+	httptransport.RegisterRoomRoutes(router, roomHandler)
 	server := &http.Server{Addr: ":8080", Handler: router, ReadHeaderTimeout: 5 * time.Second}
 	go func() {
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
