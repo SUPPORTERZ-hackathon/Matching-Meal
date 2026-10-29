@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { GENRES } from "@/features/genre-vote/genres";
-import { GenreVoteScreen } from "@/features/genre-vote/genre-vote-screen";
+import { GenreVotePrototype } from "@/features/genre-vote/genre-vote-prototype";
 import { GENRE_ICON_PATH, GENRE_MANIFEST_PATH, GENRE_THEME_COLOR, PROTOTYPE_ROOM_ID } from "@/features/genre-vote/prototype-config";
 
 export const metadata: Metadata = {
@@ -13,5 +13,5 @@ export const metadata: Metadata = {
 export const viewport: Viewport = { themeColor: GENRE_THEME_COLOR };
 
 export default function GenreVotePage() {
-  return <GenreVoteScreen genres={GENRES} roomId={PROTOTYPE_ROOM_ID} />;
+  return <GenreVotePrototype genres={GENRES} roomId={PROTOTYPE_ROOM_ID} />;
 }
