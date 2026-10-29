@@ -1,0 +1,68 @@
+.background { display: flow-root; min-height: 100svh; background: var(--soft); }
+.page { --result-action-height: 160px; }
+.page > main { padding: 0; }
+.header > :last-child:not(:first-child) { margin-inline-start: auto; }
+.content { padding: 24px max(var(--meal-page-gutter), env(safe-area-inset-right, 0px)) calc(var(--result-action-height) + 24px) max(var(--meal-page-gutter), env(safe-area-inset-left, 0px)); }
+.hero { text-align: center; }
+.kicker { margin-bottom: 8px; color: var(--primary); font-size: .75rem; font-weight: 800; letter-spacing: .12em; }
+.hero h1 { font-size: 1.1875rem; font-weight: 400; line-height: 1.4; letter-spacing: -.04em; }
+.revealStage { --burst-radius: min(calc((100vw - 72px) / 2), 158px); position: relative; display: grid; place-items: center; width: 100%; height: 260px; isolation: isolate; }
+.popImage { position: relative; z-index: 1; width: min(210px, 70%); aspect-ratio: 1; border: 7px solid var(--card); border-radius: 50%; box-shadow: 0 18px 45px rgb(64 38 29 / 12%); animation: resultPop var(--result-pop-duration) linear both; }
+.heartBadge { position: absolute; right: 0; bottom: 4px; z-index: 1; display: grid; place-items: center; width: 23%; aspect-ratio: 1; border: 4px solid var(--card); border-radius: 50%; background: var(--primary); color: var(--primary-foreground); pointer-events: none; }
+.heartBadge svg { width: 64%; height: 64%; }
+.artwork { position: relative; width: 100%; height: 100%; overflow: clip; border-radius: 50%; background: var(--primary-pale); }
+.placeholder { position: absolute; inset: 0; display: grid; place-items: center; background: radial-gradient(circle at 25% 15%, #fffdf9, transparent 60%), linear-gradient(140deg, var(--primary-pale), #e9c5b6); }
+.plate { display: grid; place-items: center; width: 65%; aspect-ratio: 1; border: 1px solid rgb(255 255 255 / 85%); border-radius: 50%; outline: 8px solid rgb(255 255 255 / 25%); background: rgb(255 253 250 / 60%); color: var(--primary-dark); box-shadow: inset 0 0 0 8px rgb(255 255 255 / 20%); }
+.plate svg { width: 43%; height: 43%; }
+.photo { object-fit: cover; }
+.burstLayer { position: absolute; inset: 0; z-index: 2; overflow: clip; pointer-events: none; animation: burstLifetime var(--result-burst-duration) linear; }
+.burstPiece { position: absolute; top: calc(50% - var(--burst-size) / 2); left: calc(50% - var(--burst-size) / 2); width: var(--burst-size); height: var(--burst-size); border-radius: 2px; background: var(--burst-color); animation: resultBurst var(--burst-duration) var(--burst-delay) ease-out both; }
+.burstPiece[data-shape="circle"] { border-radius: 50%; }
+.burstPiece[data-shape="rectangle"] { width: calc(var(--burst-size) * .6); height: calc(var(--burst-size) * 1.2); border-radius: 1px; }
+.genreName { margin-block: 4px; color: var(--primary); font-size: 2.125rem; font-weight: 500; line-height: 1.4; letter-spacing: -.03em; overflow-wrap: anywhere; }
+.decidedMessage { color: var(--muted-foreground); font-size: .8125rem; line-height: 1.8; }
+.rankingCard { margin-top: 10px; }
+.rankingCard h2 { font-size: .875rem; font-weight: 500; }
+.rankings { display: grid; gap: 16px; margin-top: 16px; list-style: none; }
+.rank { display: grid; grid-template-columns: 24px minmax(0, 1fr); align-items: center; gap: 9px; }
+.rankNumber { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--soft); font-size: .6875rem; font-weight: 800; }
+.rank:first-child .rankNumber { background: #f6b63d; color: var(--primary-foreground); }
+.rankDetail { min-width: 0; }
+.rankDetail p { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-size: .8125rem; }
+.rankDetail strong { min-width: 0; font-weight: 700; overflow-wrap: anywhere; }
+.rankDetail b { flex-shrink: 0; font-size: .75rem; font-weight: 700; }
+.rankTrack { height: 4px; margin-top: 6px; overflow: clip; border-radius: 99px; background: var(--border); }
+.rankTrack span { display: block; height: 100%; border-radius: inherit; background: var(--primary); }
+.prototypeNote { margin-top: 12px; color: var(--muted-foreground); font-size: .75rem; line-height: 1.8; text-align: center; }
+.emptyRanking, .invalid p { margin-top: 12px; color: var(--muted-foreground); font-size: .875rem; line-height: 1.8; }
+.invalid h1 { font-size: 1.25rem; }
+.fixedAction { position: fixed; z-index: 30; inset-inline: 0; bottom: 0; width: 100%; max-width: var(--meal-max-width); margin-inline: auto; background: linear-gradient(transparent, var(--background) 16%); }
+.actionLabel { min-width: 0; }
+.actionNote { margin-top: 10px; color: var(--muted-foreground); font-size: .6875rem; line-height: 1.6; text-align: center; overflow-wrap: anywhere; }
+.previewControls { width: 100%; min-width: 0; margin-top: 32px; }
+.previewControls h2 { margin-bottom: 12px; font-weight: 700; }
+.previewControls p { margin-block: 12px; color: var(--muted-foreground); font-size: .875rem; line-height: 1.8; }
+.previewControls label { display: grid; gap: 8px; font-size: .875rem; }
+.previewControls select { width: 100%; min-height: 44px; margin-top: 8px; padding: 10px; border: 1px solid var(--border); border-radius: 12px; background: var(--card); font: inherit; }
+.previewActions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.previewActions button { flex: 1 1 auto; min-height: 44px; height: auto; white-space: normal; overflow-wrap: anywhere; }
+
+@keyframes resultPop {
+  0% { opacity: 0; transform: scale(.2); animation-timing-function: cubic-bezier(.16,.75,.3,1); }
+  25% { opacity: 1; }
+  52% { transform: scale(1.15); animation-timing-function: ease-in-out; }
+  76% { transform: scale(.94); animation-timing-function: ease-out; }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes burstLifetime { from { opacity: 1; } to { opacity: 1; } }
+@keyframes resultBurst {
+  0% { opacity: 0; transform: translate3d(calc(var(--burst-x) * var(--burst-radius) * .15),calc(var(--burst-y) * 120px * .15),0) rotate(0deg) scale(.6); }
+  14% { opacity: 1; }
+  62% { opacity: .95; transform: translate3d(calc(var(--burst-x) * var(--burst-radius) * .92),calc(var(--burst-y) * 120px * .92),0) rotate(calc(var(--burst-rotation) * .8)) scale(1); }
+  100% { opacity: 0; transform: translate3d(calc(var(--burst-x) * var(--burst-radius)),calc(var(--burst-y) * 120px),0) rotate(var(--burst-rotation)) scale(.9); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .popImage { animation: none; }
+  .burstLayer { display: none; animation: none; }
+  .burstPiece { animation: none; }
+}

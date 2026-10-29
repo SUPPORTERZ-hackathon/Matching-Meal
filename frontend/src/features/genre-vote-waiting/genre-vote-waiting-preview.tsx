@@ -1,20 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { BottomAction } from "@/components/common/bottom-action";
 import { Button } from "@/components/ui/button";
 import { PROTOTYPE_ROOM_ID } from "@/features/genre-vote/prototype-config";
 import { GenreVoteWaitingScreen } from "./genre-vote-waiting-screen";
 import { MOCK_WAITING_PARTICIPANTS } from "./prototype-data";
 import type { WaitingParticipant } from "./waiting-state";
+import { summarizeParticipants } from "./waiting-state";
+import { GENRE_RESULT_PATH } from "@/features/genre-result/prototype-data";
 import styles from "./genre-vote-waiting.module.css";
 
 const MANY_PARTICIPANT_COUNT = 12;
 const PREVIEW_LONG_ROOM_ID = "prototype-room-with-a-long-identifier-2481";
 
 export function GenreVoteWaitingPreview() {
+  const router = useRouter();
   const [participants, setParticipants] = useState<readonly WaitingParticipant[]>(MOCK_WAITING_PARTICIPANTS);
   const [roomId, setRoomId] = useState<string>(PROTOTYPE_ROOM_ID);
+  const [revealRequested, setRevealRequested] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (revealRequested && summarizeParticipants(participants).allComplete) router.push(GENRE_RESULT_PATH);
+  }, [participants, revealRequested, router]);
 
   function showCompletedCount(count: number) {
     setParticipants(MOCK_WAITING_PARTICIPANTS.map((participant, index) => ({ ...participant, state: index < count ? "complete" : "waiting" })));
@@ -47,6 +56,7 @@ export function GenreVoteWaitingPreview() {
             ))}
           </div>
           <div className={styles.previewActions}>
+            <Button type="button" variant="primary" onClick={() => { showCompletedCount(MOCK_WAITING_PARTICIPANTS.length); setRevealRequested(true); }}>全員完了から結果へ進む（モック）</Button>
             <Button type="button" variant="outline" onClick={showManyParticipants}>多数・長文を表示</Button>
             <Button type="button" variant="outline" onClick={() => setParticipants([])}>参加者なしを表示</Button>
             <Button type="button" variant="outline" onClick={() => { setParticipants(MOCK_WAITING_PARTICIPANTS); setRoomId(PROTOTYPE_ROOM_ID); }}>初期表示に戻す</Button>
