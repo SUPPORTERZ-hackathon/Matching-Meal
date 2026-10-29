@@ -1,12 +1,18 @@
 # ジャンル投票画面・UIプロトタイプ
 
 - Status: Verified
-- Last updated: 2026-10-28
+- Last updated: 2026-10-29
 - Related issue: None
-- Related specifications: ../components/common-ui.md, ../themes/design-system.md
+- Related specifications: ../components/common-ui.md, ../themes/design-system.md, genre-vote-waiting.md
 - Implementation files: frontend/src/app/genre-vote/, frontend/src/features/genre-vote/, frontend/public/genres/, frontend/public/genre-vote/
 
 ## 目的と対象範囲
+
+### 待機画面への接続（2026-10-29）
+
+今回のユーザー指示により、`/genre-vote`では16件の投票退場完了後に`/genre-vote-waiting`へreplace遷移する。接続・再読込・モックの契約は[待機画面仕様](genre-vote-waiting.md)を正とする。追加依頼により旧完了表示の疑似集計/投票記録/再試行/完了後undoは撤去し、onCompleteを必須にする。投票中のundoは維持する。本節は後述の「待機遷移は対象外」「完了表示の集計」を今回のプロトタイプ接続に限り更新する。投票内容は転送/永続化せず、既存のアンマウントでの初期化を維持する。
+
+- Progress：接続と旧完了画面撤去を実装・検証済み。Docker lint/typecheck/build、既存7件と待機4件、左右スワイプ/ボタン/投票中undo/16件後の直接遷移・タッチ/縦スクロールを確認。詳細は待機画面の最終検証結果を参照。既存スワイプと投票/undoのhookは変更していない。
 
 2026-10-28のユーザーの実装依頼を承認根拠とし、指定16ジャンルを左右スワイプ・ボタンで選べる表示プロトタイプを実装する。今回指定された方向・進捗・確定条件を採用し、技術的な初期値を以下に記録する。共通UIの責務や既存Propsは変更しない。
 

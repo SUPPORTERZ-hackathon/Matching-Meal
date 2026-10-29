@@ -8,7 +8,8 @@
     "start": "NEXT_BUILD_DIR=.next-build next start --hostname 0.0.0.0",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test:genre-vote": "node --experimental-strip-types --test src/features/genre-vote/*.test.mjs"
+    "test:genre-vote": "node --experimental-strip-types --test src/features/genre-vote/*.test.mjs",
+    "test:genre-vote-waiting": "node --experimental-strip-types --test src/features/genre-vote-waiting/*.test.mjs"
   },
   "dependencies": {
     "@radix-ui/react-slot": "1.5.0",

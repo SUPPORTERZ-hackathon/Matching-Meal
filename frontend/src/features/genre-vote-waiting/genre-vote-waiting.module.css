@@ -1,0 +1,137 @@
+.background {
+  display: flow-root;
+  min-height: 100svh;
+  background: var(--soft);
+}
+
+.page > main { padding: 0; }
+.header > :last-child:not(:first-child) { margin-inline-start: auto; }
+
+.content {
+  padding: 24px max(var(--meal-page-gutter), env(safe-area-inset-right, 0px)) max(32px, env(safe-area-inset-bottom, 0px)) max(var(--meal-page-gutter), env(safe-area-inset-left, 0px));
+}
+
+.hero { padding-top: 34px; text-align: center; }
+.successRing {
+  --success-ring-size: clamp(5.75rem, 26.25vw, 6.5625rem);
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--success-ring-size);
+  height: var(--success-ring-size);
+  margin: 0 auto 22px;
+  isolation: isolate;
+}
+.successRing::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: 50%;
+  background: var(--primary-pale);
+  content: "";
+  animation: haloBreathe var(--halo-cycle) var(--halo-delay) ease-in-out infinite both;
+}
+
+.successMark {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: calc(var(--success-ring-size) * 66 / 105);
+  height: calc(var(--success-ring-size) * 66 / 105);
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  box-shadow: 0 9px 20px color-mix(in srgb, var(--primary) 20%, transparent);
+  animation: successAppear 300ms ease-out both;
+}
+.successMark svg { width: 2rem; height: 2rem; }
+.confettiLayer {
+  position: absolute;
+  inset: -26px -34px -20px;
+  z-index: 2;
+  overflow: clip;
+  pointer-events: none;
+  animation: celebrationLifetime var(--celebration-duration) linear;
+}
+.confettiPiece {
+  position: absolute;
+  top: 42%;
+  left: calc(50% - var(--confetti-size) / 2);
+  width: var(--confetti-size);
+  height: var(--confetti-size);
+  border-radius: 2px;
+  background: var(--confetti-color);
+  animation: confettiScatter var(--confetti-duration) var(--confetti-delay) linear both;
+}
+.confettiPiece[data-shape="circle"] { border-radius: 50%; }
+.confettiPiece[data-shape="rectangle"] { width: calc(var(--confetti-size) * .6); height: calc(var(--confetti-size) * 1.2); border-radius: 1px; }
+.kicker {
+  margin-bottom: 12px;
+  color: var(--primary);
+  font-size: .75rem;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+.hero h1 { font-size: 1.625rem; font-weight: 500; line-height: 1.4; letter-spacing: -.04em; }
+.hero h1 span { display: block; }
+.description { margin-top: 12px; color: var(--muted-foreground); font-size: .875rem; line-height: 1.8; }
+
+.statusCard { margin-top: 26px; }
+.statusCount { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
+.count { display: flex; flex-wrap: wrap; align-items: baseline; }
+.count strong { font-size: 2.125rem; font-weight: 700; line-height: 1.5; }
+.count span { color: var(--muted-foreground); font-size: 1rem; }
+.remaining { padding: 7px 10px; border-radius: 99px; background: var(--primary-pale); color: var(--primary); font-size: .875rem; font-weight: 700; }
+.progressTrack { height: 9px; margin: 14px 0 20px; overflow: clip; border-radius: 99px; background: var(--border); }
+.progressTrack > span { display: block; height: 100%; border-radius: inherit; background: var(--primary); transition: width 300ms ease; }
+.participants { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; list-style: none; }
+.participants li { min-width: 0; }
+.participant { display: block; }
+/* 共通部品の名前・状態は読み上げに残し、画像08のイニシャル表示に合わせる。 */
+.participant > :last-child { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.empty { color: var(--muted-foreground); font-size: .875rem; line-height: 1.8; text-align: center; }
+
+.previewControls { width: 100%; max-width: var(--meal-max-width); margin: 24px auto; padding: 0 max(var(--meal-page-gutter), env(safe-area-inset-right, 0px)) max(24px, env(safe-area-inset-bottom, 0px)) max(var(--meal-page-gutter), env(safe-area-inset-left, 0px)); }
+.previewControls h2 { font-size: 1rem; font-weight: 700; }
+.previewControls p { margin-block: 8px 16px; color: var(--muted-foreground); font-size: .875rem; line-height: 1.8; }
+.previewActions { display: flex; flex-wrap: wrap; gap: 8px; margin-block: 12px; }
+.previewActions button { flex: 1 1 auto; min-height: 44px; height: auto; white-space: normal; overflow-wrap: anywhere; }
+.previewBottom { padding: 0; }
+
+@keyframes successAppear { from { opacity: 0; transform: scale(.94); } to { opacity: 1; transform: scale(1); } }
+@keyframes haloBreathe { 0%, 100% { opacity: .9; transform: scale(var(--halo-min-scale)); } 50% { opacity: 1; transform: scale(var(--halo-max-scale)); } }
+@keyframes celebrationLifetime { from { opacity: 1; } to { opacity: 1; } }
+@keyframes confettiScatter {
+  0% {
+    opacity: 0;
+    transform: translate3d(var(--confetti-start-x),var(--confetti-start-y),0) rotate(0deg) scale(.6);
+    animation-timing-function: cubic-bezier(.16,.7,.3,1);
+  }
+  12% { opacity: 1; }
+  36% {
+    transform: translate3d(calc(var(--confetti-x) * .85),var(--confetti-rise),0) rotate(calc(var(--confetti-rotation) * .35)) scale(1);
+    animation-timing-function: cubic-bezier(.45,0,.75,.6);
+  }
+  62% {
+    transform: translate3d(calc(var(--confetti-x) + var(--confetti-sway)),-6px,0) rotate(calc(var(--confetti-rotation) * .65)) scale(1);
+    animation-timing-function: ease-in;
+  }
+  82% {
+    opacity: .9;
+    transform: translate3d(calc(var(--confetti-x) - var(--confetti-sway) * .5),calc(var(--confetti-fall) * .45),0) rotate(calc(var(--confetti-rotation) * .85)) scale(1);
+    animation-timing-function: ease-in;
+  }
+  100% { opacity: 0; transform: translate3d(calc(var(--confetti-x) + var(--confetti-sway) * .4),var(--confetti-fall),0) rotate(var(--confetti-rotation)) scale(1); }
+}
+
+@media (max-width: 360px) {
+  .hero { padding-top: 24px; }
+  .hero h1 { font-size: 1.5rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .successRing::before, .successMark { animation: none; }
+  .confettiLayer { display: none; animation: none; }
+  .confettiPiece { animation: none; }
+  .progressTrack > span { transition: none; }
+}

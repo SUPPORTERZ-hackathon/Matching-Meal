@@ -81,27 +81,8 @@
 .undoButton { display: flex; flex-direction: column; gap: 5px; width: 100%; height: auto; min-height: 64px; padding: 8px 4px; border-radius: 12px; color: var(--muted-foreground); font-size: 11px; font-weight: 600; line-height: 1.4; white-space: normal; transition-property: background-color, color, box-shadow, transform; }
 .undoButton svg { width: 22px; height: 22px; }
 .undoButton:disabled { opacity: .28; }
-.prototypeNote { margin-top: 8px; color: var(--muted-foreground); font-size: 10px; line-height: 1.8; text-align: center; }
-
-.completion { padding: 40px var(--vote-gutter-right) max(24px, env(safe-area-inset-bottom, 0px)) var(--vote-gutter-left); text-align: center; }
-.completionActions { display: grid; gap: 12px; }
+.handoff { padding: 40px var(--vote-gutter-right) max(24px, env(safe-area-inset-bottom, 0px)) var(--vote-gutter-left); color: var(--muted-foreground); text-align: center; }
 .empty { margin: 24px var(--vote-gutter-right) 24px var(--vote-gutter-left); }
-.successRing { display: grid; width: 105px; height: 105px; margin: 0 auto 22px; place-items: center; border: 18px solid var(--primary-pale); border-radius: 50%; background: var(--primary); color: var(--primary-foreground); }
-.successRing svg { width: 34px; height: 34px; }
-.completion h1 { font-size: 26px; line-height: 1.5; letter-spacing: -.04em; outline-offset: 6px; }
-.summary { margin-block: 26px 14px; }
-.completedTotal { font-size: 34px; font-weight: 700; }
-.completedTotal span { font-size: 13px; font-weight: 400; color: var(--muted-foreground); }
-.summaryCounts { display: grid; gap: 12px; margin-top: 18px; text-align: left; }
-.summaryCounts p { display: flex; align-items: center; gap: 8px; font-size: 13px; }
-.summaryCounts svg { width: 18px; height: 18px; color: var(--primary-dark); }
-.summaryCounts strong { margin-left: auto; }
-.voteRecords { margin-bottom: 22px; text-align: left; font-size: 13px; }
-.voteRecords summary { cursor: pointer; font-weight: 700; }
-.voteRecords ul { margin-top: 14px; }
-.voteRecords li { display: flex; justify-content: space-between; gap: 12px; padding-block: 10px; border-top: 1px solid var(--border); }
-.voteRecords strong { flex-shrink: 0; color: var(--muted-foreground); font-size: 11px; }
-.voteRecords strong[data-choice="like"] { color: var(--primary-dark); }
 
 @media (prefers-reduced-motion: reduce) {
   .genreCard { transform: translate3d(var(--drag-x), var(--drag-y), 0); }
