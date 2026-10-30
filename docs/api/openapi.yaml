@@ -403,10 +403,32 @@ components:
 
     CreateRoomRequest:
       type: object
-      required: [nickname]
+      required: [nickname, searchLocation, searchRange]
       properties:
         nickname:
           $ref: "#/components/schemas/Nickname"
+        searchLocation:
+          $ref: "#/components/schemas/SearchLocation"
+        searchRange:
+          type: integer
+          minimum: 1
+          maximum: 5
+          description: Hot Pepper Gourmet APIの検索範囲。1=300m、2=500m、3=1km、4=2km、5=3km。
+
+    SearchLocation:
+      type: object
+      required: [latitude, longitude]
+      properties:
+        latitude:
+          type: number
+          format: double
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          format: double
+          minimum: -180
+          maximum: 180
 
     JoinRoomRequest:
       type: object

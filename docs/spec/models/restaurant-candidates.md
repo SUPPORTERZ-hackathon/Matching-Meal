@@ -4,7 +4,7 @@
 - Last updated: 2026-10-31
 - Related issue: None
 - Related specifications: ../services/restaurant-search.md, rooms-and-participants.md, genre-votes.md, ../screens/room-create-screen.md, ../screens/restaurant-vote.md
-- Implementation files: Not implemented
+- Implementation files: ../../backend/internal/domain/room.go, ../../backend/internal/repository/room.go, ../../backend/internal/repository/postgres/room.go, ../../backend/migrations/000004_create_room_search_conditions.up.sql, ../../backend/migrations/000004_create_room_search_conditions.down.sql
 
 ## 目的と対象範囲
 
@@ -189,7 +189,9 @@ None。最大100件を抽選母集団とすること、最大5件を重複なし
 - 完了: Context7が利用できないため、Hot Pepper Gourmet公式APIリファレンスと利用案内を一次資料として確認。
 - 完了: 現在地とrangeの保存、最大100件から最大5件の重複なし抽選、候補永続化、状態遷移、競合時の再抽選防止を設計。
 - 完了: ユーザーが最大100件から最大5件を抽選することと、ジャンル検索条件を承認。
-- 残作業: 実装、検証、OpenAPI更新。
+- 完了: `RoomSearchCondition`の検証、DB制約、ルーム・ホストとの同時保存を実装し、単体・実PostgreSQL統合テストに成功。
+- 検証: マイグレーションupとup再実行に成功。downは実行許可が得られなかったため未検証。
+- 残作業: 候補店舗モデル、候補抽選、候補保存、検索状態遷移の実装と検証。
 - ブロッカー: なし。
 - 関連Issue・PR・コミット: None。
 

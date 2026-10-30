@@ -50,6 +50,13 @@ type CreateRoomResult struct {
 	SessionToken string
 }
 
+type CreateRoomInput struct {
+	Nickname    string
+	Latitude    float64
+	Longitude   float64
+	SearchRange int
+}
+
 type JoinRoomResult struct {
 	Room         domain.Room
 	Participant  domain.Participant
@@ -66,11 +73,15 @@ func NewRoomService(roomRepository repository.RoomRepository, generator security
 	return &RoomService{repository: roomRepository, generator: generator, clock: clock}
 }
 
-func (service *RoomService) Create(ctx context.Context, rawNickname string) (CreateRoomResult, error) {
+func (service *RoomService) Create(ctx context.Context, input CreateRoomInput) (CreateRoomResult, error) {
 	operationContext, cancel := context.WithTimeout(ctx, roomOperationTimeout)
 	defer cancel()
 
-	nickname, err := domain.NormalizeNickname(rawNickname)
+	nickname, err := domain.NormalizeNickname(input.Nickname)
+	if err != nil {
+		return CreateRoomResult{}, err
+	}
+	searchCondition, err := domain.NewRoomSearchCondition("", input.Latitude, input.Longitude, input.SearchRange)
 	if err != nil {
 		return CreateRoomResult{}, err
 	}
@@ -89,6 +100,7 @@ func (service *RoomService) Create(ctx context.Context, rawNickname string) (Cre
 	}
 
 	createdAt := service.clock.Now()
+	searchCondition.RoomID = roomID
 	for attempt := 0; attempt < joinCodeGenerationAttempts; attempt++ {
 		joinCode, err := service.generator.JoinCode()
 		if err != nil {
@@ -108,7 +120,7 @@ func (service *RoomService) Create(ctx context.Context, rawNickname string) (Cre
 			Role:     domain.ParticipantRoleHost,
 		}
 		storedRoom, storedHost, err := service.repository.Create(operationContext, repository.CreateRoomParams{
-			Room: room, Host: host, SessionTokenHash: sessionTokenHash,
+			Room: room, Host: host, SearchCondition: searchCondition, SessionTokenHash: sessionTokenHash,
 		})
 		if errors.Is(err, repository.ErrJoinCodeConflict) {
 			continue

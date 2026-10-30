@@ -33,7 +33,7 @@ func TestGenreVoteSubmissionRollbackIntegration(t *testing.T) {
 	t.Cleanup(pool.Close)
 	roomRepository := roompostgres.NewRoomRepository(pool)
 	roomService := service.NewRoomService(roomRepository, security.RandomGenerator{}, service.SystemClock{})
-	created, err := roomService.Create(ctx, "ロールバック検証")
+	created, err := roomService.Create(ctx, service.CreateRoomInput{Nickname: "ロールバック検証", Latitude: 35.658, Longitude: 139.7016, SearchRange: 3})
 	if err != nil {
 		t.Fatalf("create room: %v", err)
 	}
@@ -104,7 +104,7 @@ func TestGenreVotingConcurrencyIntegration(t *testing.T) {
 	roomService := service.NewRoomService(roomRepository, randomGenerator, service.SystemClock{})
 	genreService := service.NewGenreVotingService(genreRepository, roomRepository, fixedIndexSelector{index: 1}, service.SystemClock{})
 
-	created, err := roomService.Create(ctx, "同名")
+	created, err := roomService.Create(ctx, service.CreateRoomInput{Nickname: "同名", Latitude: 35.658, Longitude: 139.7016, SearchRange: 3})
 	if err != nil {
 		t.Fatalf("create room: %v", err)
 	}

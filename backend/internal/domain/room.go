@@ -2,6 +2,7 @@ package domain
 
 import (
 	"errors"
+	"math"
 	"strings"
 	"time"
 	"unicode"
@@ -35,9 +36,10 @@ const (
 )
 
 var (
-	ErrInvalidJoinCode = errors.New("invalid join code")
-	ErrInvalidNickname = errors.New("invalid nickname")
-	ErrInvalidRoomID   = errors.New("invalid room id")
+	ErrInvalidJoinCode        = errors.New("invalid join code")
+	ErrInvalidNickname        = errors.New("invalid nickname")
+	ErrInvalidRoomID          = errors.New("invalid room id")
+	ErrInvalidSearchCondition = errors.New("invalid search condition")
 )
 
 type Room struct {
@@ -56,6 +58,29 @@ type Participant struct {
 	Nickname string
 	Role     ParticipantRole
 	JoinedAt time.Time
+}
+
+type RoomSearchCondition struct {
+	RoomID    string
+	Latitude  float64
+	Longitude float64
+	Range     int16
+	CreatedAt time.Time
+}
+
+func NewRoomSearchCondition(roomID string, latitude float64, longitude float64, searchRange int) (RoomSearchCondition, error) {
+	if math.IsNaN(latitude) || math.IsInf(latitude, 0) || latitude < -90 || latitude > 90 {
+		return RoomSearchCondition{}, ErrInvalidSearchCondition
+	}
+	if math.IsNaN(longitude) || math.IsInf(longitude, 0) || longitude < -180 || longitude > 180 {
+		return RoomSearchCondition{}, ErrInvalidSearchCondition
+	}
+	if searchRange < 1 || searchRange > 5 {
+		return RoomSearchCondition{}, ErrInvalidSearchCondition
+	}
+	return RoomSearchCondition{
+		RoomID: roomID, Latitude: latitude, Longitude: longitude, Range: int16(searchRange),
+	}, nil
 }
 
 func NormalizeNickname(value string) (string, error) {

@@ -1,10 +1,10 @@
 # ルーム作成・参加・投票開始サービス
 
-- Status: Approved
+- Status: Verified
 - Last updated: 2026-10-31
 - Related issue: None
 - Related specifications: ../models/rooms-and-participants.md, ../models/restaurant-candidates.md, restaurant-search.md, ../screens/genre-vote.md, ../screens/room-create-screen.md
-- Implementation files: backend/cmd/api/main.go, backend/internal/service/room.go, backend/internal/transport/http/room.go, backend/internal/transport/http/request_id.go
+- Implementation files: backend/cmd/api/main.go, backend/internal/domain/room.go, backend/internal/repository/room.go, backend/internal/repository/postgres/room.go, backend/internal/service/room.go, backend/internal/transport/http/room.go, backend/internal/transport/http/request_id.go, backend/migrations/000004_create_room_search_conditions.up.sql, backend/migrations/000004_create_room_search_conditions.down.sql, docs/api/openapi.yaml
 
 ## 目的と対象範囲
 
@@ -273,7 +273,10 @@ None。既存API形状、人数、期限、固定方式に加え、ルーム作�
 - 検証: 実PostgreSQLで参加と開始を同時実行し、ロック取得順に応じて参加者集合が確定することを確認。開始の再送でversionが増えないこと、開始後の参加が409になることを確認。
 - 検証: 実HTTPで作成、参加、開始、再送、開始後参加拒否、ヘルスチェックを確認。`go test ./...`、`go vet ./...`、`go test -race ./...`に成功し、AuthorizationトークンがGinのリクエストログへ出ないことを自動テストで確認。
 - 承認: ルーム作成リクエストへ現在地と検索範囲を必須追加し、ルーム・ホストと同じトランザクションで検索条件を保存する。
-- 残作業: 現在地・検索範囲保存の実装と検証。PR作成は未実施。
+- 完了: 現在地・検索範囲のDomain検証、ルーム・ホストとのトランザクション保存、HTTPエラー、OpenAPI契約、新規マイグレーションを実装。
+- 検証: Docker内の`go test ./...`、`go vet ./...`、`go test -race ./...`、実PostgreSQL統合テスト、マイグレーションupとup再実行、OpenAPI検証に成功。
+- 未実施: マイグレーションdownは実行許可が得られなかったため未検証。
+- 残作業: 店舗検索サービスの実装。PR作成は未実施。
 - ブロッカー: なし。
 - 関連Issue・PR・コミット: `ae8f14ca`（ルーム状態取得API）、本変更コミット（ジャンル投票開始API）、PR未作成。
 

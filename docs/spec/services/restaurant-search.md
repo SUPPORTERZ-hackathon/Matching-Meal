@@ -4,7 +4,7 @@
 - Last updated: 2026-10-31
 - Related issue: None
 - Related specifications: ../models/restaurant-candidates.md, ../models/rooms-and-participants.md, ../models/genre-votes.md, room-lifecycle.md, ../screens/room-create-screen.md, ../screens/restaurant-vote.md
-- Implementation files: Not implemented
+- Implementation files: ../../backend/internal/domain/room.go, ../../backend/internal/repository/room.go, ../../backend/internal/repository/postgres/room.go, ../../backend/internal/service/room.go, ../../backend/internal/transport/http/room.go, ../../backend/migrations/000004_create_room_search_conditions.up.sql, ../../backend/migrations/000004_create_room_search_conditions.down.sql, ../../api/openapi.yaml
 
 ## 目的と対象範囲
 
@@ -258,7 +258,9 @@ None。上記ジャンル検索条件を採用することはユーザー承認�
 - 完了: Context7が利用できないため、Hot Pepper Gourmet公式APIリファレンス・利用案内を一次資料として確認。
 - 完了: 現在地検索、最大100件から最大5件の抽選、候補保存、取得、状態遷移、冪等性、エラー契約を設計。
 - 完了: ユーザーがジャンル検索条件と最大100件から最大5件を抽選する方針を承認。
-- 残作業: 実装、OpenAPI更新、検証。
+- 完了: 最初の実装単位としてルーム作成時の現在地・検索範囲検証、トランザクション保存、HTTP契約、OpenAPI更新を実装・検証。
+- 検証: Docker内のGoテスト、vet、race、実PostgreSQL統合テスト、マイグレーションupと再up、OpenAPI検証に成功。downは実行許可が得られず未実施。
+- 残作業: Hot Pepper Client、候補抽選・保存、検索・取得API、状態遷移の実装と検証。
 - ブロッカー: なし。
 - 関連Issue・PR・コミット: None。
 
