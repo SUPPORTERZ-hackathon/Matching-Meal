@@ -1,0 +1,264 @@
+
+.background {
+  display: flow-root;
+  min-height: 100svh;
+  background: var(--soft);
+}
+
+.page {
+  --room-gutter-left: max(var(--meal-page-gutter), env(safe-area-inset-left, 0px));
+  --room-gutter-right: max(var(--meal-page-gutter), env(safe-area-inset-right, 0px));
+}
+
+.page > main {
+  padding: 0;
+}
+
+.header > :last-child:not(:first-child) {
+  margin-inline-start: auto;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 28px var(--room-gutter-right) 32px var(--room-gutter-left);
+}
+
+.card {
+  margin-bottom: 16px;
+}
+
+.card:last-child {
+  margin-bottom: 0;
+}
+
+.kicker {
+  margin-bottom: 5px;
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.title {
+  font-size: 28px;
+  letter-spacing: -0.04em;
+  line-height: 1.4;
+}
+
+.description {
+  margin-top: 5px;
+  margin-bottom: 28px;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.required {
+  display: inline-block;
+  margin-left: 6px;
+  color: #ed3b33;
+  background: #fff0ed;
+  border-radius: 5px;
+  padding: 2px 6px;
+  font-size: 9px;
+  font-weight: 700;
+  vertical-align: 1px;
+}
+
+.counter {
+  font-size: 11px;
+  color: #746d69;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.field > label,
+.radiusHeading label {
+  color: var(--foreground);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.field input[type="text"] {
+  width: 100%;
+  min-width: 0;
+  height: 52px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  outline: none;
+  background: var(--card);
+  color: var(--foreground);
+  font-size: 14px;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.field input[type="text"]::placeholder {
+  color: var(--muted-foreground);
+  opacity: 0.7;
+}
+
+.field input[type="text"]:focus-visible {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgb(237 59 51 / 12%);
+}
+
+.footerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+}
+
+.help {
+  font-size: 10px;
+  color: #746d69;
+  margin: 0;
+}
+
+.radiusHelpBox {
+  background-color: #fff0ed; 
+  color: #ed3b33;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+  padding: 12px;
+  border-radius: 12px;
+}
+
+.counter {
+  font-size:10px;
+  color: #746d69;
+  flex-shrink: 0;
+}
+
+.locationInput {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.locationInput > svg {
+  position: absolute;
+  left: 13px;
+  width: 19px;
+  height: 19px;
+  color: var(--primary);
+  pointer-events: none;
+}
+
+.locationInput input[type="text"] {
+  padding-left: 42px;
+  padding-right: 44px;
+}
+
+.clearButton {
+  position: absolute;
+  right: 8px;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+
+.clearButton:hover {
+  background: var(--soft);
+}
+
+.clearButton svg {
+  width: 17px;
+  height: 17px;
+}
+
+.currentLocationButton {
+  align-self: center;
+  height: auto;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  color: hsl(3, 84%, 56%);
+}
+
+.currentLocationButton svg {
+  width: 14px;
+  height: 14px;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.radiusHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.radiusHeading strong {
+  color: var(--primary);
+  font-size: 18px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.radiusSlider {
+  width: 100%;
+  height: 24px;
+  margin: 4px 0;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+.radiusLabels {
+  display: flex;
+  justify-content: space-between;
+  gap: 2px;
+  color: var(--muted-foreground);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.radiusLabels span {
+  text-align: center;
+}
+
+.actions {
+  padding: 8px var(--room-gutter-right)
+    max(20px, env(safe-area-inset-bottom, 0px))
+    var(--room-gutter-left);
+}
+
+.valid {
+  color: #16a34a;
+  background: #dcfce7;
+}
+
+@media (max-width: 360px) {
+  .content {
+    padding-top: 20px;
+  }
+
+  .title {
+    font-size: 23px;
+  }
+
+  .radiusLabels {
+    font-size: 9px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .field input[type="text"] {
+    transition: none;
+  }
+}
