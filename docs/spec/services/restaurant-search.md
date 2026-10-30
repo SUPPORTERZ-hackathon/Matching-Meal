@@ -1,10 +1,10 @@
 # 現在地による店舗候補検索サービス
 
-- Status: Approved
+- Status: Implemented
 - Last updated: 2026-10-31
 - Related issue: None
 - Related specifications: ../models/restaurant-candidates.md, ../models/rooms-and-participants.md, ../models/genre-votes.md, room-lifecycle.md, ../screens/room-create-screen.md, ../screens/restaurant-vote.md
-- Implementation files: ../../backend/internal/domain/room.go, ../../backend/internal/repository/room.go, ../../backend/internal/repository/postgres/room.go, ../../backend/internal/service/room.go, ../../backend/internal/transport/http/room.go, ../../backend/migrations/000004_create_room_search_conditions.up.sql, ../../backend/migrations/000004_create_room_search_conditions.down.sql, ../../api/openapi.yaml
+- Implementation files: ../../backend/cmd/api/main.go, ../../backend/internal/domain/room.go, ../../backend/internal/domain/restaurant_candidate.go, ../../backend/internal/hotpepper/client.go, ../../backend/internal/repository/room.go, ../../backend/internal/repository/restaurant_search.go, ../../backend/internal/repository/postgres/room.go, ../../backend/internal/repository/postgres/restaurant_search.go, ../../backend/internal/service/room.go, ../../backend/internal/service/restaurant_search.go, ../../backend/internal/transport/http/room.go, ../../backend/internal/transport/http/restaurant_search.go, ../../backend/migrations/000004_create_room_search_conditions.up.sql, ../../backend/migrations/000004_create_room_search_conditions.down.sql, ../../backend/migrations/000005_create_restaurant_candidates.up.sql, ../../backend/migrations/000005_create_restaurant_candidates.down.sql, ../../api/openapi.yaml
 
 ## 目的と対象範囲
 
@@ -93,7 +93,7 @@
 | `lat` | 保存済みlatitude |
 | `lng` | 保存済みlongitude |
 | `range` | 保存済み1〜5 |
-| `count` | 100 |
+| `count` | 1検索のジャンルは100、2検索の複合ジャンルは各50 |
 | `start` | 1 |
 | `format` | json |
 | `datum` | world |
@@ -124,7 +124,8 @@
 | `cafe` | `genre=G014` |
 
 - 1ジャンルにつき外部検索は最大2回とする。
-- 2検索の場合は各検索へ同じ位置・range・countを指定し、レスポンスを検索定義順に結合して店舗IDで重複除外した後、全体から最大5件を抽選する。
+- 1検索の場合は`count=100`、2検索の場合は各検索へ同じ位置・rangeと`count=50`を指定する。
+- 2検索のレスポンスは検索定義順に結合して店舗IDで重複除外し、最大100件の全体から最大5件を抽選する。
 - 片方が成功し片方が失敗した場合は部分結果を採用せず、検索全体を失敗として再試行可能にする。
 - コード値は実装前にHot Pepper Gourmetジャンルマスタの公式レスポンスまたは公式資料で再確認し、仕様と違う場合は実装せず仕様を再レビューする。
 
@@ -258,10 +259,15 @@ None。上記ジャンル検索条件を採用することはユーザー承認�
 - 完了: Context7が利用できないため、Hot Pepper Gourmet公式APIリファレンス・利用案内を一次資料として確認。
 - 完了: 現在地検索、最大100件から最大5件の抽選、候補保存、取得、状態遷移、冪等性、エラー契約を設計。
 - 完了: ユーザーがジャンル検索条件と最大100件から最大5件を抽選する方針を承認。
+- 完了: 複合ジャンルは各50件の2検索とし、抽選母集団を合計最大100件に固定する方針をユーザーが承認。
 - 完了: 最初の実装単位としてルーム作成時の現在地・検索範囲検証、トランザクション保存、HTTP契約、OpenAPI更新を実装・検証。
-- 検証: Docker内のGoテスト、vet、race、実PostgreSQL統合テスト、マイグレーションupと再up、OpenAPI検証に成功。downは実行許可が得られず未実施。
-- 残作業: Hot Pepper Client、候補抽選・保存、検索・取得API、状態遷移の実装と検証。
-- ブロッカー: なし。
+- 完了: Hot Pepper Client、16ジャンル検索定義、最大2検索、重複除外、ランダム最大5件、候補保存、検索・取得API、冪等性、状態遷移を実装。
+- 検証: Hot Pepper公式ジャンルマスタAPI version 1.30でジャンルコードを確認。実グルメサーチAPIで現在地・range・ジャンル検索の正常応答と使用フィールドを確認。
+- 検証: Clientの正常・欠損・危険URL・HTTPエラー・不正JSON・APIエラー・タイムアウト、Serviceの100/50件条件・重複排除・抽選・権限・状態・再送、Handlerの成功・主要エラーを自動テストで確認。
+- 検証: Docker内の`go test ./...`、`go vet ./...`、`go test -race ./...`、実PostgreSQL統合テスト、マイグレーションupと再up、OpenAPI検証に成功。
+- 未実施: マイグレーションdownは実行許可が得られなかったため未検証。
+- 残作業: マイグレーションdown検証後のStatus `Verified`化。フロントエンドAPI接続と店舗投票保存は別仕様。
+- ブロッカー: マイグレーションdownの実行許可なし。
 - 関連Issue・PR・コミット: None。
 
 ## Self-Review

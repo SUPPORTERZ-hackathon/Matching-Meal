@@ -12,10 +12,16 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"meal/backend/internal/hotpepper"
 	"meal/backend/internal/repository/postgres"
 	"meal/backend/internal/security"
 	"meal/backend/internal/service"
 	httptransport "meal/backend/internal/transport/http"
+)
+
+const (
+	hotPepperGourmetSearchURL = "https://webservice.recruit.co.jp/hotpepper/gourmet/v1/"
+	hotPepperRequestTimeout   = 5 * time.Second
 )
 
 func main() {
@@ -29,10 +35,18 @@ func main() {
 	randomGenerator := security.RandomGenerator{}
 	roomRepository := postgres.NewRoomRepository(pool)
 	genreVotingRepository := postgres.NewGenreVotingRepository(pool)
+	restaurantSearchRepository := postgres.NewRestaurantSearchRepository(pool)
+	hotPepperClient := hotpepper.NewClient(
+		&http.Client{Timeout: hotPepperRequestTimeout}, hotPepperGourmetSearchURL, os.Getenv("HOTPEPPER_API_KEY"),
+	)
 	roomService := service.NewRoomService(roomRepository, randomGenerator, service.SystemClock{})
 	genreVotingService := service.NewGenreVotingService(genreVotingRepository, roomRepository, randomGenerator, service.SystemClock{})
+	restaurantSearchService := service.NewRestaurantSearchService(
+		restaurantSearchRepository, roomRepository, hotPepperClient, randomGenerator, service.SystemClock{},
+	)
 	roomHandler := httptransport.NewRoomHandler(roomService)
 	genreVotingHandler := httptransport.NewGenreVotingHandler(genreVotingService)
+	restaurantSearchHandler := httptransport.NewRestaurantSearchHandler(restaurantSearchService)
 	router := gin.New()
 	router.Use(httptransport.RequestID(randomGenerator), gin.Logger(), gin.Recovery())
 	router.GET("/api/health", func(c *gin.Context) {
@@ -48,6 +62,7 @@ func main() {
 	})
 	httptransport.RegisterRoomRoutes(router, roomHandler)
 	httptransport.RegisterGenreVotingRoutes(router, genreVotingHandler)
+	httptransport.RegisterRestaurantSearchRoutes(router, restaurantSearchHandler)
 	server := &http.Server{Addr: ":8080", Handler: router, ReadHeaderTimeout: 5 * time.Second}
 	go func() {
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {

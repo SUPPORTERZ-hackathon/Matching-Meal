@@ -1,10 +1,10 @@
 # 店舗検索条件・候補店舗モデル
 
-- Status: Approved
+- Status: Implemented
 - Last updated: 2026-10-31
 - Related issue: None
 - Related specifications: ../services/restaurant-search.md, rooms-and-participants.md, genre-votes.md, ../screens/room-create-screen.md, ../screens/restaurant-vote.md
-- Implementation files: ../../backend/internal/domain/room.go, ../../backend/internal/repository/room.go, ../../backend/internal/repository/postgres/room.go, ../../backend/migrations/000004_create_room_search_conditions.up.sql, ../../backend/migrations/000004_create_room_search_conditions.down.sql
+- Implementation files: ../../backend/internal/domain/room.go, ../../backend/internal/domain/restaurant_candidate.go, ../../backend/internal/repository/room.go, ../../backend/internal/repository/restaurant_search.go, ../../backend/internal/repository/postgres/room.go, ../../backend/internal/repository/postgres/restaurant_search.go, ../../backend/migrations/000004_create_room_search_conditions.up.sql, ../../backend/migrations/000004_create_room_search_conditions.down.sql, ../../backend/migrations/000005_create_restaurant_candidates.up.sql, ../../backend/migrations/000005_create_restaurant_candidates.down.sql
 
 ## 目的と対象範囲
 
@@ -109,14 +109,14 @@ genre_vote_results 1 ── 0..5 restaurant_candidates
 
 ## 候補抽選
 
-1. Hot Pepper Gourmet APIへ`count=100`を指定し、1回の検索結果を最大100件取得する。
+1. Hot Pepper Gourmet APIから抽選母集団を最大100件取得する。1検索のジャンルは`count=100`、2検索を結合する複合ジャンルは各検索を`count=50`とする。
 2. 店舗IDが空の要素と同じ店舗IDの重複を除外し、有効な店舗だけで抽選母集団を作る。
 3. 母集団が1〜5件なら全件を採用する。
 4. 母集団が6〜100件なら、各店舗が同じ確率になる重複なし抽選で5件を採用する。
 5. 抽選された順に`position`を1から付与し、候補集合を一度だけ保存する。
 6. 保存後の取得、画面再読み込み、検索API再送、プロセス再起動では再抽選しない。
 
-公式APIの1回の取得上限が100件であるため、`results_available`が100を超える場合でも抽選母集団は最初に返された最大100件とする。全ページ取得はAPI負荷と応答時間を抑えるため対象外とする。
+公式APIの1回の取得上限が100件であるため、`results_available`が取得件数を超える場合でも追加ページは取得しない。複合ジャンルは定義順に最大50件ずつ結合して重複を除外するため、抽選母集団は常に最大100件となる。全ページ取得はAPI負荷と応答時間を抑えるため対象外とする。
 
 乱数選択は既存の暗号学的乱数実装を再利用し、剰余バイアスのないFisher-Yates方式または同等の重複なし選択とする。テストでは選択器を差し替え、結果を決定的に検証できるようにする。
 
@@ -189,10 +189,13 @@ None。最大100件を抽選母集団とすること、最大5件を重複なし
 - 完了: Context7が利用できないため、Hot Pepper Gourmet公式APIリファレンスと利用案内を一次資料として確認。
 - 完了: 現在地とrangeの保存、最大100件から最大5件の重複なし抽選、候補永続化、状態遷移、競合時の再抽選防止を設計。
 - 完了: ユーザーが最大100件から最大5件を抽選することと、ジャンル検索条件を承認。
+- 完了: 複合ジャンルは2検索を各50件とし、抽選母集団を合計最大100件に保つ方針をユーザーが承認。
 - 完了: `RoomSearchCondition`の検証、DB制約、ルーム・ホストとの同時保存を実装し、単体・実PostgreSQL統合テストに成功。
-- 検証: マイグレーションupとup再実行に成功。downは実行許可が得られなかったため未検証。
-- 残作業: 候補店舗モデル、候補抽選、候補保存、検索状態遷移の実装と検証。
-- ブロッカー: なし。
+- 完了: 候補店舗モデル、1〜5件保存、最大100件からの重複なし抽選、同時保存の一意確定、`restaurant_voting`遷移を実装。
+- 検証: 1/5/6/10件の境界、複合検索の重複除外、再送時の非再抽選、DB制約、同時保存、CASCADEを単体・実PostgreSQL統合テストで確認。
+- 検証: 000004・000005のマイグレーションupとup再実行に成功。downは実行許可が得られなかったため未検証。
+- 残作業: マイグレーションdown検証後のStatus `Verified`化。
+- ブロッカー: マイグレーションdownの実行許可なし。
 - 関連Issue・PR・コミット: None。
 
 ## Self-Review

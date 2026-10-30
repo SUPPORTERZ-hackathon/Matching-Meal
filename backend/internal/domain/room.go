@@ -75,7 +75,7 @@ func NewRoomSearchCondition(roomID string, latitude float64, longitude float64, 
 	if math.IsNaN(longitude) || math.IsInf(longitude, 0) || longitude < -180 || longitude > 180 {
 		return RoomSearchCondition{}, ErrInvalidSearchCondition
 	}
-	if searchRange < 1 || searchRange > 5 {
+	if searchRange < RestaurantSearchRangeMin || searchRange > RestaurantSearchRangeMax {
 		return RoomSearchCondition{}, ErrInvalidSearchCondition
 	}
 	return RoomSearchCondition{

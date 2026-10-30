@@ -1,6 +1,6 @@
 # ルーム作成・参加・投票開始サービス
 
-- Status: Verified
+- Status: Implemented
 - Last updated: 2026-10-31
 - Related issue: None
 - Related specifications: ../models/rooms-and-participants.md, ../models/restaurant-candidates.md, restaurant-search.md, ../screens/genre-vote.md, ../screens/room-create-screen.md
@@ -276,7 +276,7 @@ None。既存API形状、人数、期限、固定方式に加え、ルーム作�
 - 完了: 現在地・検索範囲のDomain検証、ルーム・ホストとのトランザクション保存、HTTPエラー、OpenAPI契約、新規マイグレーションを実装。
 - 検証: Docker内の`go test ./...`、`go vet ./...`、`go test -race ./...`、実PostgreSQL統合テスト、マイグレーションupとup再実行、OpenAPI検証に成功。
 - 未実施: マイグレーションdownは実行許可が得られなかったため未検証。
-- 残作業: 店舗検索サービスの実装。PR作成は未実施。
+- 残作業: 000004マイグレーションdown検証後のStatus `Verified`化。PR作成は未実施。
 - ブロッカー: なし。
 - 関連Issue・PR・コミット: `ae8f14ca`（ルーム状態取得API）、本変更コミット（ジャンル投票開始API）、PR未作成。
 
