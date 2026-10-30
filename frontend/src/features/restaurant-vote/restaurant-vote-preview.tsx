@@ -46,6 +46,7 @@ export function RestaurantVotePreview() {
       <output aria-live="polite" data-restaurant-records>完了時の記録 {completedVotes.length}件{completedVotes.map((vote) => <p key={vote.restaurantId}>{vote.restaurantId}：{vote.choice === "like" ? "ここがいい" : "見送り"}</p>)}</output>
       <p><Link href={restaurantVoteUrl(genre.id)}>通常画面から待機まで操作する</Link></p>
       <p><Link href={restaurantWaitingUrl(genre.id)}>待機画面を見る（独立モック）</Link></p>
+      <p><Link href={`/ui-preview${restaurantWaitingUrl(genre.id)}`}>同じジャンルの待機・結果を開発用に確認する</Link></p>
     </section>
   </>;
 }
