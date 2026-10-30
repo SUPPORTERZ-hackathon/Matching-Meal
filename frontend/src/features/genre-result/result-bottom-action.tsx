@@ -43,7 +43,7 @@ export function ResultBottomAction({ genre, onFindShops }: ResultBottomActionPro
       <BottomAction>
         <Button type="button" variant="primary" size="meal" onClick={findShops} aria-describedby="genre-result-next-status"><span className={styles.actionLabel}>このジャンルでお店を探す</span><ChevronRight className="size-5" aria-hidden="true" /></Button>
         <p id="genre-result-next-status" className={styles.actionNote} role="status" aria-live="polite" aria-atomic="true">
-          {requested ? `${genre.name}を選択しました。${onFindShops ? "" : "店舗選定フローは準備中です。"}` : "店舗選定フローは準備中です"}
+          {requested ? `${genre.name}を選択しました。${onFindShops ? "" : "店舗選定フローは準備中です。"}` : onFindShops ? "選択したジャンルを引き継ぎます" : "店舗選定フローは準備中です"}
         </p>
       </BottomAction>
     </div>
