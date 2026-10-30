@@ -1,0 +1,896 @@
+openapi: 3.1.0
+info:
+  title: Matching Meal API
+  version: 1.0.0
+  description: |
+    Matching Mealで現在実装済みのバックエンドAPI。
+    未実装の店舗検索、店舗投票、店舗決定APIは含まない。
+servers:
+  - url: /
+    description: フロントエンドと同一オリジン
+tags:
+  - name: Health
+    description: 稼働状態
+  - name: Rooms
+    description: ルームと参加者
+  - name: Genre Voting
+    description: ジャンル投票
+paths:
+  /api/health:
+    get:
+      tags: [Health]
+      operationId: getHealth
+      summary: ヘルスチェック
+      description: バックエンドとPostgreSQLの利用可否を返す。
+      security: []
+      responses:
+        "200":
+          description: 利用可能
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+              example:
+                status: ok
+                database: ok
+        "503":
+          description: PostgreSQLを利用できない
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+              example:
+                status: error
+                database: unavailable
+
+  /api/v1/rooms:
+    post:
+      tags: [Rooms]
+      operationId: createRoom
+      summary: ルームを作成する
+      description: ルームとホスト参加者を作成し、平文セッショントークンを初回だけ返す。
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRoomRequest"
+            example:
+              nickname: ひかる
+      responses:
+        "201":
+          description: 作成成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoomSessionResponse"
+              examples:
+                created:
+                  $ref: "#/components/examples/CreatedRoomSession"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "500":
+          description: 参加コード生成失敗または内部エラー
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                codeGenerationFailed:
+                  value:
+                    error:
+                      code: ROOM_CODE_GENERATION_FAILED
+                      message: ルームを作成できませんでした。
+                      requestId: 01JEXAMPLE0000000000000000
+                internalError:
+                  $ref: "#/components/examples/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /api/v1/rooms/{roomRef}/participants:
+    post:
+      tags: [Rooms]
+      operationId: joinRoom
+      summary: ルームへ参加する
+      description: 8文字の参加コードでルームへ参加する。同じニックネームの参加者を許可する。
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/RoomRef"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JoinRoomRequest"
+            example:
+              nickname: ひかる
+      responses:
+        "201":
+          description: 参加成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoomSessionResponse"
+              examples:
+                joined:
+                  $ref: "#/components/examples/JoinedRoomSession"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "404":
+          $ref: "#/components/responses/RoomNotFound"
+        "409":
+          description: 参加不可または定員到達
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                notJoinable:
+                  value:
+                    error:
+                      code: ROOM_NOT_JOINABLE
+                      message: このルームには現在参加できません。
+                      requestId: 01JEXAMPLE0000000000000000
+                capacityReached:
+                  value:
+                    error:
+                      code: ROOM_CAPACITY_REACHED
+                      message: このルームにはこれ以上参加できません。
+                      requestId: 01JEXAMPLE0000000000000000
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /api/v1/rooms/{roomId}:
+    get:
+      tags: [Rooms]
+      operationId: getRoomState
+      summary: ルーム状態を取得する
+      security:
+        - participantToken: []
+      parameters:
+        - $ref: "#/components/parameters/RoomId"
+      responses:
+        "200":
+          description: 取得成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoomStateResponse"
+              examples:
+                lobby:
+                  $ref: "#/components/examples/LobbyRoomState"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/ForbiddenView"
+        "404":
+          $ref: "#/components/responses/RoomNotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /api/v1/rooms/{roomId}/genre-voting/start:
+    post:
+      tags: [Genre Voting]
+      operationId: startGenreVoting
+      summary: ジャンル投票を開始する
+      description: ホストだけが実行できる。同じ開始要求の再送はversionを変更せず成功する。
+      security:
+        - participantToken: []
+      parameters:
+        - $ref: "#/components/parameters/RoomId"
+      responses:
+        "200":
+          description: 開始成功、または開始済み
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoomStateResponse"
+              examples:
+                started:
+                  $ref: "#/components/examples/GenreVotingRoomState"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: 別ルームの参加者、またはホスト以外
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                forbidden:
+                  $ref: "#/components/examples/Forbidden"
+                hostRequired:
+                  value:
+                    error:
+                      code: HOST_REQUIRED
+                      message: ホストだけが投票を開始できます。
+                      requestId: 01JEXAMPLE0000000000000000
+        "404":
+          $ref: "#/components/responses/RoomNotFound"
+        "409":
+          description: 参加人数不足または不正な状態遷移
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                notEnoughParticipants:
+                  value:
+                    error:
+                      code: NOT_ENOUGH_PARTICIPANTS
+                      message: 投票開始には2人以上の参加者が必要です。
+                      requestId: 01JEXAMPLE0000000000000000
+                invalidTransition:
+                  value:
+                    error:
+                      code: INVALID_ROOM_TRANSITION
+                      message: 現在のルーム状態では投票を開始できません。
+                      requestId: 01JEXAMPLE0000000000000000
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /api/v1/rooms/{roomId}/genre-votes:
+    put:
+      tags: [Genre Voting]
+      operationId: submitGenreVotes
+      summary: ジャンル投票を一括提出する
+      description: |
+        固定16ジャンルを各1件提出する。入力順は問わない。
+        同一内容の再送は成功し、提出時刻、version、確定結果を変更しない。
+      security:
+        - participantToken: []
+      parameters:
+        - $ref: "#/components/parameters/RoomId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitGenreVotesRequest"
+            examples:
+              allSkipped:
+                summary: 全ジャンルをskip
+                value:
+                  votes:
+                    - {genreId: ramen, choice: skip}
+                    - {genreId: sushi-seafood, choice: skip}
+                    - {genreId: yakiniku, choice: skip}
+                    - {genreId: steak-hamburg, choice: skip}
+                    - {genreId: curry, choice: skip}
+                    - {genreId: soba-udon, choice: skip}
+                    - {genreId: teishoku, choice: skip}
+                    - {genreId: italian, choice: skip}
+                    - {genreId: chinese, choice: skip}
+                    - {genreId: korean, choice: skip}
+                    - {genreId: asian, choice: skip}
+                    - {genreId: hamburger, choice: skip}
+                    - {genreId: okonomiyaki-takoyaki, choice: skip}
+                    - {genreId: nabe-shabushabu, choice: skip}
+                    - {genreId: izakaya, choice: skip}
+                    - {genreId: cafe, choice: skip}
+      responses:
+        "200":
+          description: 提出成功、または同一内容の再送成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenreVotingResponse"
+              examples:
+                waiting:
+                  $ref: "#/components/examples/GenreVotingWaiting"
+                decided:
+                  $ref: "#/components/examples/GenreVotingDecided"
+        "400":
+          $ref: "#/components/responses/InvalidGenreVotes"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/RoomNotFound"
+        "409":
+          description: 投票受付中でない、または異なる内容を提出済み
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                notActive:
+                  value:
+                    error:
+                      code: GENRE_VOTING_NOT_ACTIVE
+                      message: 現在はジャンル投票を提出できません。
+                      requestId: 01JEXAMPLE0000000000000000
+                alreadySubmitted:
+                  value:
+                    error:
+                      code: VOTE_ALREADY_SUBMITTED
+                      message: ジャンル投票はすでに提出済みです。
+                      requestId: 01JEXAMPLE0000000000000000
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /api/v1/rooms/{roomId}/genre-voting:
+    get:
+      tags: [Genre Voting]
+      operationId: getGenreVotingState
+      summary: ジャンル投票状態を取得する
+      description: 他参加者については提出有無だけを返し、個別のchoiceは返さない。
+      security:
+        - participantToken: []
+      parameters:
+        - $ref: "#/components/parameters/RoomId"
+      responses:
+        "200":
+          description: 取得成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenreVotingResponse"
+              examples:
+                waiting:
+                  $ref: "#/components/examples/GenreVotingWaiting"
+                decided:
+                  $ref: "#/components/examples/GenreVotingDecided"
+        "400":
+          $ref: "#/components/responses/InvalidGenreVotes"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/RoomNotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+components:
+  securitySchemes:
+    participantToken:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque-session-token
+      description: ルーム作成または参加成功時に返される参加者セッショントークン。
+
+  parameters:
+    RoomId:
+      name: roomId
+      in: path
+      required: true
+      description: ルームUUID
+      schema:
+        type: string
+        format: uuid
+      example: 550e8400-e29b-41d4-a716-446655440000
+    RoomRef:
+      name: roomRef
+      in: path
+      required: true
+      description: 8文字の参加コード
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 8
+        pattern: "^[23456789ABCDEFGHJKMNPQRSTVWXYZabcdefghjkmnpqrstvwxyz]{8}$"
+      example: 7K9M2QXR
+
+  schemas:
+    HealthResponse:
+      type: object
+      additionalProperties: false
+      required: [status, database]
+      properties:
+        status:
+          type: string
+          enum: [ok, error]
+        database:
+          type: string
+          enum: [ok, unavailable]
+
+    CreateRoomRequest:
+      type: object
+      required: [nickname]
+      properties:
+        nickname:
+          $ref: "#/components/schemas/Nickname"
+
+    JoinRoomRequest:
+      type: object
+      required: [nickname]
+      properties:
+        nickname:
+          $ref: "#/components/schemas/Nickname"
+
+    Nickname:
+      type: string
+      minLength: 1
+      maxLength: 20
+      description: 前後のUnicode空白を除去後、1〜20文字。制御文字は不可。同じルーム内の重複を許可する。
+      examples: [ひかる]
+
+    RoomStatus:
+      type: string
+      enum:
+        - lobby
+        - genre_voting
+        - restaurant_searching
+        - restaurant_voting
+        - decided
+        - expired
+
+    ParticipantRole:
+      type: string
+      enum: [host, member]
+
+    Room:
+      type: object
+      additionalProperties: false
+      required: [id, joinCode, status, version, expiresAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        joinCode:
+          type: string
+          minLength: 8
+          maxLength: 8
+          pattern: "^[23456789ABCDEFGHJKMNPQRSTVWXYZ]{8}$"
+        status:
+          $ref: "#/components/schemas/RoomStatus"
+        version:
+          type: integer
+          format: int64
+          minimum: 1
+        expiresAt:
+          type: string
+          format: date-time
+
+    Participant:
+      type: object
+      additionalProperties: false
+      required: [id, nickname, role]
+      properties:
+        id:
+          type: string
+          format: uuid
+        nickname:
+          type: string
+        role:
+          $ref: "#/components/schemas/ParticipantRole"
+
+    RoomSessionResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required: [room, participant, sessionToken]
+          properties:
+            room:
+              $ref: "#/components/schemas/Room"
+            participant:
+              $ref: "#/components/schemas/Participant"
+            sessionToken:
+              type: string
+              minLength: 1
+              description: 初回レスポンスだけで返す不透明なBearerトークン。ログやDBへ平文保存しない。
+
+    RoomStateResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required: [room, currentParticipantId, participants]
+          properties:
+            room:
+              $ref: "#/components/schemas/Room"
+            currentParticipantId:
+              type: string
+              format: uuid
+            participants:
+              type: array
+              items:
+                $ref: "#/components/schemas/Participant"
+
+    GenreId:
+      type: string
+      enum:
+        - ramen
+        - sushi-seafood
+        - yakiniku
+        - steak-hamburg
+        - curry
+        - soba-udon
+        - teishoku
+        - italian
+        - chinese
+        - korean
+        - asian
+        - hamburger
+        - okonomiyaki-takoyaki
+        - nabe-shabushabu
+        - izakaya
+        - cafe
+
+    GenreVoteChoice:
+      type: string
+      enum: [like, skip]
+
+    GenreVote:
+      type: object
+      required: [genreId, choice]
+      properties:
+        genreId:
+          $ref: "#/components/schemas/GenreId"
+        choice:
+          $ref: "#/components/schemas/GenreVoteChoice"
+
+    SubmitGenreVotesRequest:
+      type: object
+      required: [votes]
+      properties:
+        votes:
+          type: array
+          minItems: 16
+          maxItems: 16
+          description: 固定16ジャンルを重複・不足なく各1件含める。順序は問わない。
+          items:
+            $ref: "#/components/schemas/GenreVote"
+
+    GenreVotingParticipant:
+      type: object
+      additionalProperties: false
+      required: [id, nickname, role, submitted]
+      properties:
+        id:
+          type: string
+          format: uuid
+        nickname:
+          type: string
+        role:
+          $ref: "#/components/schemas/ParticipantRole"
+        submitted:
+          type: boolean
+
+    GenreDecisionMethod:
+      type: string
+      enum: [most_likes, random_tie, random_all_skipped]
+
+    GenreVoteResult:
+      type: object
+      additionalProperties: false
+      required: [genreId, likeCount, decisionMethod, decidedAt]
+      properties:
+        genreId:
+          $ref: "#/components/schemas/GenreId"
+        likeCount:
+          type: integer
+          minimum: 0
+        decisionMethod:
+          $ref: "#/components/schemas/GenreDecisionMethod"
+        decidedAt:
+          type: string
+          format: date-time
+
+    GenreVotingResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required:
+            - room
+            - currentParticipantId
+            - submitted
+            - submittedAt
+            - submittedParticipantCount
+            - totalParticipantCount
+            - participants
+            - result
+          properties:
+            room:
+              $ref: "#/components/schemas/Room"
+            currentParticipantId:
+              type: string
+              format: uuid
+            submitted:
+              type: boolean
+            submittedAt:
+              oneOf:
+                - type: string
+                  format: date-time
+                - type: "null"
+            submittedParticipantCount:
+              type: integer
+              minimum: 0
+            totalParticipantCount:
+              type: integer
+              minimum: 1
+              maximum: 20
+            participants:
+              type: array
+              items:
+                $ref: "#/components/schemas/GenreVotingParticipant"
+            result:
+              oneOf:
+                - $ref: "#/components/schemas/GenreVoteResult"
+                - type: "null"
+
+    ApiError:
+      type: object
+      additionalProperties: false
+      required: [code, message, requestId]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        requestId:
+          type: string
+
+    ApiErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          $ref: "#/components/schemas/ApiError"
+
+  examples:
+    CreatedRoomSession:
+      value:
+        data:
+          room:
+            id: 550e8400-e29b-41d4-a716-446655440000
+            joinCode: 7K9M2QXR
+            status: lobby
+            version: 1
+            expiresAt: "2026-10-31T12:00:00Z"
+          participant:
+            id: 8d5b0ad5-e8c6-47f2-8e87-f6180b175759
+            nickname: ひかる
+            role: host
+          sessionToken: example-opaque-session-token
+    JoinedRoomSession:
+      value:
+        data:
+          room:
+            id: 550e8400-e29b-41d4-a716-446655440000
+            joinCode: 7K9M2QXR
+            status: lobby
+            version: 2
+            expiresAt: "2026-10-31T12:00:00Z"
+          participant:
+            id: 3a3cf4d0-c2ef-4f40-bcb8-61f0ce680916
+            nickname: ひかる
+            role: member
+          sessionToken: example-member-session-token
+    LobbyRoomState:
+      value:
+        data:
+          room:
+            id: 550e8400-e29b-41d4-a716-446655440000
+            joinCode: 7K9M2QXR
+            status: lobby
+            version: 2
+            expiresAt: "2026-10-31T12:00:00Z"
+          currentParticipantId: 3a3cf4d0-c2ef-4f40-bcb8-61f0ce680916
+          participants:
+            - id: 8d5b0ad5-e8c6-47f2-8e87-f6180b175759
+              nickname: ひかる
+              role: host
+            - id: 3a3cf4d0-c2ef-4f40-bcb8-61f0ce680916
+              nickname: ひかる
+              role: member
+    GenreVotingRoomState:
+      value:
+        data:
+          room:
+            id: 550e8400-e29b-41d4-a716-446655440000
+            joinCode: 7K9M2QXR
+            status: genre_voting
+            version: 3
+            expiresAt: "2026-10-31T12:00:00Z"
+          currentParticipantId: 8d5b0ad5-e8c6-47f2-8e87-f6180b175759
+          participants:
+            - id: 8d5b0ad5-e8c6-47f2-8e87-f6180b175759
+              nickname: ひかる
+              role: host
+            - id: 3a3cf4d0-c2ef-4f40-bcb8-61f0ce680916
+              nickname: ひかる
+              role: member
+    GenreVotingWaiting:
+      value:
+        data:
+          room:
+            id: 550e8400-e29b-41d4-a716-446655440000
+            joinCode: 7K9M2QXR
+            status: genre_voting
+            version: 4
+            expiresAt: "2026-10-31T12:00:00Z"
+          currentParticipantId: 8d5b0ad5-e8c6-47f2-8e87-f6180b175759
+          submitted: true
+          submittedAt: "2026-10-30T12:01:00Z"
+          submittedParticipantCount: 1
+          totalParticipantCount: 2
+          participants:
+            - id: 8d5b0ad5-e8c6-47f2-8e87-f6180b175759
+              nickname: ひかる
+              role: host
+              submitted: true
+            - id: 3a3cf4d0-c2ef-4f40-bcb8-61f0ce680916
+              nickname: ひかる
+              role: member
+              submitted: false
+          result: null
+    GenreVotingDecided:
+      value:
+        data:
+          room:
+            id: 550e8400-e29b-41d4-a716-446655440000
+            joinCode: 7K9M2QXR
+            status: restaurant_searching
+            version: 5
+            expiresAt: "2026-10-31T12:00:00Z"
+          currentParticipantId: 3a3cf4d0-c2ef-4f40-bcb8-61f0ce680916
+          submitted: true
+          submittedAt: "2026-10-30T12:02:00Z"
+          submittedParticipantCount: 2
+          totalParticipantCount: 2
+          participants:
+            - id: 8d5b0ad5-e8c6-47f2-8e87-f6180b175759
+              nickname: ひかる
+              role: host
+              submitted: true
+            - id: 3a3cf4d0-c2ef-4f40-bcb8-61f0ce680916
+              nickname: ひかる
+              role: member
+              submitted: true
+          result:
+            genreId: sushi-seafood
+            likeCount: 1
+            decisionMethod: random_tie
+            decidedAt: "2026-10-30T12:02:00Z"
+    InvalidRequest:
+      value:
+        error:
+          code: INVALID_REQUEST
+          message: 入力内容を確認してください。
+          requestId: 01JEXAMPLE0000000000000000
+    InvalidGenreVotes:
+      value:
+        error:
+          code: INVALID_GENRE_VOTES
+          message: ジャンル投票を確認してください。
+          requestId: 01JEXAMPLE0000000000000000
+    Unauthorized:
+      value:
+        error:
+          code: UNAUTHORIZED
+          message: 認証情報を確認してください。
+          requestId: 01JEXAMPLE0000000000000000
+    Forbidden:
+      value:
+        error:
+          code: FORBIDDEN
+          message: このルームを操作する権限がありません。
+          requestId: 01JEXAMPLE0000000000000000
+    ForbiddenView:
+      value:
+        error:
+          code: FORBIDDEN
+          message: このルームを表示する権限がありません。
+          requestId: 01JEXAMPLE0000000000000000
+    RoomNotFound:
+      value:
+        error:
+          code: ROOM_NOT_FOUND
+          message: ルームが見つかりません。
+          requestId: 01JEXAMPLE0000000000000000
+    InternalError:
+      value:
+        error:
+          code: INTERNAL_ERROR
+          message: 処理を完了できませんでした。
+          requestId: 01JEXAMPLE0000000000000000
+    ServiceUnavailable:
+      value:
+        error:
+          code: SERVICE_UNAVAILABLE
+          message: 時間をおいて再度お試しください。
+          requestId: 01JEXAMPLE0000000000000000
+
+  responses:
+    InvalidRequest:
+      description: 入力不正
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiErrorResponse"
+          examples:
+            invalidRequest:
+              $ref: "#/components/examples/InvalidRequest"
+    InvalidGenreVotes:
+      description: room ID、JSON、ジャンル集合またはchoiceが不正
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiErrorResponse"
+          examples:
+            invalidGenreVotes:
+              $ref: "#/components/examples/InvalidGenreVotes"
+    Unauthorized:
+      description: Bearerトークンが欠落または不正
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiErrorResponse"
+          examples:
+            unauthorized:
+              $ref: "#/components/examples/Unauthorized"
+    Forbidden:
+      description: 別ルームの参加者
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiErrorResponse"
+          examples:
+            forbidden:
+              $ref: "#/components/examples/Forbidden"
+    ForbiddenView:
+      description: 別ルームの参加者
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiErrorResponse"
+          examples:
+            forbidden:
+              $ref: "#/components/examples/ForbiddenView"
+    RoomNotFound:
+      description: ルームが存在しない、または期限切れ
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiErrorResponse"
+          examples:
+            roomNotFound:
+              $ref: "#/components/examples/RoomNotFound"
+    InternalError:
+      description: 内部エラー
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiErrorResponse"
+          examples:
+            internalError:
+              $ref: "#/components/examples/InternalError"
+    ServiceUnavailable:
+      description: DB処理などがタイムアウト
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiErrorResponse"
+          examples:
+            serviceUnavailable:
+              $ref: "#/components/examples/ServiceUnavailable"
