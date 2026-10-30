@@ -11,7 +11,8 @@
     "test:genre-vote": "node --experimental-strip-types --test src/features/genre-vote/*.test.mjs",
     "test:genre-vote-waiting": "node --experimental-strip-types --test src/features/genre-vote-waiting/*.test.mjs",
     "test:genre-result": "node --experimental-strip-types --test src/features/genre-result/*.test.mjs",
-    "test:restaurant-vote": "node --experimental-strip-types --test src/features/restaurant-vote/*.test.mjs"
+    "test:restaurant-vote": "node --experimental-strip-types --test src/features/restaurant-vote/*.test.mjs",
+    "test:restaurant-result": "node --experimental-strip-types --test src/features/restaurant-result/*.test.mjs"
   },
   "dependencies": {
     "@radix-ui/react-slot": "1.5.0",

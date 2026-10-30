@@ -16,6 +16,5 @@ export function RestaurantPhoto({ restaurant }: RestaurantPhotoProps) {
     <div className={styles.placeholder} aria-hidden="true"><span className={styles.plate}><UtensilsCrossed strokeWidth={1.3} /></span><span>お店の写真</span></div>
     {src && !failed && <Image src={src} alt={`${restaurant.name}の店舗写真`} fill unoptimized draggable={false} className={styles.photo} style={{ opacity: loaded ? 1 : 0 }} onLoad={() => setLoaded(true)} onError={() => setFailed(true)} />}
     {(!src || failed) && <span className="sr-only">{failed ? "写真を読み込めませんでした" : "店舗写真は未登録です"}</span>}
-    {restaurant.source === "mock" && <span className={styles.sampleBadge}>表示サンプル</span>}
   </div>;
 }
