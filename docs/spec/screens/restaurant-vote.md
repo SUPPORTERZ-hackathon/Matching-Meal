@@ -1,9 +1,9 @@
 # 店舗投票画面・フロントエンドプロトタイプ
 
 - Status: Verified
-- Last updated: 2026-10-30
+- Last updated: 2026-10-31
 - Related issue: None
-- Related specifications: restaurant-vote-waiting.md, genre-result.md, ../components/common-ui.md, ../themes/design-system.md
+- Related specifications: restaurant-vote-waiting.md, genre-result.md, ../services/restaurant-search.md, ../models/restaurant-candidates.md, ../components/common-ui.md, ../themes/design-system.md
 - Implementation files: frontend/src/app/restaurant-vote/, frontend/src/app/ui-preview/restaurant-vote/, frontend/src/features/restaurant-vote/, frontend/src/features/genre-result/genre-result-prototype.tsx
 
 ## 目的・承認・範囲
@@ -40,6 +40,7 @@
 - `HotPepperShopFields`は将来の変換境界で必要な部分だけを型定義。id/name、photo.pc.l→m、open/close、budget.average→name、mobile_access→access、station_name、urls.pc、lat/lngを純粋関数で変換する。API全体や取得処理をUIへ持ち込まない。Go型/API契約の追加はしない。
 - 写真/詳細URLに不正なschemeや資格情報を許可しない。詳細はHTTPS・hotpepper.jp/www.hotpepper.jp・店舗パス `/strJ数字/` のみ。写真はHTTPSまたはローカル`/restaurants/`・`/genres/`パス。外部写真は将来渡されたURLのみで、今回のモックには外部写真なし。
 - 4店舗はID `mock-restaurant-*`、名称にサンプル店を含め、表示用の架空情報。固定ジャンルIDから候補を作るだけで実検索/絞り込みではない。詳細URL/座標は未設定、架空URL/座標を補完しない。
+- 正式API連携時の候補数は`../services/restaurant-search.md`に従い1〜5件とする。現在の4件はプロトタイプ用モック件数であり、正式APIの固定件数ではない。
 - `RestaurantVote`: restaurantIdとchoice(like/skip)。状態はコンポーネントのメモリ内、再読み込みで全件リセット。待機へ個人の投票配列は渡さず、genre IDのみ引き継ぐ。待機の他参加者は独立モックで実同期ではない。
 
 ## 状態・遷移・操作
@@ -77,7 +78,7 @@ idle → exiting → entering → idle。最後はexiting → complete → `/res
 
 ## 未決定事項・将来の課題
 
-今回のプロトタイプに必要な未決定事項なし。API連携、16ジャンルと公式ジャンルマスタの対応、検索条件/件数/順序、正式なルーム/参加者同期、集計/同票、店舗結果への遷移・PWA全体設定は別作業のまま保留。
+今回のプロトタイプに必要な未決定事項なし。API連携時の検索条件・件数・順序と16ジャンルの対応は`../services/restaurant-search.md`で承認済み。正式なルーム/参加者同期、店舗投票の保存・集計、店舗結果への遷移・PWA全体設定は別作業のまま保留。
 
 ## Progress
 
