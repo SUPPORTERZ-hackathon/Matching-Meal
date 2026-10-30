@@ -11,11 +11,12 @@ import (
 type RoomStatus string
 
 const (
-	RoomStatusLobby            RoomStatus = "lobby"
-	RoomStatusGenreVoting      RoomStatus = "genre_voting"
-	RoomStatusRestaurantVoting RoomStatus = "restaurant_voting"
-	RoomStatusDecided          RoomStatus = "decided"
-	RoomStatusExpired          RoomStatus = "expired"
+	RoomStatusLobby               RoomStatus = "lobby"
+	RoomStatusGenreVoting         RoomStatus = "genre_voting"
+	RoomStatusRestaurantSearching RoomStatus = "restaurant_searching"
+	RoomStatusRestaurantVoting    RoomStatus = "restaurant_voting"
+	RoomStatusDecided             RoomStatus = "decided"
+	RoomStatusExpired             RoomStatus = "expired"
 
 	RoomJoinCodeLength   = 8
 	RoomJoinCodeAlphabet = "23456789ABCDEFGHJKMNPQRSTVWXYZ"

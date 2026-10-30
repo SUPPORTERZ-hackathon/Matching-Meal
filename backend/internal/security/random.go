@@ -28,6 +28,17 @@ type Generator interface {
 
 type RandomGenerator struct{}
 
+func (RandomGenerator) SelectIndex(upperBound int) (int, error) {
+	if upperBound <= 0 {
+		return 0, fmt.Errorf("select random index: upper bound must be positive")
+	}
+	value, err := rand.Int(rand.Reader, big.NewInt(int64(upperBound)))
+	if err != nil {
+		return 0, fmt.Errorf("select random index: %w", err)
+	}
+	return int(value.Int64()), nil
+}
+
 func (RandomGenerator) UUID() (string, error) {
 	bytes := make([]byte, uuidByteLength)
 	if _, err := rand.Read(bytes); err != nil {

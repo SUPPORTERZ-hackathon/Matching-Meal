@@ -1,10 +1,10 @@
 # ルーム・参加者モデル
 
 - Status: Verified
-- Last updated: 2026-10-29
+- Last updated: 2026-10-30
 - Related issue: None
 - Related specifications: ../services/room-lifecycle.md, ../screens/genre-vote.md
-- Implementation files: backend/internal/domain/room.go, backend/internal/security/random.go, backend/internal/repository/room.go, backend/internal/repository/postgres/room.go, backend/migrations/000002_create_rooms_and_participants.up.sql, backend/migrations/000002_create_rooms_and_participants.down.sql
+- Implementation files: ../../backend/internal/domain/room.go, ../../backend/internal/security/random.go, ../../backend/internal/repository/room.go, ../../backend/internal/repository/postgres/room.go, ../../backend/migrations/000002_create_rooms_and_participants.up.sql, ../../backend/migrations/000002_create_rooms_and_participants.down.sql, ../../backend/migrations/000003_create_genre_votes.up.sql, ../../backend/migrations/000003_create_genre_votes.down.sql
 
 ## 目的と対象範囲
 
@@ -41,7 +41,7 @@
 | `createdAt` | string/time.Time | `TIMESTAMPTZ` | 必須 | DB時刻 |
 | `updatedAt` | string/time.Time | `TIMESTAMPTZ` | 必須 | DB時刻 |
 
-`RoomStatus`は`lobby`、`genre_voting`、`restaurant_voting`、`decided`、`expired`とする。今回実装する遷移は`lobby`から`genre_voting`だけとし、後続状態は将来の仕様との互換性のため列挙する。
+`RoomStatus`は`lobby`、`genre_voting`、`restaurant_searching`、`restaurant_voting`、`decided`、`expired`とする。`restaurant_searching`はジャンル決定済みで店舗候補の検索・保存が未完了または再試行待ちの状態を表す。ルーム管理で実装済みの遷移は`lobby`から`genre_voting`、ジャンル投票で追加する遷移は`genre_voting`から`restaurant_searching`とする。
 
 ### Participant
 
@@ -149,9 +149,12 @@ None。参加者上限20人、最小2人、有効期限24時間は本仕様レ�
 - 検証: 実PostgreSQLで同一ニックネームのホストとメンバーを別IDとして取得し、Bearerトークンに対応する現在参加者IDと参加順序を確認。
 - 完了: ルーム行を`SELECT ... FOR UPDATE`でロックし、参加と投票開始を直列化。状態更新とversion加算を同一トランザクションで実装。
 - 検証: 実PostgreSQLで参加と開始の同時実行、開始後参加拒否、開始再送時のversion維持を確認。全Goテスト、vet、race検査に成功。
-- 残作業: なし。PR作成は未実施。
+- 承認: ジャンル決定後と店舗候補保存完了前を区別する`restaurant_searching`状態を追加し、新規マイグレーションでCHECK制約を更新する。
+- 完了: `restaurant_searching`をDomainへ追加し、新規マイグレーションでroomsのCHECK制約を更新。
+- 検証: マイグレーションup、down、再upと、ジャンル確定時の`restaurant_searching`遷移を実PostgreSQL・実HTTPで確認。
+- 残作業: なし。
 - ブロッカー: なし。
-- 関連Issue・PR・コミット: `ae8f14ca`（ルーム状態取得API）、本変更コミット（ジャンル投票開始API）、PR未作成。
+- 関連Issue・PR・コミット: `ae8f14ca`（ルーム状態取得API）、本変更コミット（ジャンル投票保存・集計）、PR未作成。
 
 ## Self-Review
 
