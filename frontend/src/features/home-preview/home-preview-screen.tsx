@@ -1,11 +1,15 @@
+"use client";
 
 import { Plus, QrCode, ChevronRight } from "lucide-react";
 import { AppLogo } from "@/components/common/app-logo";
 import { PageContainer } from "@/components/common/page-container";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import "./home-preview.css"
 
 export function HomePreviewScreen() {
+  const router = useRouter();
+
   return (
     <PageContainer header={null} className="home-preview-page">
       <div className="home-preview-content">
@@ -42,7 +46,7 @@ export function HomePreviewScreen() {
         </section>
 
         <div className="home-preview-actions">
-          <Button variant="primary" size="meal" type="button" className="relative">
+          <Button variant="primary" size="meal" type="button" className="relative" onClick={() => router.push("/room-create")}>
             <span className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap">
               ルームを作成する
             </span>
