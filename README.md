@@ -1,6 +1,8 @@
 # Matching Meal
 
-みんなで飲食店を選ぶアプリです。現在は **画面 → Go API → PostgreSQL の接続を確認できる開発環境** を用意しています。店舗検索・ルーム・投票・PWAは今後実装します。
+みんなで飲食店を選ぶアプリです。現在は **画面 → Go API → PostgreSQL の接続を確認できる開発環境** と、フロントエンドの画面プロトタイプを用意しています。各機能の実装状況は[画面仕様](docs/spec/screens/)を参照してください。
+
+料理写真は`frontend/public/images/genres/`に配置します。[16ジャンルのファイル名と配置手順](frontend/public/images/genres/README.md)に従って保存すると、`/home-preview`・`/genre-vote`・`/genre-result`で共通利用できます。`/`は引き続き接続確認画面です。
 
 ## 1. 最初に知っておくこと
 

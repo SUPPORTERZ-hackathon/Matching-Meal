@@ -1,12 +1,20 @@
 # ジャンル投票結果画面・UIプロトタイプ
 
 - Status: Verified
-- Last updated: 2026-10-30
+- Last updated: 2026-10-31
 - Related issue: None
 - Related specifications: genre-vote.md, genre-vote-waiting.md, ../themes/design-system.md, ../components/common-ui.md, ../services/room-lifecycle.md
 - Implementation files: frontend/src/app/genre-result/, frontend/src/app/ui-preview/genre-result/, frontend/src/features/genre-result/, frontend/src/features/genre-vote-waiting/genre-vote-waiting-preview.tsx, frontend/src/features/genre-vote-waiting/genre-vote-waiting-screen.tsx, frontend/package.json
 
 ## 目的・範囲・承認
+
+### 写真と発表演出の同期（2026-10-31）
+
+主仕様は[genre-card-motion.md](../components/genre-card-motion.md)。今回の明示依頼を承認根拠とし、写真の準備完了とpop/図形の開始を同期する。準備待ちは写真領域だけ最大700ms、超過は既存代替表示で演出を継続し、その再生中の遅い写真の途中参加を防ぐ。既存850/1600msの演出、軌道/ハート/配置/CTA/遷移は維持。後段の「マウントで即開始」は本契約へ更新。Progress：実装・検証済み、自己レビュー96点。準備完了の最初の描画で写真がloaded/opacity1、写真と図形の開始時刻一致、取得遅延/404のfallbackと再生中の写真非途中参加、ハート残存/図形消去/再描画で再生しないこと/軽減設定/指定幅を確認。Docker lint/型検査/40テスト/build成功。詳細は主仕様。
+
+### 16ジャンル写真の参照更新（2026-10-31）
+
+画像の主仕様は[genre-photos.md](../components/genre-photos.md)。今回の明示的な依頼に基づき、ResultArtworkのローカル画像パス判定を共通のgetGenreImagePathへ置き換え、GENRESの`/images/genres/`写真をホーム・投票と共用する。旧`/genres/`プレビュー画像も互換読み込みする。結果データ・画像領域・登場演出・ハート・装飾・固定ボタンは変更しない。Progress：ramen/cafe/sushi-seafoodの共通写真の読み込み、旧プレビューの画像失敗/代替表示、登場後のハート残存/図形消去を確認済み。Docker lint/型検査/38テスト/build成功。仕様の自己レビュー97/100、未決定事項なし。
 
 ### 店舗投票プロトタイプへの接続（2026-10-30）
 

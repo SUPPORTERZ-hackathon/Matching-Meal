@@ -11,6 +11,8 @@ import type { Genre } from "./genres";
 import { GenreArtwork } from "./genre-artwork";
 import { useGenreVote } from "./use-genre-vote";
 import { SWIPE } from "./swipe-config";
+import { DECK_PRESENTATION, nextCardPresentation } from "./deck-presentation";
+import { useNextCardShade } from "./use-next-card-shade";
 import type { VoteChoice } from "./vote-state";
 import styles from "./genre-vote.module.css";
 
@@ -23,10 +25,15 @@ type MotionStyle = CSSProperties & {
   "--exit-duration": string;
   "--enter-duration": string;
   "--undo-duration": string;
+  "--next-shade-opacity": number;
+  "--next-scale": number;
+  "--next-offset": string;
 };
 
 export function GenreVoteScreen({ genres, roomId, onComplete }: GenreVoteScreenProps) {
-  const { votes, phase, motion, cardRef, vote, undo, finishAnimation, currentGenre, complete, locked, canUndo, pointerHandlers, labelOpacity, lastAction } = useGenreVote(genres);
+  const { votes, phase, motion, reducedMotion, cardRef, vote, undo, finishAnimation, currentGenre, complete, locked, canUndo, pointerHandlers, labelOpacity, lastAction } = useGenreVote(genres);
+  const clipRef = useRef<HTMLDivElement>(null);
+  const shadeRef = useNextCardShade({ cardRef, clipRef, genreId: currentGenre?.id, phase, motionX: motion.x, reducedMotion });
   const skipButtonRef = useRef<HTMLButtonElement>(null);
   const likeButtonRef = useRef<HTMLButtonElement>(null);
   const undoButtonRef = useRef<HTMLButtonElement>(null);
@@ -38,6 +45,7 @@ export function GenreVoteScreen({ genres, roomId, onComplete }: GenreVoteScreenP
   const genre = currentGenre;
   const lastVote = lastAction?.type === "vote" ? lastAction.vote : undefined;
   const lastGenre = lastVote ? genres.find((item) => item.id === lastVote.genreId) : undefined;
+  const nextPresentation = nextCardPresentation(labelOpacity);
   const announcement = complete ? `${total}ジャンルの投票が完了しました。待機画面へ移動します。`
     : lastAction?.type === "undo" ? `${genre?.name}の投票を取り消しました。${currentNumber}件目を選び直せます。`
       : lastVote ? `${lastGenre?.name}を${lastVote.choice === "like" ? "食べたい" : "見送り"}にしました。次は${genre?.name}、${currentNumber}件目です。` : "";
@@ -49,6 +57,9 @@ export function GenreVoteScreen({ genres, roomId, onComplete }: GenreVoteScreenP
     "--exit-duration": `${SWIPE.exitDuration}ms`,
     "--enter-duration": `${SWIPE.enterDuration}ms`,
     "--undo-duration": `${SWIPE.undoDuration}ms`,
+    "--next-shade-opacity": DECK_PRESENTATION.shadeOpacity,
+    "--next-scale": nextPresentation.scale,
+    "--next-offset": `${nextPresentation.offset}px`,
   };
 
   useEffect(() => {
@@ -105,28 +116,36 @@ export function GenreVoteScreen({ genres, roomId, onComplete }: GenreVoteScreenP
                 <small>投票済み {completedCount}件</small>
               </div>
             </div>
-            <div className={styles.swipeWindow}>
+            <div ref={clipRef} className={styles.swipeWindow}>
               <div className={styles.cardStage} data-phase={phase} style={motionStyle}>
                 <div className={styles.backCard} aria-hidden="true" />
-                <article
-                  key={genre.id}
-                  ref={cardRef}
-                  className={styles.genreCard}
-                  aria-labelledby="genre-card-title"
-                  aria-describedby="genre-swipe-help"
-                  data-genre-id={genre.id}
-                  {...pointerHandlers}
-                  onTransitionEnd={(event) => {
-                    if (event.target === event.currentTarget && event.propertyName === "transform") finishAnimation();
-                  }}
-                  onAnimationEnd={(event) => {
-                    if (event.target === event.currentTarget) finishAnimation();
-                  }}
-                >
-                  <GenreArtwork genre={genre} />
-                  <div className={`${styles.directionLabel} ${styles.likeLabel}`} data-vote-choice="like" aria-hidden="true" style={{ opacity: motion.x > 0 ? labelOpacity : 0 }}><Heart />食べたい</div>
-                  <div className={`${styles.directionLabel} ${styles.skipLabel}`} data-vote-choice="skip" aria-hidden="true" style={{ opacity: motion.x < 0 ? labelOpacity : 0 }}><X />見送り</div>
-                </article>
+                {[...genres.slice(completedCount + 1, completedCount + 2), genre].map((item) => {
+                  const current = item.id === genre.id;
+                  return <article
+                    key={item.id}
+                    ref={current ? cardRef : undefined}
+                    className={current ? styles.genreCard : styles.nextCard}
+                    aria-labelledby={current ? "genre-card-title" : undefined}
+                    aria-describedby={current ? "genre-swipe-help" : undefined}
+                    aria-hidden={current ? undefined : true}
+                    inert={!current}
+                    data-genre-id={current ? item.id : undefined}
+                    data-next-genre-id={current ? undefined : item.id}
+                    {...(current ? pointerHandlers : {})}
+                    onTransitionEnd={current ? (event) => {
+                      if (event.target === event.currentTarget && event.propertyName === "transform" && (phase === "exiting" || phase === "returning")) finishAnimation();
+                    } : undefined}
+                    onAnimationEnd={current ? (event) => {
+                      if (event.target === event.currentTarget) finishAnimation();
+                    } : undefined}
+                  >
+                    <GenreArtwork genre={item} current={current} />
+                    {current ? <>
+                      <div className={`${styles.directionLabel} ${styles.likeLabel}`} data-vote-choice="like" aria-hidden="true" style={{ opacity: motion.x > 0 ? labelOpacity : 0 }}><Heart />食べたい</div>
+                      <div className={`${styles.directionLabel} ${styles.skipLabel}`} data-vote-choice="skip" aria-hidden="true" style={{ opacity: motion.x < 0 ? labelOpacity : 0 }}><X />見送り</div>
+                    </> : <div ref={shadeRef} className={styles.nextShade} data-next-shade aria-hidden="true" />}
+                  </article>;
+                })}
               </div>
             </div>
 

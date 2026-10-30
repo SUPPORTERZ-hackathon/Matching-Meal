@@ -29,7 +29,7 @@ export function GenreResultScreen({ result, genres, roomId, isPrototype = false,
             <section className={styles.hero} aria-labelledby="genre-result-heading">
               <p className={styles.kicker}>みんなの気分がマッチ！</p>
               <h1 id="genre-result-heading">今日のごはんは…</h1>
-              <ResultReveal key={`${view.genre.id}:${replayKey}`} genre={view.genre} />
+              <ResultReveal key={`${view.genre.id}:${view.genre.imagePath ?? "none"}:${replayKey}`} genre={view.genre} />
               <h2 className={styles.genreName} data-decided-genre={view.genre.id}>{view.genre.name}</h2>
               <p className={styles.decidedMessage}>に決まりました！</p>
             </section>

@@ -1,10 +1,13 @@
 "use client";
 
-import { Plus, QrCode, ChevronRight } from "lucide-react";
+import { QrCode, ChevronRight } from "lucide-react";
 import { AppLogo } from "@/components/common/app-logo";
 import { PageContainer } from "@/components/common/page-container";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { GENRES } from "../genre-vote/genres";
+import { getHomeFeaturedGenres } from "./home-food-data";
+import { HomeFoodPhoto } from "./home-food-photo";
 import "./home-preview.css"
 
 export function HomePreviewScreen() {
@@ -18,11 +21,12 @@ export function HomePreviewScreen() {
         </header>
 
         <section className="home-preview-hero" aria-label="料理のイメージ">
-          <div className="home-preview-food home-preview-food-side" />
-          <div className="home-preview-food home-preview-food-main">
-            <span className="home-preview-heart">♥</span>
-          </div>
-          <div className="home-preview-food home-preview-food-side" />
+          {getHomeFeaturedGenres(GENRES).map(({ position, genre }) => (
+            <div key={position} className={`home-preview-food ${position === "center" ? "home-preview-food-main" : "home-preview-food-side"}`} data-home-position={position}>
+              <HomeFoodPhoto key={`${genre?.id}:${genre?.imagePath}`} genre={genre} featured={position === "center"} />
+              {position === "center" && <span className="home-preview-heart">♥</span>}
+            </div>
+          ))}
         </section>
 
         <section className="home-preview-intro">
