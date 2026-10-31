@@ -53,7 +53,7 @@ export function HomePreviewScreen() {
             <ChevronRight aria-hidden="true" className="ml-auto" />
           </Button>
 
-          <Button variant="outline" size="meal" type="button">
+          <Button variant="outline" size="meal" type="button" onClick={() => router.push("/qr-scan")}>
             <QrCode aria-hidden="true" />
             QRコードから参加する
           </Button>
