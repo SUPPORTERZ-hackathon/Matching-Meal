@@ -12,7 +12,8 @@
     "test:genre-vote-waiting": "node --experimental-strip-types --test src/features/genre-vote-waiting/*.test.mjs",
     "test:genre-result": "node --experimental-strip-types --test src/features/genre-result/*.test.mjs",
     "test:restaurant-vote": "node --experimental-strip-types --test src/features/restaurant-vote/*.test.mjs",
-    "test:restaurant-result": "node --experimental-strip-types --test src/features/restaurant-result/*.test.mjs"
+    "test:restaurant-result": "node --experimental-strip-types --test src/features/restaurant-result/*.test.mjs",
+    "test:room": "node --experimental-strip-types --test src/features/room/*.test.mjs"
   },
   "dependencies": {
     "@radix-ui/react-slot": "1.5.0",
@@ -21,6 +22,7 @@
     "cn": "^0.5.0",
     "lucide-react": "1.61.0",
     "next": "16.4.3",
+    "qrcode.react": "4.2.0",
     "radix-ui": "^1.8.1",
     "react": "19.3.1",
     "react-dom": "19.3.1",

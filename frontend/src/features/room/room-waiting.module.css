@@ -1,0 +1,64 @@
+.background { display: flow-root; min-height: 100svh; background: var(--soft); }
+.page { --room-action-height: 160px; --room-waiting-pulse-duration: 1.5s; }
+.page > main { padding: 0; }
+.content { padding: 26px max(var(--meal-page-gutter), env(safe-area-inset-right, 0px)) calc(var(--room-action-height) + 24px) max(var(--meal-page-gutter), env(safe-area-inset-left, 0px)); }
+.hero, .joinHero { text-align: center; }
+.hero { margin-bottom: 26px; }
+.hero h1, .joinHero h1 { font-size: 1.625rem; font-weight: 400; line-height: 1.45; letter-spacing: -.04em; overflow-wrap: anywhere; }
+.hero > p { margin-top: 12px; color: var(--muted-foreground); font-size: .8125rem; line-height: 1.8; }
+.live { display: inline-flex; align-items: center; justify-content: center; gap: 7px; margin-bottom: 15px; padding: 7px 10px; border-radius: 99px; background: #ebf8f1; color: var(--success); font-size: .6875rem; font-weight: 800; }
+.live i, .joined i { flex-shrink: 0; width: 7px; height: 7px; border-radius: 50%; background: var(--success); }
+.inviteCard { padding: 20px; text-align: center; }
+.qrFrame { width: min(100%, 200px); aspect-ratio: 1; margin-inline: auto; box-shadow: 0 2px 15px rgb(0 0 0 / 6%); background: #fff; }
+.qrFrame svg, .expandedQr svg { display: block; width: 100%; height: auto; aspect-ratio: 1; }
+.expandLink { display: flex; min-height: 44px; height: auto; margin: 4px auto 10px; padding: 8px; color: var(--muted-foreground); font-size: .75rem; text-decoration: underline; white-space: normal; }
+.urlRow { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 8px 8px 8px 12px; border-radius: 12px; background: var(--soft); text-align: left; }
+.url { min-width: 0; color: var(--muted-foreground); font-family: inherit; font-size: .75rem; line-height: 1.7; overflow-wrap: anywhere; user-select: text; }
+.copyButton { min-width: 0; min-height: 44px; height: auto; padding: 10px; border-radius: 10px; color: var(--primary); font-size: .75rem; white-space: normal; }
+.copyButton svg { flex-shrink: 0; }
+.feedback, .localNote { margin-top: 12px; color: var(--muted-foreground); font-size: .75rem; line-height: 1.8; overflow-wrap: anywhere; }
+.feedback:empty { display: none; }
+.membersHeading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-block: 25px 10px; }
+.membersHeading h2 { min-width: 0; font-size: 1rem; font-weight: 500; }
+.membersHeading > span { display: flex; align-items: center; gap: 5px; flex-shrink: 0; color: var(--muted-foreground); font-size: .8125rem; }
+.membersHeading svg { width: 18px; height: 18px; }
+.members { list-style: none; padding: 0; margin: 0; }
+.member { display: flex; align-items: center; gap: 10px; padding-block: 13px; border-bottom: 1px solid var(--border); }
+.member:last-child { border: 0; }
+.member > :first-child { flex: 1; min-width: 0; }
+.member :global(.meal-participant-name) { font-size: .875rem; }
+.role { flex-shrink: 0; max-width: 35%; padding: 5px 8px; border-radius: 99px; background: var(--primary-pale); color: var(--primary); font-size: .625rem; overflow-wrap: anywhere; }
+.joined { display: grid; place-items: center; width: 10px; flex-shrink: 0; }
+.fixedAction { position: fixed; z-index: 30; inset-inline: 0; bottom: 0; width: 100%; max-width: var(--meal-max-width); margin-inline: auto; background: linear-gradient(transparent, var(--background) 16%); }
+.fixedAction button { min-width: 0; }
+.actionNote { margin-top: 10px; color: var(--muted-foreground); font-size: .6875rem; line-height: 1.7; text-align: center; overflow-wrap: anywhere; }
+.guestWaiting { display: flex; align-items: center; justify-content: center; gap: 9px; padding: 16px; border-radius: 18px; background: var(--primary-pale); color: var(--primary-dark); font-weight: 700; text-align: center; }
+.guestDot { flex-shrink: 0; width: 7px; height: 7px; border-radius: 50%; background: var(--primary); opacity: .55; }
+.waitingDot { transform-origin: center; }
+.waitingDot[data-waiting="true"] { animation: waitingPulse var(--room-waiting-pulse-duration) ease-in-out infinite; }
+@keyframes waitingPulse { 0%, 100% { transform: scale(.8); } 50% { transform: scale(1.2); } }
+@media (prefers-reduced-motion: reduce) { .waitingDot[data-waiting="true"] { animation: none; } }
+.error { margin-block: 16px; padding: 12px; border: 1px solid var(--primary-pale); border-radius: 12px; color: var(--primary-dark); background: var(--primary-pale); font-size: .875rem; line-height: 1.8; overflow-wrap: anywhere; }
+.error button { margin-top: 8px; height: auto; white-space: normal; }
+.message { display: grid; gap: 18px; padding-block: 24px; overflow-wrap: anywhere; }
+.message h1 { font-size: 1.375rem; }
+.message p { color: var(--muted-foreground); font-size: .875rem; line-height: 1.8; }
+.message button { height: auto; min-height: 44px; white-space: normal; }
+.message a { color: var(--primary); text-decoration: underline; }
+.dialog { width: min(420px, calc(100vw - 44px)); max-height: calc(100dvh - 44px); margin: auto; padding: 18px; border: 1px solid var(--border); border-radius: 22px; background: var(--card); color: var(--foreground); }
+.dialog::backdrop { background: rgb(39 35 33 / 50%); }
+.dialogHeading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.dialogHeading h2 { min-width: 0; font-size: 1.125rem; overflow-wrap: anywhere; }
+.dialogHeading button { flex-shrink: 0; min-width: 44px; min-height: 44px; }
+.expandedQr { width: min(100%, 320px); margin-inline: auto; }
+.code { margin-top: 14px; color: var(--muted-foreground); font-size: .875rem; text-align: center; overflow-wrap: anywhere; }
+.joinHero { margin-block: 10px 30px; }
+.roomIcon { display: grid; place-items: center; width: 76px; height: 76px; margin: 0 auto 20px; border-radius: 26px; color: var(--primary); background: var(--primary-pale); }
+.roomIcon svg { width: 34px; height: 34px; }
+.kicker { margin-bottom: 8px; color: var(--primary); font-size: .6875rem; font-weight: 800; letter-spacing: .1em; }
+.joinForm label { display: block; margin-bottom: 10px; font-size: .875rem; font-weight: 700; }
+.joinForm input { width: 100%; min-width: 0; min-height: 56px; padding: 12px 15px; border: 1px solid var(--border); border-radius: 14px; background: var(--card); font: inherit; }
+.joinForm input:focus-visible { outline: 3px solid var(--primary-pale); border-color: var(--primary); }
+.fieldMeta { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-top: 9px; color: var(--muted-foreground); font-size: .6875rem; line-height: 1.8; }
+.fieldMeta p { min-width: 0; }
+.fieldMeta span { flex-shrink: 0; }
