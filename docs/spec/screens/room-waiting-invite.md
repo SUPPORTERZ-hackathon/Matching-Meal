@@ -73,6 +73,19 @@
 
 ## 検証方法・受け入れ条件
 
+### 2026-10-31追加：待機中の丸アイコンPulse（承認済み）
+
+- 承認根拠：今回のユーザー依頼にある周期1.5秒・scale(0.8〜1.2)・smooth easing・reduced-motion対応をそのまま採用。API/業務動作の変更や未決定事項はない。
+- 調査：作業開始時はfeature/room-waiting-invite、HEAD 5a0a072、未コミット変更なし。画面06は独立したNextコンポーネントではなく、Figma参照のWaiting/isHost=falseに相当する。参照のscan-dotは1.3秒のopacity点滅であり、今回指定のscale演出とは異なる。共通UIに同等の再利用可能なPulse定義はない。
+- 現状との差：room-waiting-screen.tsxのゲスト待機表示はp要素で、ピンクの丸が未実装。Figma06のscan-dotと同じ7pxの丸をテキスト左に補う。既存の淡い赤背景・文字色/太さ・角丸・paddingは維持し、丸は既存primaryの固定opacity .55でピンクに見せる。操作を持たない表示のままとし、buttonやクリック処理を追加しない。
+- 緑の丸は既存の色・7pxサイズを維持。参加者行の緑点は今回の対象外とする。
+- 同じ画面専用keyframesを2か所で使い、0%/100%でscale(.8)、50%でscale(1.2)、周期1.5秒、ease-in-out、無限反復。transform-origin:centerで中心を固定し、サイズ/余白/opacityをアニメーションさせない。JavaScriptタイマー・依存追加・共通CSS変更は不要。
+- 入力/状態：既存のroom.status=lobbyかつ状態取得が正常なときにだけPulseする。更新失敗・lobby以外では静止、認証エラー等で既存表示が消える場合は丸も消える。既存の開始検知/遷移は変更しない。
+- アクセシビリティ：丸はaria-hidden=true。prefers-reduced-motion:reduceではanimation:none、通常サイズで静止する。既存メッセージを状態の意味として維持する。
+- 受け入れ：両丸の周期/倍率/中心が揃い、本文/ボタン文字の矩形がPulse中に変化しないこと。320/375/390/430/768/1024px、横向き、短い高さ、200%文字で横スクロールなし・固定待機表示を維持。ゲストはクリック/キーボードで開始できず、ホストの実API開始後は通常どおりジャンル投票へ移動すること。
+- 検証：ブラウザーのAnimation.currentTimeで倍率/中心/文字矩形とreduced-motionを測定。ローカル実APIでホスト/ゲストの開始を回帰確認。Docker Composeのlint/typecheck/フロントテスト/build、Git差分でREADME/禁止領域無変更を確認する。
+- Self-Review: 98/100（2026-10-31）。再現条件・状態・CSS値・受け入れ条件を明記。減点は実機の滑らかさを別途確認する必要がある2点。90点以上、ユーザー指定から未決定事項なし。
+
 1. 既存Docker Composeでヘルスチェックと4 APIを確認。テスト用ルーム/ニックネームだけでローカルに作成/参加し、同じroom.id・joinCodeと異なるparticipant.idを検証。トークンを検証ログへ出さない。
 2. 実ブラウザーのホスト作成→URL取得/QRデコード値一致→別コンテキストで参加→ホストの人数更新→ゲストに開始ボタンなし→ホスト開始成功とゲスト更新を確認。
 3. コピー成功/拒否、sessionStorage再読込、同一招待への再訪問で参加POST重複なし、無効コード/不存在/期限切れ相当/認証/409/503/通信失敗/不正レスポンスを自動テストとブラウザー応答差し替えで確認。実APIとモック応答を記録で区別する。
@@ -94,6 +107,12 @@
 - 既存PWA manifestはscope=/genre-voteであり、今回のroom-waiting/jはscope外。通常ブラウザーの動作とは区別し、manifest/Service Workerは依頼どおり変更しない。PWA全体のscope拡張は別作業。
 
 ## Progress
+
+- 2026-10-31 Pulse改善（完了）：画面03のTSX/CSSだけにPulseを実装。通常色/背景/文字/既存処理を維持し、未実装だったピンクの丸をFigma06に合わせて補った。開始時の作業ツリーはクリーン。READMEと画面06/共通UIは変更なし。
+- Pulse検証（完了）：Edge/Chromiumで0/750/1500msのscaleを両方とも.8/1.2/.8と測定。周期1500ms・ease-in-out・無限反復を確認。丸の中心は0.01px未満の差、見出し/待機文字/固定領域の矩形は完全一致。参加者追加の再描画でも同じCSSAnimationが維持された。reduced-motionではアニメーション0件・transform:none・丸は表示維持。
+- Pulse状態/操作検証（完了）：ローカル実APIでホスト/ゲスト/追加メンバーを作成し、ホスト開始→双方の既存ジャンル投票への遷移を確認。ゲスト待機表示のタップでは開始POSTなし。モック503で両丸停止→実GET復旧で再開、モックdecidedでステータス切替・両丸停止を確認。API実装や通信コードは変更していない。
+- Pulse表示/コード検証（完了）：320/375/390/430/768/1024px、844×390、390×320で横スクロールなし・固定領域の下端が画面下端に一致・参加者末尾が固定領域の上まで到達。390px文字200%も横スクロールなし。Docker Composeでlint/typecheck/全フロント51テスト/buildが成功。Git diff --check成功、変更は本仕様と画面03のTSX/CSSの3ファイルのみ。コミット/プッシュ/PRなし。
+- Pulse記録：Git対象外のCodex検証領域にroom-pulse-results.json、room-pulse-small-390.png、room-pulse-large-390.pngを保存。実機での滑らかさは未検証。
 
 - 完了：Git/関連資料/4 APIのソースとOpenAPI調査、Figma確認、既存依存とルーティング確認、最新mainへ安全な追従。
 - 完了：Context7でqrcode.reactの端末内SVG生成/余白/訂正レベル/中央画像を確認。既存のReact/Nextの仕組みを使用し、QR以外の依存を追加しない案。

@@ -1,5 +1,5 @@
 .background { display: flow-root; min-height: 100svh; background: var(--soft); }
-.page { --room-action-height: 160px; }
+.page { --room-action-height: 160px; --room-waiting-pulse-duration: 1.5s; }
 .page > main { padding: 0; }
 .content { padding: 26px max(var(--meal-page-gutter), env(safe-area-inset-right, 0px)) calc(var(--room-action-height) + 24px) max(var(--meal-page-gutter), env(safe-area-inset-left, 0px)); }
 .hero, .joinHero { text-align: center; }
@@ -32,7 +32,12 @@
 .fixedAction { position: fixed; z-index: 30; inset-inline: 0; bottom: 0; width: 100%; max-width: var(--meal-max-width); margin-inline: auto; background: linear-gradient(transparent, var(--background) 16%); }
 .fixedAction button { min-width: 0; }
 .actionNote { margin-top: 10px; color: var(--muted-foreground); font-size: .6875rem; line-height: 1.7; text-align: center; overflow-wrap: anywhere; }
-.guestWaiting { padding: 16px; border-radius: 18px; background: var(--primary-pale); color: var(--primary-dark); font-weight: 700; text-align: center; }
+.guestWaiting { display: flex; align-items: center; justify-content: center; gap: 9px; padding: 16px; border-radius: 18px; background: var(--primary-pale); color: var(--primary-dark); font-weight: 700; text-align: center; }
+.guestDot { flex-shrink: 0; width: 7px; height: 7px; border-radius: 50%; background: var(--primary); opacity: .55; }
+.waitingDot { transform-origin: center; }
+.waitingDot[data-waiting="true"] { animation: waitingPulse var(--room-waiting-pulse-duration) ease-in-out infinite; }
+@keyframes waitingPulse { 0%, 100% { transform: scale(.8); } 50% { transform: scale(1.2); } }
+@media (prefers-reduced-motion: reduce) { .waitingDot[data-waiting="true"] { animation: none; } }
 .error { margin-block: 16px; padding: 12px; border: 1px solid var(--primary-pale); border-radius: 12px; color: var(--primary-dark); background: var(--primary-pale); font-size: .875rem; line-height: 1.8; overflow-wrap: anywhere; }
 .error button { margin-top: 8px; height: auto; white-space: normal; }
 .message { display: grid; gap: 18px; padding-block: 24px; overflow-wrap: anywhere; }
