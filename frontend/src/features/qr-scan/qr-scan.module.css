@@ -8,16 +8,14 @@
   min-height: 100dvh;
 }
 
-.header {
-  padding-top: env(safe-area-inset-top, 0px);
-}
+.page > main { padding: 0; }
 
 .content {
   display: flex;
   flex-direction: column;
   align-items: center;
   width: 100%;
-  padding: 24px 20px 32px;
+  padding: 24px var(--meal-page-gutter) 32px;
   text-align: center;
 }
 
@@ -41,7 +39,7 @@
   color: var(--muted-foreground);
   font-size: 14px;
   line-height: 1.7;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .cameraArea {
@@ -56,7 +54,6 @@
   border-radius: 24px;
   background: #242424;
   color: #ffffff;
-  transform: scale(1.05);
 }
 
 .cameraIcon {
@@ -96,12 +93,14 @@
 
 .cameraButton {
   width: 100%;
-  max-width: 108px;
-  min-height: 34px;
-  padding: 0 12px;
+  max-width: 100%;
+  min-height: 44px;
+  height: auto;
+  padding: 10px 12px;
   font-size: 11px;
   border-radius: 12px;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .homeButton {
@@ -129,11 +128,6 @@
 }
 
 @media (max-width: 380px) {
-  .content {
-    padding-right: 16px;
-    padding-left: 16px;
-  }
-
   .title {
     font-size: 25px;
   }

@@ -9,6 +9,10 @@
 - 対象画面: メシマッチのホーム画面
 - 関連仕様: `docs/spec/components/common-ui.md`、`docs/spec/themes/design-system.md`
 
+## UI統合の現行契約（2026-10-31）
+
+主仕様は[frontend-ui-integration.md](frontend-ui-integration.md)。共通AppHeaderへ統一し、写真・遷移を維持する。ボタンの絶対配置/nowrapを通常フローへ戻し、文字拡大時は折り返す。 後段の従来ルート/固定処理/モック供給の記録は、相違する部分のみ本契約へ更新する。検証結果は主仕様のProgressへ集約する。
+
 ## 1. 目的
 
 ### 料理写真追加の現行契約（2026-10-31）

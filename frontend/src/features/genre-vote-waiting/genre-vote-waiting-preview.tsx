@@ -10,6 +10,8 @@ import { MOCK_WAITING_PARTICIPANTS } from "./prototype-data";
 import type { WaitingParticipant } from "./waiting-state";
 import { summarizeParticipants } from "./waiting-state";
 import { GENRE_RESULT_PATH } from "@/features/genre-result/prototype-data";
+import { demoFlowUrl } from "../ui-flow/development-demo";
+import { DevelopmentDemoNotice } from "../ui-flow/flow-message";
 import styles from "./genre-vote-waiting.module.css";
 
 const MANY_PARTICIPANT_COUNT = 12;
@@ -22,7 +24,7 @@ export function GenreVoteWaitingPreview() {
   const [revealRequested, setRevealRequested] = useState<boolean>(false);
 
   useEffect(() => {
-    if (revealRequested && summarizeParticipants(participants).allComplete) router.push(GENRE_RESULT_PATH);
+    if (revealRequested && summarizeParticipants(participants).allComplete) router.push(demoFlowUrl(GENRE_RESULT_PATH));
   }, [participants, revealRequested, router]);
 
   function showCompletedCount(count: number) {
@@ -39,8 +41,7 @@ export function GenreVoteWaitingPreview() {
   }
 
   return (
-    <>
-      <GenreVoteWaitingScreen participants={participants} roomId={roomId} />
+    <GenreVoteWaitingScreen participants={participants} roomId={roomId} notice={<DevelopmentDemoNotice />}>
       <section className={styles.previewControls} aria-labelledby="waiting-preview-heading">
         <h2 id="waiting-preview-heading">開発用プレビュー</h2>
         <p>すべて仮データです。操作したときだけ状態が変わり、再読み込みすると2/3人に戻ります。</p>
@@ -63,6 +64,6 @@ export function GenreVoteWaitingPreview() {
           </div>
         </BottomAction>
       </section>
-    </>
+    </GenreVoteWaitingScreen>
   );
 }

@@ -7,6 +7,7 @@ import { MapPin, LocateFixed, X, ArrowLeft } from "lucide-react";
 import { AppHeader } from "@/components/common/app-header";
 import { PageContainer } from "@/components/common/page-container";
 import { BottomAction } from "@/components/common/bottom-action";
+import { FixedBottomAction } from "@/components/common/fixed-bottom-action";
 import { Button } from "@/components/ui/button";
 import { StepProgress } from "@/components/common/step-progress";
 import { createRoom } from "../room/room-api";
@@ -63,8 +64,8 @@ export function RoomCreateScreen() {
                     variant="outline"
                     size="icon-lg"
                     className="rounded-[13px]"
-                    onClick={() => router.back()}
-                    aria-label="前の画面に戻る"
+                    onClick={() => router.push("/home-preview")}
+                    aria-label="ホームに戻る"
                 >
                     <ArrowLeft className="size-5" aria-hidden="true" />
                 </Button>
@@ -181,7 +182,7 @@ export function RoomCreateScreen() {
           {createError && <p className={styles.apiError} role="alert">{createError}</p>}
         </section>
 
-        <BottomAction className={styles.actions}>
+        <FixedBottomAction><BottomAction>
           <Button
             type="button"
             variant="primary"
@@ -192,7 +193,7 @@ export function RoomCreateScreen() {
           >
             ルームを作成する
           </Button>
-        </BottomAction>
+        </BottomAction></FixedBottomAction>
       </PageContainer>
     </div>
   );

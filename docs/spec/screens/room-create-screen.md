@@ -6,6 +6,10 @@
 - Related specifications: room-waiting-invite.md, ../components/common-ui.md
 - Implementation files: frontend/src/features/room-create/room-create-screen.tsx, frontend/src/features/room-create/room-create.module.css, frontend/src/features/room/
 
+## UI統合の現行契約（2026-10-31）
+
+主仕様は[frontend-ui-integration.md](frontend-ui-integration.md)。主要ボタンは共通FixedBottomActionで下部固定し、本文に実測高の余白を確保する。戻る先は/home-preview。nickname・API・集合場所の保存範囲は維持する。 後段の従来ルート/固定処理/モック供給の記録は、相違する部分のみ本契約へ更新する。検証結果は主仕様のProgressへ集約する。
+
 ## 現行のAPI接続契約
 
 2026-10-31に承認された[画面03・招待仕様](room-waiting-invite.md)をAPI接続・状態・エラー処理の主仕様とする。既存の画面02の配置・必須入力・12文字上限は維持する。作成APIへ送る項目はnicknameだけで、集合場所と検索範囲はホストのsessionStorage内だけに保持し、未同期である旨を表示する。現在地取得と検索は引き続き未実装。

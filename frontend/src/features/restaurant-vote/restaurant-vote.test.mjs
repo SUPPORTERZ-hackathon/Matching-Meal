@@ -80,4 +80,7 @@ test("固定ジャンルIDを引き継ぎ、不明/空/重複queryから別ジ�
   assert.equal(restaurantVoteUrl("sushi-seafood"), "/restaurant-vote?genre=sushi-seafood");
   assert.equal(restaurantWaitingUrl("sushi-seafood"), "/restaurant-vote-waiting?genre=sushi-seafood");
   assert.equal(restaurantVoteUrl("a&b"), "/restaurant-vote?genre=a%26b");
+  assert.equal(restaurantVoteUrl("italian", { demo: true }), "/restaurant-vote?genre=italian&demo=1");
+  assert.equal(restaurantWaitingUrl("italian", { demo: true }), "/restaurant-vote-waiting?genre=italian&demo=1");
+  assert.equal(restaurantWaitingUrl("cafe", { demo: false }), "/restaurant-vote-waiting?genre=cafe");
 });

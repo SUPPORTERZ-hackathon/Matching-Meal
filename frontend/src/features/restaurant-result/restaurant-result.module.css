@@ -1,9 +1,8 @@
 .background { display: flow-root; min-height: 100svh; background: var(--soft); }
-.page { --restaurant-result-action-height: 12rem; }
 .page *, .page *::before, .page *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 .page > main { padding: 0; }
 .header > :last-child:not(:first-child) { margin-inline-start: auto; }
-.content { padding: 24px max(var(--meal-page-gutter), env(safe-area-inset-right, 0px)) calc(var(--restaurant-result-action-height) + 24px) max(var(--meal-page-gutter), env(safe-area-inset-left, 0px)); }
+.content { padding: 24px max(var(--meal-page-gutter), env(safe-area-inset-right, 0px)) 24px max(var(--meal-page-gutter), env(safe-area-inset-left, 0px)); }
 .intro { margin-bottom: 20px; text-align: center; }
 .decided { display: inline-block; margin-bottom: 10px; padding: 7px 14px; border-radius: 99px; background: var(--primary-pale); color: var(--primary); font-size: .75rem; font-weight: 800; }
 .intro h1 { font-size: 1.375rem; font-weight: 500; line-height: 1.5; letter-spacing: -.04em; }
@@ -37,7 +36,6 @@
 .summary small { display: block; color: var(--muted-foreground); font-size: .6875rem; line-height: 1.8; }
 .prototypeNote, .sourceNote { margin-top: 16px; color: var(--muted-foreground); font-size: .6875rem; line-height: 1.8; text-align: center; overflow-wrap: anywhere; }
 .sourceNote a { text-decoration: underline; text-underline-offset: 3px; }
-.fixedAction { position: fixed; z-index: 20; bottom: 0; left: 50%; width: 100%; max-width: var(--meal-max-width); transform: translateX(-50%); background: var(--background); box-shadow: 0 -8px 24px rgb(255 253 250 / 95%); }
 .mapButton { scale: 1 !important; transform: none !important; }
 .mapButton svg { flex-shrink: 0; }
 .mapButton > span { min-width: 0; }

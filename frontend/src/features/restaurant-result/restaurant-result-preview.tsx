@@ -44,7 +44,7 @@ export function RestaurantResultPreview() {
       <label htmlFor="result-preview-scenario">表示状態</label><select id="result-preview-scenario" value={scenario} onChange={(event) => { const next = SCENARIOS.find((item) => item.id === event.target.value); if (next) setScenario(next.id); }}>{SCENARIOS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select>
       <p>写真なし・座標なしは通常のモックでも確認できます。</p>
       <p><Link href={restaurantResultUrl(genreId, restaurantId, { demo: true })}>同じIDのデモ結果画面を見る</Link></p>
-      <p><Link href={restaurantVoteUrl(genreId)}>このジャンルで店舗投票から確認する</Link></p>
+      <p><Link href={restaurantVoteUrl(genreId, { demo: true })}>このジャンルで店舗投票から確認する（開発デモ）</Link></p>
     </section>
   </RestaurantResultScreen>;
 }

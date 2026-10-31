@@ -1,7 +1,7 @@
 "use client";
 
 import { QrCode, ChevronRight } from "lucide-react";
-import { AppLogo } from "@/components/common/app-logo";
+import { AppHeader } from "@/components/common/app-header";
 import { PageContainer } from "@/components/common/page-container";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -14,12 +14,8 @@ export function HomePreviewScreen() {
   const router = useRouter();
 
   return (
-    <PageContainer header={null} className="home-preview-page">
+    <PageContainer header={<AppHeader />} className="home-preview-page">
       <div className="home-preview-content">
-        <header className="home-preview-header">
-          <AppLogo />
-        </header>
-
         <section className="home-preview-hero" aria-label="料理のイメージ">
           {getHomeFeaturedGenres(GENRES).map(({ position, genre }) => (
             <div key={position} className={`home-preview-food ${position === "center" ? "home-preview-food-main" : "home-preview-food-side"}`} data-home-position={position}>
@@ -50,16 +46,16 @@ export function HomePreviewScreen() {
         </section>
 
         <div className="home-preview-actions">
-          <Button variant="primary" size="meal" type="button" className="relative" onClick={() => router.push("/room-create")}>
-            <span className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap">
+          <Button variant="primary" size="meal" type="button" onClick={() => router.push("/room-create")}>
+            <span className="home-preview-action-label">
               ルームを作成する
             </span>
-            <ChevronRight aria-hidden="true" className="ml-auto" />
+            <ChevronRight aria-hidden="true" />
           </Button>
 
           <Button variant="outline" size="meal" type="button" onClick={() => router.push("/qr-scan")}>
             <QrCode aria-hidden="true" />
-            QRコードから参加する
+            <span className="home-preview-action-label">QRコードから参加する</span>
           </Button>
         </div>
 

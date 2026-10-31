@@ -6,6 +6,10 @@
 - Related specifications: restaurant-vote.md, restaurant-vote-waiting.md, genre-result.md, ../themes/design-system.md, ../components/common-ui.md
 - Implementation files: frontend/src/app/restaurant-result/, frontend/src/app/ui-preview/restaurant-result/, frontend/src/features/restaurant-result/, frontend/src/features/restaurant-vote/route-data.ts, frontend/src/app/restaurant-vote/page.tsx, frontend/src/features/restaurant-vote-waiting/restaurant-vote-waiting-preview.tsx
 
+## UI統合の現行契約（2026-10-31）
+
+主仕様は[frontend-ui-integration.md](frontend-ui-integration.md)。静的表示・マッチ率/座標検証を維持し、下部固定領域だけ共通FixedBottomActionへ移す。モック結果は開発環境の明示demo=1に限定し、roomクエリ併記時は供給しない。通常の欠損結果と無効マップを維持する。 後段の従来ルート/固定処理/モック供給の記録は、相違する部分のみ本契約へ更新する。検証結果は主仕様のProgressへ集約する。
+
 ## 目的・承認・範囲
 
 ### マッチ率・明示デモの現行契約（2026-10-30）

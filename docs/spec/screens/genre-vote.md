@@ -6,6 +6,10 @@
 - Related specifications: ../components/common-ui.md, ../themes/design-system.md, genre-vote-waiting.md
 - Implementation files: frontend/src/app/genre-vote/, frontend/src/features/genre-vote/, frontend/public/genres/, frontend/public/genre-vote/
 
+## UI統合の現行契約（2026-10-31）
+
+主仕様は[frontend-ui-integration.md](frontend-ui-integration.md)。通常ルームからは投票保存未接続を表示する。既存投票UI・写真・スワイプ・戻るは開発環境の明示demo=1で利用し、完了後もdemoを待機へ引き継ぐ。 後段の従来ルート/固定処理/モック供給の記録は、相違する部分のみ本契約へ更新する。検証結果は主仕様のProgressへ集約する。
+
 ## 目的と対象範囲
 
 ### 次カードの先読み・アピール文（2026-10-31）

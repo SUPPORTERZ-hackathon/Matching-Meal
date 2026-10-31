@@ -232,12 +232,6 @@
   text-align: center;
 }
 
-.actions {
-  padding: 8px var(--room-gutter-right)
-    max(20px, env(safe-area-inset-bottom, 0px))
-    var(--room-gutter-left);
-}
-
 .valid {
   color: #16a34a;
   background: #dcfce7;

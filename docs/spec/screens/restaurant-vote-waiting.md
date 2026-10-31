@@ -6,6 +6,10 @@
 - Related specifications: restaurant-vote.md, genre-vote-waiting.md, ../components/common-ui.md, ../themes/design-system.md
 - Implementation files: frontend/src/app/restaurant-vote-waiting/, frontend/src/app/ui-preview/restaurant-vote-waiting/, frontend/src/features/restaurant-vote-waiting/, frontend/src/features/genre-vote-waiting/genre-vote-waiting-screen.tsx
 
+## UI統合の現行契約（2026-10-31）
+
+主仕様は[frontend-ui-integration.md](frontend-ui-integration.md)。既存参加者/アニメーション/明示デモ結果操作は開発環境のdemo=1に限定する。通常URLは未接続状態を示し、モック参加者や結果を自動補完しない。 後段の従来ルート/固定処理/モック供給の記録は、相違する部分のみ本契約へ更新する。検証結果は主仕様のProgressへ集約する。
+
 ## 目的・範囲・承認
 
 ### 明示デモ導線（2026-10-30）

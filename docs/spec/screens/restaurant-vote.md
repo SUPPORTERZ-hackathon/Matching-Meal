@@ -6,6 +6,10 @@
 - Related specifications: restaurant-vote-waiting.md, genre-result.md, ../components/common-ui.md, ../themes/design-system.md
 - Implementation files: frontend/src/app/restaurant-vote/, frontend/src/app/ui-preview/restaurant-vote/, frontend/src/features/restaurant-vote/, frontend/src/features/genre-result/genre-result-prototype.tsx
 
+## UI統合の現行契約（2026-10-31）
+
+主仕様は[frontend-ui-integration.md](frontend-ui-integration.md)。既存ボタン投票・切替演出は開発環境の明示demo=1で維持する。通常URLは実候補/保存未接続を表示し、仮候補を供給しない。既存genreにdemoを加えて待機へ引き継ぐ。 後段の従来ルート/固定処理/モック供給の記録は、相違する部分のみ本契約へ更新する。検証結果は主仕様のProgressへ集約する。
+
 ## 目的・承認・範囲
 
 ### 写真上バッジの撤去（2026-10-30）

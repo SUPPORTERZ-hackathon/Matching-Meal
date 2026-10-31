@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { GENRES } from "../genre-vote/genres";
 import { PROTOTYPE_ROOM_ID } from "../genre-vote/prototype-config";
 import { RestaurantVoteScreen } from "./restaurant-vote-screen";
+import { DevelopmentDemoNotice } from "../ui-flow/flow-message";
 import { createMockRestaurants, DEFAULT_RESTAURANT_GENRE_ID, restaurantVoteUrl, restaurantWaitingUrl } from "./prototype-data";
 import type { RestaurantCandidate } from "./restaurant-data";
 import type { RestaurantVote } from "./vote-state";
@@ -34,8 +35,7 @@ export function RestaurantVotePreview() {
   }, [genre, scenario]);
   function restart() { setRevision((current) => current + 1); setCompletedVotes([]); }
 
-  return <>
-    <RestaurantVoteScreen key={`${genre.id}:${scenario}:${revision}`} genre={genre} restaurants={restaurants} roomId={PROTOTYPE_ROOM_ID} onComplete={setCompletedVotes} />
+  return <RestaurantVoteScreen key={`${genre.id}:${scenario}:${revision}`} genre={genre} restaurants={restaurants} roomId={PROTOTYPE_ROOM_ID} onComplete={setCompletedVotes} notice={<DevelopmentDemoNotice />}>
     <section className={styles.previewControls} aria-labelledby="restaurant-preview-heading">
       <h2 id="restaurant-preview-heading">店舗投票・開発用プレビュー</h2>
       <p>架空データです。投票はメモリ内のみで、再読み込み・条件変更・再開始でリセットします。このページでは完了後の記録を確認できます。</p>
@@ -44,9 +44,9 @@ export function RestaurantVotePreview() {
       <div className={styles.previewActions}>{SCENARIOS.map((item) => <Button key={item.id} type="button" variant="outline" aria-pressed={scenario === item.id} onClick={() => { setScenario(item.id); restart(); }}>{item.label}</Button>)}</div>
       <Button type="button" variant="soft" onClick={restart}>投票を最初から確認</Button>
       <output aria-live="polite" data-restaurant-records>完了時の記録 {completedVotes.length}件{completedVotes.map((vote) => <p key={vote.restaurantId}>{vote.restaurantId}：{vote.choice === "like" ? "ここがいい" : "見送り"}</p>)}</output>
-      <p><Link href={restaurantVoteUrl(genre.id)}>通常画面から待機まで操作する</Link></p>
-      <p><Link href={restaurantWaitingUrl(genre.id)}>待機画面を見る（独立モック）</Link></p>
+      <p><Link href={restaurantVoteUrl(genre.id, { demo: true })}>開発デモで投票から待機まで操作する</Link></p>
+      <p><Link href={restaurantWaitingUrl(genre.id, { demo: true })}>待機画面を見る（独立モック）</Link></p>
       <p><Link href={`/ui-preview${restaurantWaitingUrl(genre.id)}`}>同じジャンルの待機・結果を開発用に確認する</Link></p>
     </section>
-  </>;
+  </RestaurantVoteScreen>;
 }

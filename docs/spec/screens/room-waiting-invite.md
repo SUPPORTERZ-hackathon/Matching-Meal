@@ -6,6 +6,10 @@
 - Related specifications: room-create-screen.md, qr-scan-screen.md, ../services/room-lifecycle.md, ../models/rooms-and-participants.md, ../components/common-ui.md, ../themes/design-system.md
 - Implementation files: frontend/src/app/room-waiting/page.tsx, frontend/src/app/j/[joinCode]/page.tsx, frontend/src/app/genre-vote/page.tsx, frontend/src/features/room/{room-data.ts,room-api.ts,room-session.ts,use-room-state.ts,room-waiting-screen.tsx,room-join-screen.tsx,invite-card.tsx,room-fixed-action.tsx,room-genre-entry.tsx,room-waiting.module.css,room-data.test.mjs}, frontend/src/features/room-create/{room-create-screen.tsx,room-create.module.css}, frontend/package.json, frontend/package-lock.json
 
+## UI統合の現行契約（2026-10-31）
+
+主仕様は[frontend-ui-integration.md](frontend-ui-integration.md)。待機/参加画面の固定領域を共通FixedBottomActionへ移す。/j/{joinCode}を唯一の参加フォームとし、旧/room-joinは正規化する。実API開始後の/genre-vote?room=UUIDでは投票保存未接続を明示し、モックへ接続しない。開始/検知/Pulse/参加情報の保存は維持する。 後段の従来ルート/固定処理/モック供給の記録は、相違する部分のみ本契約へ更新する。検証結果は主仕様のProgressへ集約する。
+
 ## 目的・範囲
 
 画面03（03-host-waiting.png）を実装し、既存のルーム作成/参加/状態取得/開始APIを接続する。実ルームのjoinCodeから端末内でQR/招待URLを作り、別ブラウザーから参加してホスト一覧に反映できることを確認する。画面05の参加フォームと参加後の同一待機画面を必要最小限の接続として含める。

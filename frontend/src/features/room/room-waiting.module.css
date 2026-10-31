@@ -1,7 +1,7 @@
 .background { display: flow-root; min-height: 100svh; background: var(--soft); }
-.page { --room-action-height: 160px; --room-waiting-pulse-duration: 1.5s; }
+.page { --room-waiting-pulse-duration: 1.5s; }
 .page > main { padding: 0; }
-.content { padding: 26px max(var(--meal-page-gutter), env(safe-area-inset-right, 0px)) calc(var(--room-action-height) + 24px) max(var(--meal-page-gutter), env(safe-area-inset-left, 0px)); }
+.content { padding: 26px max(var(--meal-page-gutter), env(safe-area-inset-right, 0px)) 24px max(var(--meal-page-gutter), env(safe-area-inset-left, 0px)); }
 .hero, .joinHero { text-align: center; }
 .hero { margin-bottom: 26px; }
 .hero h1, .joinHero h1 { font-size: 1.625rem; font-weight: 400; line-height: 1.45; letter-spacing: -.04em; overflow-wrap: anywhere; }
@@ -29,8 +29,6 @@
 .member :global(.meal-participant-name) { font-size: .875rem; }
 .role { flex-shrink: 0; max-width: 35%; padding: 5px 8px; border-radius: 99px; background: var(--primary-pale); color: var(--primary); font-size: .625rem; overflow-wrap: anywhere; }
 .joined { display: grid; place-items: center; width: 10px; flex-shrink: 0; }
-.fixedAction { position: fixed; z-index: 30; inset-inline: 0; bottom: 0; width: 100%; max-width: var(--meal-max-width); margin-inline: auto; background: linear-gradient(transparent, var(--background) 16%); }
-.fixedAction button { min-width: 0; }
 .actionNote { margin-top: 10px; color: var(--muted-foreground); font-size: .6875rem; line-height: 1.7; text-align: center; overflow-wrap: anywhere; }
 .guestWaiting { display: flex; align-items: center; justify-content: center; gap: 9px; padding: 16px; border-radius: 18px; background: var(--primary-pale); color: var(--primary-dark); font-weight: 700; text-align: center; }
 .guestDot { flex-shrink: 0; width: 7px; height: 7px; border-radius: 50%; background: var(--primary); opacity: .55; }

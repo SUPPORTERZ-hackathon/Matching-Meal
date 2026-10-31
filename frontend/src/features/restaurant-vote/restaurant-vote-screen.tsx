@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type CSSProperties, type MouseEvent } from "react";
+import { useEffect, useRef, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 import { Heart, MapPin, JapaneseYen, X } from "lucide-react";
 import { AppHeader } from "@/components/common/app-header";
 import { PageContainer } from "@/components/common/page-container";
@@ -21,10 +21,12 @@ type RestaurantVoteScreenProps = {
   restaurants: readonly RestaurantCandidate[];
   roomId?: string;
   onComplete: (votes: readonly RestaurantVote[]) => void;
+  children?: ReactNode;
+  notice?: ReactNode;
 };
 type MotionStyle = CSSProperties & { "--restaurant-exit-duration": string; "--restaurant-enter-duration": string };
 
-export function RestaurantVoteScreen({ genre, restaurants, roomId, onComplete }: RestaurantVoteScreenProps) {
+export function RestaurantVoteScreen({ genre, restaurants, roomId, onComplete, children, notice }: RestaurantVoteScreenProps) {
   const { votes, phase, vote, finishAnimation, currentRestaurant: restaurant, complete, locked, valid } = useRestaurantVote(restaurants);
   const skipRef = useRef<HTMLButtonElement>(null);
   const likeRef = useRef<HTMLButtonElement>(null);
@@ -60,6 +62,7 @@ export function RestaurantVoteScreen({ genre, restaurants, roomId, onComplete }:
   return <div className={styles.background}>
     <PageContainer className={styles.page} header={<AppHeader roomNumber={roomId} className={styles.header} />}>
       <StepProgress currentStep="shop" />
+      {notice}
       <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">{announcement}</p>
       <div className={styles.content}>
         {!genre || !valid || total === 0 ? <section className={`meal-card ${styles.empty}`} role="status">
@@ -101,6 +104,7 @@ export function RestaurantVoteScreen({ genre, restaurants, roomId, onComplete }:
           <RestaurantDetails restaurant={restaurant} />
         </> : null}
       </div>
+      {children}
     </PageContainer>
   </div>;
 }
