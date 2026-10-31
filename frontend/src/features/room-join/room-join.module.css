@@ -1,0 +1,238 @@
+
+.background {
+  display: flow-root;
+  min-height: 100svh;
+  background: var(--soft);
+}
+
+.page {
+  --room-gutter-left: max(
+    var(--meal-page-gutter),
+    env(safe-area-inset-left, 0px)
+  );
+  --room-gutter-right: max(
+    var(--meal-page-gutter),
+    env(safe-area-inset-right, 0px)
+  );
+
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+}
+
+.page > main {
+    flex: 1;
+  padding: 0;
+}
+
+.header {
+  padding-inline: var(--room-gutter-left) var(--room-gutter-right);
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 28px var(--room-gutter-right) 32px var(--room-gutter-left);
+}
+
+.kicker {
+  margin-bottom: 5px;
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.title {
+  color: var(--foreground);
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.4;
+}
+
+.description {
+  margin-top: 8px;
+  margin-bottom: 28px;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.roomCard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding: 22px 20px;
+}
+
+.roomLabel {
+  color: var(--muted-foreground);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.invitation {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 28px 0 32px;
+}
+
+.invitationIcon {
+  display: grid;
+  width: 76px;
+  height: 76px;
+  place-items: center;
+  margin-bottom: 20px;
+  border-radius: 26px;
+  background: #fff0ed;
+  color: var(--primary);
+}
+
+.invitationIcon svg {
+  width: 30px;
+  height: 30px;
+  stroke-width: 2.3;
+}
+
+.invitationLabel {
+  margin-bottom: 8px;
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.roomName {
+  color: var(--foreground);
+  font-size: 22px;
+  line-height: 1.5;
+}
+
+.location {
+  display: flex;
+  align-items: center;
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+
+.location svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.nicknameCard {
+  margin-bottom: 16px;
+  padding: 22px 20px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.field > label {
+  color: var(--foreground);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.required {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: #fff0ed;
+  color: #ed3b33;
+  font-size: 9px;
+  font-weight: 700;
+  vertical-align: 1px;
+}
+
+.valid {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.field input[type="text"] {
+  width: 100%;
+  min-width: 0;
+  height: 52px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  outline: none;
+  background: var(--card);
+  color: var(--foreground);
+  font-size: 14px;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.field input[type="text"]::placeholder {
+  color: var(--muted-foreground);
+  opacity: 0.7;
+}
+
+.field input[type="text"]:focus-visible {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgb(237 59 51 / 12%);
+}
+
+.footerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.help {
+  margin: 0;
+  color: #746d69;
+  font-size: 10px;
+}
+
+.counter {
+  flex-shrink: 0;
+  color: #746d69;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+
+
+.actions {
+    margin-top: auto;
+  padding: 8px var(--room-gutter-right)
+    max(20px, env(safe-area-inset-bottom, 0px))
+    var(--room-gutter-left);
+}
+
+@media (max-width: 360px) {
+  .content {
+    padding-top: 20px;
+  }
+
+  .title {
+    font-size: 23px;
+  }
+
+  .roomName {
+    font-size: 19px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .field input[type="text"] {
+    transition: none;
+  }
+}
