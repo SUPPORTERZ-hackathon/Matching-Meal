@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { PROTOTYPE_ROOM_ID } from "../genre-vote/prototype-config";
 import type { WaitingParticipant } from "../genre-vote-waiting/waiting-state";
 import { RestaurantVoteWaitingScreen } from "./restaurant-vote-waiting-screen";
+import { DevelopmentDemoNotice } from "../ui-flow/flow-message";
 import { MOCK_RESTAURANT_PARTICIPANTS } from "./prototype-data";
 import { GENRES } from "../genre-vote/genres";
 import { createMockRestaurants, DEFAULT_RESTAURANT_GENRE_ID } from "../restaurant-vote/prototype-data";
@@ -26,8 +27,7 @@ export function RestaurantVoteWaitingPreview({ initialGenreId }: RestaurantVoteW
   const restaurants = genre ? createMockRestaurants(genre) : [];
   const [participants, setParticipants] = useState<readonly WaitingParticipant[]>(MOCK_RESTAURANT_PARTICIPANTS);
   const [roomId, setRoomId] = useState<string>(PROTOTYPE_ROOM_ID);
-  return <>
-    <RestaurantVoteWaitingScreen participants={participants} roomId={roomId} />
+  return <RestaurantVoteWaitingScreen participants={participants} roomId={roomId} notice={<DevelopmentDemoNotice />}>
     <section className={`${styles.previewControls} ${previewStyles.controls}`} aria-labelledby="restaurant-waiting-preview-heading">
       <h2 id="restaurant-waiting-preview-heading">店舗投票待機・開発用プレビュー</h2>
       <p>独立した仮データです。操作時だけ状態が変化し、再読み込みで2/3人に戻ります。人数変更だけでは結果へ進みません。下の明示操作でサンプル結果へ進めます。</p>
@@ -48,5 +48,5 @@ export function RestaurantVoteWaitingPreview({ initialGenreId }: RestaurantVoteW
         router.push(restaurantResultUrl(genre.id, restaurantId, { demo: true }));
       }}>全員完了からサンプル結果へ</Button></div>
     </section>
-  </>;
+  </RestaurantVoteWaitingScreen>;
 }

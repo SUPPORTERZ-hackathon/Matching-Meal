@@ -1,28 +1,27 @@
 .home-preview-page {
   min-height: 100dvh;
-  background: #fffaf7;
+  background: var(--background);
   color: #292524;
 }
 
 .home-preview-content {
   width: 100%;
   max-width: 430px;
-  min-height: 100dvh;
+  min-height: 0;
   height: auto;
   margin: 0 auto;
   padding: 20px 0;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  flex: 1;
+  gap: 20px;
   box-sizing: border-box;
 }
 
-.home-preview-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 0px;
-  margin-top: 16px;
-}
+.home-preview-page > main { display: flex; flex-direction: column; }
+.home-preview-action-label { flex: 1; min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+.home-preview-actions svg { flex-shrink: 0; }
 
 .home-preview-hero {
   height: clamp(180px, 62vw, 250px);
@@ -106,8 +105,7 @@
 
 .home-preview-eyebrow {
   color: #81766f;
-  font-family: "Noto Sans JP", "Hiragino Kaku Gothic ProN",
-    "Yu Gothic", sans-serif;
+  font-family: inherit;
   font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.12em; 
@@ -164,7 +162,7 @@
 
 @media (max-width: 360px) {
   .home-preview-content {
-    padding: 24px 18px;
+    padding: 20px 0;
   }
 
 }

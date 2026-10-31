@@ -6,6 +6,10 @@
 - Related specifications: ../components/common-ui.md
 - Implementation files: frontend/src/app/globals.css, frontend/src/app/layout.tsx, frontend/src/components/ui/button.tsx, frontend/src/components/common/
 
+## UI統合の現行契約（2026-10-31）
+
+主仕様は[frontend-ui-integration.md](../screens/frontend-ui-integration.md)。共通ヘッダーは不透明な既存背景色と境界線を一体でsticky表示する。最大430px/左右22pxとsafe-areaを維持し、高さ500px以下だけ仮の44px上部余白を実safe-areaへ縮める。固定領域の実測予約により本文末尾の隠れを防ぐ。 後段の従来ルート/固定処理/モック供給の記録は、相違する部分のみ本契約へ更新する。検証結果は主仕様のProgressへ集約する。
+
 ## 今回の実装契約（2026-10-28）
 
 ### 目的・範囲・承認根拠

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type CSSProperties, type MouseEvent } from "react";
+import { useEffect, useRef, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 import { Heart, Undo2, X } from "lucide-react";
 import { AppHeader } from "@/components/common/app-header";
 import { PageContainer } from "@/components/common/page-container";
@@ -16,7 +16,7 @@ import { useNextCardShade } from "./use-next-card-shade";
 import type { VoteChoice } from "./vote-state";
 import styles from "./genre-vote.module.css";
 
-type GenreVoteScreenProps = { genres: readonly Genre[]; roomId?: string; onComplete: () => void };
+type GenreVoteScreenProps = { genres: readonly Genre[]; roomId?: string; onComplete: () => void; notice?: ReactNode };
 type MotionStyle = CSSProperties & {
   "--drag-x": string;
   "--drag-y": string;
@@ -30,7 +30,7 @@ type MotionStyle = CSSProperties & {
   "--next-offset": string;
 };
 
-export function GenreVoteScreen({ genres, roomId, onComplete }: GenreVoteScreenProps) {
+export function GenreVoteScreen({ genres, roomId, onComplete, notice }: GenreVoteScreenProps) {
   const { votes, phase, motion, reducedMotion, cardRef, vote, undo, finishAnimation, currentGenre, complete, locked, canUndo, pointerHandlers, labelOpacity, lastAction } = useGenreVote(genres);
   const clipRef = useRef<HTMLDivElement>(null);
   const shadeRef = useNextCardShade({ cardRef, clipRef, genreId: currentGenre?.id, phase, motionX: motion.x, reducedMotion });
@@ -98,6 +98,7 @@ export function GenreVoteScreen({ genres, roomId, onComplete }: GenreVoteScreenP
     <div className={styles.background}>
       <PageContainer className={styles.page} header={<AppHeader roomNumber={roomId} className={styles.header} />}>
         <StepProgress currentStep="genre" />
+        {notice}
         <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">{announcement}</p>
 
         {total === 0 ? (

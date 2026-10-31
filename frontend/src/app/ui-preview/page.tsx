@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { demoFlowUrl } from "@/features/ui-flow/development-demo";
 import { ArrowLeft, ArrowUp, CircleAlert, CircleDashed, Users } from "lucide-react";
 import { AppLogo } from "@/components/common/app-logo";
 import { AppHeader } from "@/components/common/app-header";
@@ -25,6 +28,7 @@ const PREVIEW_PARTICIPANTS: ReadonlyArray<ParticipantAvatarProps> = [
 ];
 
 export default function UiPreviewPage() {
+  if (process.env.NODE_ENV !== "development") notFound();
   return (
     <div className="meal-preview-background">
       <PageContainer
@@ -44,6 +48,14 @@ export default function UiPreviewPage() {
           <p className="meal-preview-caption mt-3">すべて表示確認用のサンプルです。</p>
         </div>
 
+        <section className="meal-card meal-preview-stack" aria-labelledby="flow-preview-heading">
+          <h2 id="flow-preview-heading">画面フロー・開発用デモ</h2>
+          <p className="meal-preview-caption">ルーム作成・参加は実APIで確認します。投票フローは既存モックによるデモで、投票を保存・集計しません。</p>
+          <Button asChild variant="primary" size="meal"><Link href={demoFlowUrl("/genre-vote")}>投票フローのデモを開始</Link></Button>
+          <Link href="/home-preview">実ルームの作成・参加へ</Link>
+          <Link href="/ui-preview/genre-result">ジャンル結果の状態別プレビュー</Link>
+          <Link href="/ui-preview/restaurant-result">店舗結果の状態別プレビュー</Link>
+        </section>
         <section id="preview-logo" className="meal-preview-section" aria-labelledby="logo-heading">
           <h2 id="logo-heading">01　ロゴ</h2>
           <div className="meal-card meal-preview-stack">
@@ -57,13 +69,13 @@ export default function UiPreviewPage() {
           <h2 id="header-heading">02　共通ヘッダー</h2>
           <p className="meal-preview-caption">ルーム番号ありはページ先頭に表示しています。</p>
           <div className="meal-preview-header">
-            <AppHeader />
-            <AppHeader layout="centered" leading={
+            <AppHeader sticky={false} />
+            <AppHeader sticky={false} layout="centered" leading={
               <Button asChild variant="outline" size="icon-lg" className="rounded-[13px]">
                 <a href="#preview-logo" aria-label="戻る見本：ロゴへ"><ArrowLeft className="size-5" aria-hidden="true" /></a>
               </Button>
             } />
-            <AppHeader roomNumber="long-room-number-for-responsive-layout-preview" />
+            <AppHeader sticky={false} roomNumber="long-room-number-for-responsive-layout-preview" />
           </div>
           <p className="meal-preview-caption mt-3">ルーム番号なし / 中央配置 / 長いルーム番号</p>
         </section>

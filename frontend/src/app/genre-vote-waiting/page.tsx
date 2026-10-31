@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from "next";
-import { GENRE_ICON_PATH, GENRE_MANIFEST_PATH, GENRE_THEME_COLOR, PROTOTYPE_ROOM_ID } from "@/features/genre-vote/prototype-config";
-import { GenreVoteWaitingScreen } from "@/features/genre-vote-waiting/genre-vote-waiting-screen";
-import { MOCK_WAITING_PARTICIPANTS } from "@/features/genre-vote-waiting/prototype-data";
+import { GENRE_ICON_PATH, GENRE_MANIFEST_PATH, GENRE_THEME_COLOR } from "@/features/genre-vote/prototype-config";
+import { GenreVoteWaitingPreview } from "@/features/genre-vote-waiting/genre-vote-waiting-preview";
+import { isDevelopmentDemo, type QueryValue } from "@/features/ui-flow/development-demo";
+import { FlowMessage } from "@/features/ui-flow/flow-message";
+import { notFound } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "ジャンル投票待機 | メシマッチ",
@@ -12,7 +14,10 @@ export const metadata: Metadata = {
 };
 export const viewport: Viewport = { themeColor: GENRE_THEME_COLOR };
 
-export default function GenreVoteWaitingPage() {
-  // API連携時はこの境界でルームIDと参加者の表示データを供給する。
-  return <GenreVoteWaitingScreen participants={MOCK_WAITING_PARTICIPANTS} roomId={PROTOTYPE_ROOM_ID} />;
+type WaitingPageProps = { searchParams: Promise<{ demo?: QueryValue; room?: QueryValue }> };
+export default async function GenreVoteWaitingPage({ searchParams }: WaitingPageProps) {
+  const query = await searchParams;
+  if (query.room === undefined && query.demo === "1" && process.env.NODE_ENV !== "development") notFound();
+  return isDevelopmentDemo(query.demo, process.env.NODE_ENV, query.room) ? <GenreVoteWaitingPreview />
+    : <FlowMessage step="genre" title="投票状況の取得は準備中です" description="参加者の投票完了状況と結果の取得は、まだ接続されていません。" />;
 }

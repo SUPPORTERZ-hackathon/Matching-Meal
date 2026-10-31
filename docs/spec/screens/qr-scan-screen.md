@@ -1,5 +1,17 @@
 # QRコード参加画面 仕様書
 
+- Status: Implemented
+- Last updated: 2026-10-31
+- Related issue: None
+- Related specifications: frontend-ui-integration.md, room-join-screen.md, room-waiting-invite.md
+- Implementation files: frontend/src/features/qr-scan/qr-scan-screen.tsx, frontend/src/app/qr-scan/page.tsx
+
+## UI統合の現行契約
+
+主仕様は[frontend-ui-integration.md](frontend-ui-integration.md)。アプリ内QRデコーダーは未実装のため、仮のカメラ許可/拒否切替を廃止し準備中を明示する。標準カメラで実招待URLを開く方法と、共有された招待URLが同じ/j/{joinCode}の参加フォームを表示することを案内する。QR読取とニックネーム参加を混同しない。ヘッダー/境界線は共通sticky、戻る先は/home-preview。新規カメラ処理/ライブラリは対象外。検証・Progress/Self-Reviewは主仕様に集約し、未決定事項なし。
+
+以下は従来の画面案であり、仮カメラ操作に関する部分は本契約へ更新する。
+
 ## 1. 画面概要
 
 QRコードを読み取って、既存のルームに参加するための画面。

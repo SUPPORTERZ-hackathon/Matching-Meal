@@ -1,8 +1,7 @@
 .background { display: flow-root; min-height: 100svh; background: var(--soft); }
-.page { --result-action-height: 160px; }
 .page > main { padding: 0; }
 .header > :last-child:not(:first-child) { margin-inline-start: auto; }
-.content { padding: 24px max(var(--meal-page-gutter), env(safe-area-inset-right, 0px)) calc(var(--result-action-height) + 24px) max(var(--meal-page-gutter), env(safe-area-inset-left, 0px)); }
+.content { padding: 24px max(var(--meal-page-gutter), env(safe-area-inset-right, 0px)) 24px max(var(--meal-page-gutter), env(safe-area-inset-left, 0px)); }
 .hero { text-align: center; }
 .kicker { margin-bottom: 8px; color: var(--primary); font-size: .75rem; font-weight: 800; letter-spacing: .12em; }
 .hero h1 { font-size: 1.1875rem; font-weight: 400; line-height: 1.4; letter-spacing: -.04em; }
@@ -37,7 +36,6 @@
 .prototypeNote { margin-top: 12px; color: var(--muted-foreground); font-size: .75rem; line-height: 1.8; text-align: center; }
 .emptyRanking, .invalid p { margin-top: 12px; color: var(--muted-foreground); font-size: .875rem; line-height: 1.8; }
 .invalid h1 { font-size: 1.25rem; }
-.fixedAction { position: fixed; z-index: 30; inset-inline: 0; bottom: 0; width: 100%; max-width: var(--meal-max-width); margin-inline: auto; background: linear-gradient(transparent, var(--background) 16%); }
 .actionLabel { min-width: 0; }
 .actionNote { margin-top: 10px; color: var(--muted-foreground); font-size: .6875rem; line-height: 1.6; text-align: center; overflow-wrap: anywhere; }
 .previewControls { width: 100%; min-width: 0; margin-top: 32px; }

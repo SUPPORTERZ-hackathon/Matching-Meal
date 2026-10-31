@@ -6,6 +6,10 @@
 - Related specifications: ../themes/design-system.md, ../screens/ui-preview.md
 - Implementation files: frontend/src/components/common/, frontend/src/components/ui/button.tsx
 
+## UI統合の現行契約（2026-10-31）
+
+主仕様は[frontend-ui-integration.md](../screens/frontend-ui-integration.md)。AppHeaderへ互換のsticky?: boolean（既定true）を追加する。FixedBottomActionを追加し、実測spacer/VisualViewport補正/入力フォーカス露出を集約する。BottomActionの通常フローとButtonの契約は維持する。 後段の従来ルート/固定処理/モック供給の記録は、相違する部分のみ本契約へ更新する。検証結果は主仕様のProgressへ集約する。
+
 ## 今回の実装契約（2026-10-28）
 
 ### 目的・範囲・前提・承認
