@@ -1,11 +1,19 @@
 # ホーム画面仕様書
 
-- Status: UIデザイン確定
+- Status: Implemented
+- Last updated: 2026-10-31
+- Related issue: None
+- Related specifications: ../components/genre-photos.md, ../components/common-ui.md, ../themes/design-system.md
+- Implementation files: frontend/src/features/home-preview/, frontend/src/app/home-preview/page.tsx
 - 対象ルート: `/home-preview`
 - 対象画面: メシマッチのホーム画面
 - 関連仕様: `docs/spec/components/common-ui.md`、`docs/spec/themes/design-system.md`
 
 ## 1. 目的
+
+### 料理写真追加の現行契約（2026-10-31）
+
+今回の明示指示に基づき、[genre-photos.md](../components/genre-photos.md)を写真表示の主仕様とする。左カフェ/中央ラーメン/右寿司・海鮮を既存GenreのIDで参照。旧仕様の「左右を一部画面外」は今回の「3枚を画面内」に更新し、画像領域のみ調整する。実装はCSS Moduleでなく既存home-preview.cssを継続。/home-previewを対象とし、/の接続確認は変更しない。ルーム作成の/room-create遷移は既に接続済みなので維持し、QR未接続もそのまま。指定16JPEGは既に配置済みで、加工/移動/改名を行わない。Progress：写真・loading/failed・指定幅/横向き/短い高さ・作成遷移を確認済み。Docker lint/型検査/38テスト/build成功。写真は文字200%でも配置を維持するが、320pxの既存作成ボタンのラベルが枠から出るため全画面VerifiedにはせずImplementedとする（ボタンは今回の変更禁止対象）。詳細とスクリーンショットは主仕様。Self-Review：97/100。後段の写真未決定/遷移未実装/画面外配置は初回デザイン時の記録。
 
 メシマッチの利用開始画面を作成する。ユーザーがルーム作成または既存ルームへの参加を選択できる、スマートフォン向けのホーム画面を提供する。
 

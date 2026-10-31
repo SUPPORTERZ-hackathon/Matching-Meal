@@ -7,7 +7,8 @@
 .kicker { margin-bottom: 8px; color: var(--primary); font-size: .75rem; font-weight: 800; letter-spacing: .12em; }
 .hero h1 { font-size: 1.1875rem; font-weight: 400; line-height: 1.4; letter-spacing: -.04em; }
 .revealStage { --burst-radius: min(calc((100vw - 72px) / 2), 158px); position: relative; display: grid; place-items: center; width: 100%; height: 260px; isolation: isolate; }
-.popImage { position: relative; z-index: 1; width: min(210px, 70%); aspect-ratio: 1; border: 7px solid var(--card); border-radius: 50%; box-shadow: 0 18px 45px rgb(64 38 29 / 12%); animation: resultPop var(--result-pop-duration) linear both; }
+.popImage { position: relative; z-index: 1; width: min(210px, 70%); aspect-ratio: 1; border: 7px solid var(--card); border-radius: 50%; box-shadow: 0 18px 45px rgb(64 38 29 / 12%); opacity: 0; transform: scale(.2); }
+.revealStage[data-result-ready="true"] .popImage { animation: resultPop var(--result-pop-duration) linear both; }
 .heartBadge { position: absolute; right: 0; bottom: 4px; z-index: 1; display: grid; place-items: center; width: 23%; aspect-ratio: 1; border: 4px solid var(--card); border-radius: 50%; background: var(--primary); color: var(--primary-foreground); pointer-events: none; }
 .heartBadge svg { width: 64%; height: 64%; }
 .artwork { position: relative; width: 100%; height: 100%; overflow: clip; border-radius: 50%; background: var(--primary-pale); }
@@ -62,7 +63,7 @@
   100% { opacity: 0; transform: translate3d(calc(var(--burst-x) * var(--burst-radius)),calc(var(--burst-y) * 120px),0) rotate(var(--burst-rotation)) scale(.9); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .popImage { animation: none; }
+  .revealStage[data-result-ready] .popImage { animation: none; opacity: 1; transform: none; }
   .burstLayer { display: none; animation: none; }
   .burstPiece { animation: none; }
 }

@@ -26,15 +26,24 @@
   padding: 16px var(--vote-gutter-right) 16px var(--vote-gutter-left);
   overflow: clip;
 }
-.cardStage { position: relative; width: 100%; aspect-ratio: 5 / 6; max-height: 432px; isolation: isolate; }
+.cardStage { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); width: 100%; isolation: isolate; }
+.cardStage::before { content: ""; grid-area: 1 / 1; align-self: start; width: 100%; aspect-ratio: 5 / 6; max-height: 432px; pointer-events: none; }
 .backCard { position: absolute; inset: 12px 8px -5px; z-index: -1; border-radius: 28px; background: #f0dfd8; transform: rotate(3deg); }
-.genreCard {
-  position: absolute;
-  inset: 0;
+.genreCard, .nextCard {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-width: 0;
   overflow: hidden;
   border-radius: 28px;
   background: var(--primary-pale);
   box-shadow: 0 18px 45px rgb(64 38 29 / 12%);
+}
+.genreCard {
+  position: relative;
+  min-height: min-content;
+  grid-area: 1 / 1;
+  z-index: 1;
   transform: translate3d(var(--drag-x), var(--drag-y), 0) rotate(var(--drag-rotation));
   touch-action: pan-y pinch-zoom;
   user-select: none;
@@ -42,13 +51,17 @@
   cursor: grab;
   will-change: transform;
 }
+.nextCard { position: absolute; inset: 0; z-index: 0; pointer-events: none; transform: translateY(var(--next-offset)) scale(var(--next-scale)); }
+.nextShade { position: absolute; inset: 0; background: #000; opacity: var(--next-shade-opacity); pointer-events: none; }
+.cardStage[data-phase="returning"] .nextCard { transition: transform var(--return-duration) cubic-bezier(.2,.8,.25,1); }
+.cardStage[data-phase="exiting"] .nextCard { transition: transform var(--exit-duration) cubic-bezier(.3,.05,.65,.6); }
 .cardStage[data-phase="dragging"] .genreCard { cursor: grabbing; box-shadow: 0 24px 48px rgb(64 38 29 / 22%); }
 .cardStage[data-phase="returning"] .genreCard { transition: transform var(--return-duration) cubic-bezier(.2,.8,.25,1), box-shadow var(--return-duration) ease; }
 .cardStage[data-phase="exiting"] .genreCard { transition: transform var(--exit-duration) cubic-bezier(.3,.05,.65,.6); pointer-events: none; }
-.cardStage[data-phase="entering"] .genreCard { animation: cardEnter var(--enter-duration) cubic-bezier(.2,.7,.3,1) both; pointer-events: none; }
+.cardStage[data-phase="entering"] .genreCard { animation: cardPromote var(--enter-duration) linear both; pointer-events: none; }
 .cardStage[data-phase="undoing"] .genreCard { animation: cardUndoOut var(--undo-duration) ease-out both; pointer-events: none; }
 .cardStage[data-phase="undo-entering"] .genreCard { animation: cardUndoEnter var(--enter-duration) cubic-bezier(.2,.7,.3,1) both; pointer-events: none; }
-@keyframes cardEnter { from { opacity: 0; transform: translate3d(0,12px,0) scale(.98); } to { opacity: 1; transform: translate3d(0,0,0) scale(1); } }
+@keyframes cardPromote { from, to { opacity: 1; } }
 @keyframes cardUndoOut { from { opacity: 1; transform: translate3d(0,0,0) scale(1); } to { opacity: 0; transform: translate3d(0,10px,0) scale(.98); } }
 @keyframes cardUndoEnter { from { opacity: 0; transform: translate3d(-18px,0,0) scale(.98); } to { opacity: 1; transform: translate3d(0,0,0) scale(1); } }
 
@@ -58,11 +71,11 @@
 .plate svg { width: 43%; height: 43%; }
 .photo { object-fit: cover; pointer-events: none; }
 .imageShade { position: absolute; inset: 32% 0 0; background: linear-gradient(transparent, rgb(39 23 19 / 86%)); pointer-events: none; }
-.cardLabel { position: absolute; inset-inline: 24px; bottom: 24px; color: var(--primary-foreground); pointer-events: none; }
+.cardLabel { position: relative; margin: 24px; color: var(--primary-foreground); pointer-events: none; }
 .cardTag { display: inline-block; padding: 5px 9px; border-radius: 99px; background: var(--primary); color: var(--primary-foreground); font-size: 10px; font-weight: 700; }
 .cardLabel h2 { margin: 10px 0 4px; font-size: 34px; line-height: 1.35; letter-spacing: -.03em; overflow-wrap: anywhere; }
 .namePart { display: inline-block; max-width: 100%; }
-.cardLabel p { font-size: 12px; opacity: .85; }
+.cardLabel p { font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; opacity: .85; }
 .directionLabel { position: absolute; top: 28px; display: flex; align-items: center; gap: 7px; max-width: calc(100% - 40px); padding: 10px 13px; border: 3px solid currentColor; border-radius: 12px; background: rgb(255 253 250 / 96%); font-size: 23px; line-height: 1.2; font-weight: 800; pointer-events: none; }
 .directionLabel svg { flex-shrink: 0; width: 24px; height: 24px; }
 .likeLabel { left: 20px; color: var(--primary-dark); transform: rotate(-10deg); }
@@ -85,6 +98,8 @@
 .empty { margin: 24px var(--vote-gutter-right) 24px var(--vote-gutter-left); }
 
 @media (prefers-reduced-motion: reduce) {
+  .nextCard { transform: none; }
+  .cardStage[data-phase] .nextCard, .cardStage[data-phase] .nextShade { transition: none; }
   .genreCard { transform: translate3d(var(--drag-x), var(--drag-y), 0); }
   .cardStage[data-phase="returning"] .genreCard,
   .cardStage[data-phase="exiting"] .genreCard,

@@ -1,12 +1,20 @@
 # ジャンル投票画面・UIプロトタイプ
 
 - Status: Verified
-- Last updated: 2026-10-29
+- Last updated: 2026-10-31
 - Related issue: None
 - Related specifications: ../components/common-ui.md, ../themes/design-system.md, genre-vote-waiting.md
 - Implementation files: frontend/src/app/genre-vote/, frontend/src/features/genre-vote/, frontend/public/genres/, frontend/public/genre-vote/
 
 ## 目的と対象範囲
+
+### 次カードの先読み・アピール文（2026-10-31）
+
+主仕様は[genre-card-motion.md](../components/genre-card-motion.md)。今回の明示依頼を承認根拠とし、次ジャンルの写真を背面に保持してスワイプ量に応じた明度/サイズで表示、同じDOMを前面へ昇格する。旧enterのopacity0は通常昇格時に使わない。カード内の「食べたい気分なら、右へ。」を指定16文へ置換。カード外の案内・既存投票hook/undo/判定/遷移は維持する。後段の色だけの背面と従来説明文は旧契約。Progress：実装・検証済み、自己レビュー96点。Docker lint/型検査/40テスト/build、DOM/写真保持と明度、中断/左右/戻る/連打/キーボード/タッチ相当/全16件後の遷移、指定幅・320pxで全16文の文字200%を確認。詳細と保存画像は主仕様。
+
+### 料理写真の追加（2026-10-31）
+
+今回のユーザー指示に基づき、既存16件のID/日本語名/表示順を維持したまま、指定JPEGのimagePathをgenres.tsに一元登録する。主仕様は[genre-photos.md](../components/genre-photos.md)。正規保存先はpublic/images/genres、URLは/images/genres/ファイル名.jpg。既存/genres/参照は読み取り互換を維持。ホーム・ジャンル結果も同じGenreレコードを利用し、配列インデックスで写真を選ばない。投票/undo/スワイプ/状態管理/演出/遷移は無変更。後段の「全件画像なし」「public/genresへ新規配置」は初回時点の記録。Progress：実画像16件/全投票後の待機/方向ラベル/左右マウス・タッチ相当/縦操作/戻る/連打防止/キーボード/失敗時の投票/指定幅を確認済み。Docker lint/型検査/38テスト/build成功。詳細は主仕様。
 
 ### 待機画面への接続（2026-10-29）
 

@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { GENRES } from "./genres.ts";
+import { getGenreImagePath } from "./genre-image.ts";
 import { recordGenreVote, undoGenreVote } from "./vote-state.ts";
 import { canCommitSwipe, detectAxis, directionOpacity, dragMotion, SWIPE } from "./swipe-config.ts";
 
@@ -8,7 +9,7 @@ test("指定16ジャンルの順序と一意なID、任意のローカル画像�
   assert.deepEqual(GENRES.map((genre) => genre.name), ["ラーメン", "寿司・海鮮", "焼肉", "ステーキ・ハンバーグ", "カレー", "そば・うどん", "定食・食堂", "イタリアン", "中華料理", "韓国料理", "アジア料理", "ハンバーガー", "お好み焼き・たこ焼き", "鍋・しゃぶしゃぶ", "居酒屋料理", "カフェ"]);
   assert.equal(new Set(GENRES.map((genre) => genre.id)).size, GENRES.length);
   assert(GENRES.every((genre) => /^[a-z][a-z0-9-]*$/.test(genre.id)
-    && (genre.imagePath === undefined || genre.imagePath.startsWith("/genres/"))));
+    && (genre.imagePath === undefined || getGenreImagePath(genre) !== undefined)));
 });
 
 test("食べたい/見送りのどちらも記録し、重複・順序違い・完了後を受理しない", () => {
