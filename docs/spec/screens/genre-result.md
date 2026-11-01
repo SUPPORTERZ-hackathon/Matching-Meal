@@ -1,10 +1,18 @@
 # ジャンル投票結果画面・UIプロトタイプ
 
-- Status: Verified
-- Last updated: 2026-10-31
+- Status: Implemented
+- Last updated: 2026-11-01
 - Related issue: None
 - Related specifications: genre-vote.md, genre-vote-waiting.md, ../themes/design-system.md, ../components/common-ui.md, ../services/room-lifecycle.md
 - Implementation files: frontend/src/app/genre-result/, frontend/src/app/ui-preview/genre-result/, frontend/src/features/genre-result/, frontend/src/features/genre-vote-waiting/genre-vote-waiting-preview.tsx, frontend/src/features/genre-vote-waiting/genre-vote-waiting-screen.tsx, frontend/package.json
+
+## 上位3位の表示準備（2026-11-01）
+
+主仕様は[genre-result-rankings.md](genre-result-rankings.md)。既存順位UIを表示部品へ分離し、決定結果の要約と確定済み上位3件を併せて表示できるようにする。供給元の確定順を並べ替えず、先頭と決定ジャンル/票の一致・降順・重複なしを検証する。現在のR6は順位未提供のため実ルームは従来の要約だけで、実データ順位と2/3位の共有抽選は未完成。未承認のバックエンド変更案とフロント準備を区別する。
+
+## 実API連携の現行契約（2026-11-01）
+
+主仕様は[genre-voting-api-integration.md](genre-voting-api-integration.md)。実roomでは既存R5/R6を使用し、未提出/提出済み/結果確定をサーバー応答から判定する。以下のUI統合時のS07〜09未接続表示はこの契約へ更新する。デモと実ルームの分離、既存の写真/スワイプ/待機/結果演出を維持する。検証結果と残作業は主仕様のProgressを参照する。
 
 ## UI統合の現行契約（2026-10-31）
 

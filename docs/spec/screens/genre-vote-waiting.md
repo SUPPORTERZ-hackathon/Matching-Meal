@@ -6,6 +6,10 @@
 - Related specifications: genre-vote.md, genre-result.md, ../components/common-ui.md, ../themes/design-system.md
 - Implementation files: frontend/src/app/genre-vote-waiting/, frontend/src/app/ui-preview/genre-vote-waiting/, frontend/src/features/genre-vote-waiting/, frontend/src/features/genre-vote/genre-vote-screen.tsx, frontend/src/features/genre-vote/genre-vote.module.css, frontend/src/features/genre-vote/genre-vote-prototype.tsx, frontend/src/app/genre-vote/page.tsx, frontend/package.json
 
+## 実API連携の現行契約（2026-11-01）
+
+主仕様は[genre-voting-api-integration.md](genre-voting-api-integration.md)。実roomでは既存R5/R6を使用し、未提出/提出済み/結果確定をサーバー応答から判定する。以下のUI統合時のS07〜09未接続表示はこの契約へ更新する。デモと実ルームの分離、既存の写真/スワイプ/待機/結果演出を維持する。検証結果と残作業は主仕様のProgressを参照する。
+
 ## UI統合の現行契約（2026-10-31）
 
 主仕様は[frontend-ui-integration.md](frontend-ui-integration.md)。既存モック人数・状態操作・演出は開発環境の明示demo=1/詳細プレビューで維持する。通常URLへ仮参加者を供給しない。全員完了の明示操作からgenre-result?demo=1へ接続する。 後段の従来ルート/固定処理/モック供給の記録は、相違する部分のみ本契約へ更新する。検証結果は主仕様のProgressへ集約する。

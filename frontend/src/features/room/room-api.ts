@@ -2,7 +2,7 @@ import { ROOM_CONFIG, isRoomId, normalizeJoinCode, parseErrorResponse, parseSess
 
 const invalidResponse = (): RoomError => ({ code: "INVALID_RESPONSE", message: "ルーム情報を確認できませんでした。もう一度お試しください。", status: 0 });
 
-async function request<T>(path: string, method: "GET" | "POST", parse: (value: JsonValue) => T | undefined, token?: string, body?: { nickname: string }, signal?: AbortSignal): Promise<RoomResult<T>> {
+export async function request<T>(path: string, method: "GET" | "POST" | "PUT", parse: (value: JsonValue) => T | undefined, token?: string, body?: JsonValue, signal?: AbortSignal): Promise<RoomResult<T>> {
   const controller = new AbortController();
   const cancel = () => controller.abort();
   let timedOut = false;

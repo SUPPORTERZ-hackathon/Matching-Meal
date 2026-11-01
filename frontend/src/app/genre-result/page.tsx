@@ -9,6 +9,8 @@ import { FlowMessage } from "@/features/ui-flow/flow-message";
 import { FixedBottomAction } from "@/components/common/fixed-bottom-action";
 import { BottomAction } from "@/components/common/bottom-action";
 import { Button } from "@/components/ui/button";
+import { GenreVotingEntry } from "@/features/genre-voting-api/genre-voting-entry";
+import { normalizeVotingRoomId } from "@/features/genre-voting-api/genre-voting-data";
 
 export const metadata: Metadata = {
   title: "ジャンル投票結果 | メシマッチ",
@@ -20,7 +22,8 @@ export const viewport: Viewport = { themeColor: GENRE_THEME_COLOR };
 type GenreResultPageProps = { searchParams: Promise<{ demo?: QueryValue; room?: QueryValue }> };
 export default async function GenreResultPage({ searchParams }: GenreResultPageProps) {
   const query = await searchParams;
+  if (query.room !== undefined) return <GenreVotingEntry key={typeof query.room === "string" ? query.room : "invalid"} roomId={normalizeVotingRoomId(query.room)} screen="result" />;
   if (query.room === undefined && query.demo === "1" && process.env.NODE_ENV !== "development") notFound();
   if (isDevelopmentDemo(query.demo, process.env.NODE_ENV, query.room)) return <GenreResultPrototype result={MOCK_GENRE_RESULT} genres={GENRES} roomId={PROTOTYPE_ROOM_ID} />;
-  return <FlowMessage step="genre" title="ジャンル結果の取得は準備中です" description="投票結果の取得はまだ接続されていません。決定したジャンルを確認できるまで、お店探しには進めません。" bottomAction={<FixedBottomAction><BottomAction><Button type="button" variant="primary" size="meal" disabled>このジャンルでお店を探す</Button></BottomAction></FixedBottomAction>} />;
+  return <FlowMessage step="genre" title="ルーム情報を確認してください" description="参加したタブから結果を開いてください。ルーム情報なしでは投票結果を表示できません。" bottomAction={<FixedBottomAction><BottomAction><Button type="button" variant="primary" size="meal" disabled>このジャンルでお店を探す</Button></BottomAction></FixedBottomAction>} />;
 }
