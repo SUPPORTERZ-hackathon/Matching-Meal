@@ -6,6 +6,10 @@
 - Related specifications: ../components/common-ui.md, ../themes/design-system.md, genre-vote-waiting.md
 - Implementation files: frontend/src/app/genre-vote/, frontend/src/features/genre-vote/, frontend/public/genres/, frontend/public/genre-vote/
 
+## 実API連携の現行契約（2026-11-01）
+
+主仕様は[genre-voting-api-integration.md](genre-voting-api-integration.md)。実roomでは既存R5/R6を使用し、未提出/提出済み/結果確定をサーバー応答から判定する。以下のUI統合時のS07〜09未接続表示はこの契約へ更新する。デモと実ルームの分離、既存の写真/スワイプ/待機/結果演出を維持する。検証結果と残作業は主仕様のProgressを参照する。
+
 ## UI統合の現行契約（2026-10-31）
 
 主仕様は[frontend-ui-integration.md](frontend-ui-integration.md)。通常ルームからは投票保存未接続を表示する。既存投票UI・写真・スワイプ・戻るは開発環境の明示demo=1で利用し、完了後もdemoを待機へ引き継ぐ。 後段の従来ルート/固定処理/モック供給の記録は、相違する部分のみ本契約へ更新する。検証結果は主仕様のProgressへ集約する。

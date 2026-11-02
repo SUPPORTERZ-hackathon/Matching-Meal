@@ -18,16 +18,17 @@ function subscribeToMotionPreference(notify: () => void) {
 const getMotionPreference = () => window.matchMedia(REDUCED_MOTION_QUERY).matches;
 const getServerMotionPreference = () => false;
 
-export function useGenreVote(genres: readonly Genre[]) {
-  const [votes, setVotes] = useState<readonly GenreVote[]>([]);
-  const [phase, setPhase] = useState<VotePhase>("idle");
+export function useGenreVote(genres: readonly Genre[], initialVotes: readonly GenreVote[] = []) {
+  const initialPhase: VotePhase = genres.length > 0 && initialVotes.length === genres.length ? "complete" : "idle";
+  const [votes, setVotes] = useState<readonly GenreVote[]>(initialVotes);
+  const [phase, setPhase] = useState<VotePhase>(initialPhase);
   const [motion, setMotion] = useState<CardMotion>(REST_MOTION);
   const [cardWidth, setCardWidth] = useState<number>(0);
   const [lastAction, setLastAction] = useState<LastVoteAction>(null);
   const reducedMotion = useSyncExternalStore(subscribeToMotionPreference, getMotionPreference, getServerMotionPreference);
   const cardRef = useRef<HTMLElement>(null);
-  const votesRef = useRef<readonly GenreVote[]>([]);
-  const phaseRef = useRef<VotePhase>("idle");
+  const votesRef = useRef<readonly GenreVote[]>(initialVotes);
+  const phaseRef = useRef<VotePhase>(initialPhase);
   const motionRef = useRef<CardMotion>(REST_MOTION);
   const gestureRef = useRef<Gesture | null>(null);
   const pendingVoteRef = useRef<GenreVote | null>(null);

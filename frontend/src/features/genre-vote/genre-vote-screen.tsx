@@ -13,10 +13,10 @@ import { useGenreVote } from "./use-genre-vote";
 import { SWIPE } from "./swipe-config";
 import { DECK_PRESENTATION, nextCardPresentation } from "./deck-presentation";
 import { useNextCardShade } from "./use-next-card-shade";
-import type { VoteChoice } from "./vote-state";
+import type { GenreVote, VoteChoice } from "./vote-state";
 import styles from "./genre-vote.module.css";
 
-type GenreVoteScreenProps = { genres: readonly Genre[]; roomId?: string; onComplete: () => void; notice?: ReactNode };
+type GenreVoteScreenProps = { genres: readonly Genre[]; roomId?: string; onComplete: (votes: readonly GenreVote[]) => void; notice?: ReactNode; initialVotes?: readonly GenreVote[]; onVotesChange?: (votes: readonly GenreVote[]) => void };
 type MotionStyle = CSSProperties & {
   "--drag-x": string;
   "--drag-y": string;
@@ -30,8 +30,8 @@ type MotionStyle = CSSProperties & {
   "--next-offset": string;
 };
 
-export function GenreVoteScreen({ genres, roomId, onComplete, notice }: GenreVoteScreenProps) {
-  const { votes, phase, motion, reducedMotion, cardRef, vote, undo, finishAnimation, currentGenre, complete, locked, canUndo, pointerHandlers, labelOpacity, lastAction } = useGenreVote(genres);
+export function GenreVoteScreen({ genres, roomId, onComplete, notice, initialVotes, onVotesChange }: GenreVoteScreenProps) {
+  const { votes, phase, motion, reducedMotion, cardRef, vote, undo, finishAnimation, currentGenre, complete, locked, canUndo, pointerHandlers, labelOpacity, lastAction } = useGenreVote(genres, initialVotes);
   const clipRef = useRef<HTMLDivElement>(null);
   const shadeRef = useNextCardShade({ cardRef, clipRef, genreId: currentGenre?.id, phase, motionX: motion.x, reducedMotion });
   const skipButtonRef = useRef<HTMLButtonElement>(null);
@@ -46,7 +46,7 @@ export function GenreVoteScreen({ genres, roomId, onComplete, notice }: GenreVot
   const lastVote = lastAction?.type === "vote" ? lastAction.vote : undefined;
   const lastGenre = lastVote ? genres.find((item) => item.id === lastVote.genreId) : undefined;
   const nextPresentation = nextCardPresentation(labelOpacity);
-  const announcement = complete ? `${total}ジャンルの投票が完了しました。待機画面へ移動します。`
+  const announcement = complete ? `${total}ジャンルの回答が完了しました。保存状況を確認しています。`
     : lastAction?.type === "undo" ? `${genre?.name}の投票を取り消しました。${currentNumber}件目を選び直せます。`
       : lastVote ? `${lastGenre?.name}を${lastVote.choice === "like" ? "食べたい" : "見送り"}にしました。次は${genre?.name}、${currentNumber}件目です。` : "";
   const motionStyle: MotionStyle = {
@@ -66,9 +66,11 @@ export function GenreVoteScreen({ genres, roomId, onComplete, notice }: GenreVot
     if (!complete) completionNotifiedRef.current = false;
     if (complete && total > 0 && onComplete && !completionNotifiedRef.current) {
       completionNotifiedRef.current = true;
-      onComplete();
+      onComplete(votes);
     }
-  }, [complete, total, onComplete]);
+  }, [complete, total, onComplete, votes]);
+
+  useEffect(() => { if (!complete) onVotesChange?.(votes); }, [votes, complete, onVotesChange]);
 
   useEffect(() => {
     if (complete) {

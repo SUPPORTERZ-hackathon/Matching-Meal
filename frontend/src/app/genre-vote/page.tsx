@@ -23,5 +23,5 @@ export default async function GenreVotePage({ searchParams }: GenreVotePageProps
   if (raw !== undefined) return <RoomGenreEntry key={typeof raw === "string" ? raw : "invalid"} roomId={typeof raw === "string" && isRoomId(raw) ? raw.toLowerCase() : undefined} />;
   if (query.demo === "1" && process.env.NODE_ENV !== "development") notFound();
   return isDevelopmentDemo(query.demo, process.env.NODE_ENV) ? <GenreVotePrototype genres={GENRES} roomId={PROTOTYPE_ROOM_ID} />
-    : <FlowMessage step="genre" title="ルーム情報を確認してください" description="ジャンル投票の保存・同期はまだ接続されていません。実ルームの操作はホームから開始してください。" />;
+    : <FlowMessage step="genre" title="ルーム情報を確認してください" description="実ルームの投票には参加情報が必要です。ホームからルームを作成するか、招待リンクを開いてください。" />;
 }
