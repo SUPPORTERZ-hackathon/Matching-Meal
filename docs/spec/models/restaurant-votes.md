@@ -1,10 +1,10 @@
 # 店舗投票モデル
 
-- Status: Approved
+- Status: Implemented
 - Last updated: 2026-11-03
 - Related issue: None
 - Related specifications: restaurant-candidates.md, rooms-and-participants.md, ../services/restaurant-voting.md, ../screens/restaurant-vote.md, ../screens/restaurant-vote-waiting.md
-- Implementation files: Not implemented
+- Implementation files: ../../backend/internal/domain/restaurant_vote.go, ../../backend/internal/repository/restaurant_voting.go, ../../backend/internal/repository/postgres/restaurant_voting.go, ../../backend/migrations/000006_create_restaurant_votes.up.sql, ../../backend/migrations/000006_create_restaurant_votes.down.sql
 
 ## 目的と対象範囲
 
@@ -179,10 +179,16 @@ None。候補全件の一括提出、提出後変更不可、全員完了時の�
 - 完了: 既存の店舗候補、ジャンル投票、店舗投票・待機画面、ルーム状態仕様を確認。
 - 完了: 候補1〜5件への一括提出、冪等性、集計、抽選、複合外部キー、トランザクション境界を設計。
 - 完了: ユーザーが実装方針を承認。
-- 承認: ユーザーが本仕様を承認。
-- 残作業: モデル・マイグレーション・Repository・Service・HTTP APIの実装と検証。
-- ブロッカー: None。
-- 関連Issue・PR・コミット: None。
+- 承認: ユーザーが本仕様、およびDB・Domain・Repositoryの実装案を承認。
+- 完了: 店舗投票、結果、参加者別提出状態のDomain型、候補順への正規化、同一内容比較、最多候補とdecision methodの算出を実装。
+- 完了: `000006`で提出・票・結果テーブル、choice・decision method・like数のCHECK制約、参加者・候補店舗との複合外部キー、CASCADEを実装。
+- 完了: Repositoryへルーム行ロック、候補・提出取得、一括保存、人数取得、like数集計、結果保存、version更新、`decided`遷移、状態取得を実装。
+- 検証: Docker Compose内の`go test ./...`、`go vet ./...`、`go test -race ./...`に成功。
+- 検証: 実PostgreSQLで2人×3候補の保存・集計・結果取得、同じニックネームの別参加者、候補順の正規化、不正choiceと別ルーム参加者・候補のロールバック、複合外部キーを確認。
+- 検証: マイグレーションupと再実行の`no change`に成功。downは実行許可がないため未検証。
+- 残作業: Service・HTTP API・OpenAPIの実装と検証。down検証後のStatus `Verified`化。
+- ブロッカー: マイグレーションdownの実行許可なし。
+- 関連Issue・PR・コミット: 本変更コミット。
 
 ## Self-Review
 
