@@ -13,10 +13,7 @@ import (
 	"meal/backend/internal/service"
 )
 
-const (
-	roomIDParam  = "roomId"
-	roomRefParam = "roomRef"
-)
+const roomKeyParam = "roomKey"
 
 type RoomHandler struct {
 	service *service.RoomService
@@ -83,9 +80,9 @@ func NewRoomHandler(roomService *service.RoomService) *RoomHandler {
 
 func RegisterRoomRoutes(routes gin.IRoutes, handler *RoomHandler) {
 	routes.POST("/api/v1/rooms", handler.Create)
-	routes.POST("/api/v1/rooms/:roomRef/participants", handler.Join)
-	routes.GET("/api/v1/rooms/:roomId", handler.GetState)
-	routes.POST("/api/v1/rooms/:roomRef/genre-voting/start", handler.StartGenreVoting)
+	routes.POST("/api/v1/rooms/:roomKey/participants", handler.Join)
+	routes.GET("/api/v1/rooms/:roomKey", handler.GetState)
+	routes.POST("/api/v1/rooms/:roomKey/genre-voting/start", handler.StartGenreVoting)
 }
 
 func (handler *RoomHandler) Create(context *gin.Context) {
@@ -130,7 +127,7 @@ func (handler *RoomHandler) Join(context *gin.Context) {
 		context.JSON(http.StatusBadRequest, errorResponse("INVALID_REQUEST", "入力内容を確認してください。", requestID(context)))
 		return
 	}
-	result, err := handler.service.Join(context.Request.Context(), context.Param(roomRefParam), request.Nickname)
+	result, err := handler.service.Join(context.Request.Context(), context.Param(roomKeyParam), request.Nickname)
 	switch {
 	case errors.Is(err, domain.ErrInvalidJoinCode), errors.Is(err, domain.ErrInvalidNickname):
 		context.JSON(http.StatusBadRequest, errorResponse("INVALID_REQUEST", "参加コードまたはニックネームを確認してください。", requestID(context)))
@@ -164,7 +161,7 @@ func (handler *RoomHandler) GetState(context *gin.Context) {
 		return
 	}
 
-	result, err := handler.service.GetState(context.Request.Context(), context.Param(roomIDParam), sessionToken)
+	result, err := handler.service.GetState(context.Request.Context(), context.Param(roomKeyParam), sessionToken)
 	switch {
 	case errors.Is(err, domain.ErrInvalidRoomID):
 		context.JSON(http.StatusBadRequest, errorResponse("INVALID_REQUEST", "ルームIDを確認してください。", requestID(context)))
@@ -197,7 +194,7 @@ func (handler *RoomHandler) StartGenreVoting(context *gin.Context) {
 		return
 	}
 
-	result, err := handler.service.StartGenreVoting(context.Request.Context(), context.Param(roomRefParam), sessionToken)
+	result, err := handler.service.StartGenreVoting(context.Request.Context(), context.Param(roomKeyParam), sessionToken)
 	switch {
 	case errors.Is(err, domain.ErrInvalidRoomID):
 		context.JSON(http.StatusBadRequest, errorResponse("INVALID_REQUEST", "ルームIDを確認してください。", requestID(context)))

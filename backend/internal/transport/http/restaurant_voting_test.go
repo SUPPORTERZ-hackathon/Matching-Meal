@@ -37,8 +37,8 @@ func TestRegisterRestaurantVotingRoutes(t *testing.T) {
 	router := gin.New()
 	RegisterRestaurantVotingRoutes(router, NewRestaurantVotingHandler(&restaurantVotingUseCaseStub{}))
 	routes := map[string]bool{
-		"PUT /api/v1/rooms/:roomId/restaurant-votes":  false,
-		"GET /api/v1/rooms/:roomId/restaurant-voting": false,
+		"PUT /api/v1/rooms/:roomKey/restaurant-votes":  false,
+		"GET /api/v1/rooms/:roomKey/restaurant-voting": false,
 	}
 	for _, route := range router.Routes() {
 		key := route.Method + " " + route.Path
@@ -72,7 +72,7 @@ func TestRestaurantVotingHandlerSubmitAndResultResponse(t *testing.T) {
 		},
 	}}
 	router := gin.New()
-	router.PUT("/api/v1/rooms/:roomId/restaurant-votes", NewRestaurantVotingHandler(stub).Submit)
+	router.PUT("/api/v1/rooms/:roomKey/restaurant-votes", NewRestaurantVotingHandler(stub).Submit)
 	request := httptest.NewRequest(http.MethodPut, "/api/v1/rooms/"+roomID+"/restaurant-votes", strings.NewReader(validRestaurantVotingRequest))
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("Authorization", "Bearer token")
@@ -122,9 +122,9 @@ func TestRestaurantVotingHandlerErrors(t *testing.T) {
 			router := gin.New()
 			handler := NewRestaurantVotingHandler(stub)
 			if test.method == http.MethodGet {
-				router.GET("/api/v1/rooms/:roomId/restaurant-voting", handler.GetState)
+				router.GET("/api/v1/rooms/:roomKey/restaurant-voting", handler.GetState)
 			} else {
-				router.PUT("/api/v1/rooms/:roomId/restaurant-votes", handler.Submit)
+				router.PUT("/api/v1/rooms/:roomKey/restaurant-votes", handler.Submit)
 			}
 			path := "/api/v1/rooms/550e8400-e29b-41d4-a716-446655440000/restaurant-votes"
 			if test.method == http.MethodGet {

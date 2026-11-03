@@ -43,8 +43,8 @@ func TestRegisterGenreVotingRoutes(t *testing.T) {
 	router := gin.New()
 	RegisterGenreVotingRoutes(router, NewGenreVotingHandler(&genreVotingUseCaseStub{}))
 	routes := map[string]bool{
-		"PUT /api/v1/rooms/:roomId/genre-votes":  false,
-		"GET /api/v1/rooms/:roomId/genre-voting": false,
+		"PUT /api/v1/rooms/:roomKey/genre-votes":  false,
+		"GET /api/v1/rooms/:roomKey/genre-voting": false,
 	}
 	for _, route := range router.Routes() {
 		key := route.Method + " " + route.Path
@@ -70,7 +70,7 @@ func TestGenreVotingHandlerSubmit(t *testing.T) {
 		Participants: []domain.GenreVotingParticipant{{Participant: domain.Participant{ID: "participant-id"}, Submitted: true}},
 	}}
 	router := gin.New()
-	router.PUT("/api/v1/rooms/:roomId/genre-votes", NewGenreVotingHandler(stub).Submit)
+	router.PUT("/api/v1/rooms/:roomKey/genre-votes", NewGenreVotingHandler(stub).Submit)
 	request := httptest.NewRequest(http.MethodPut, "/api/v1/rooms/"+roomID+"/genre-votes", strings.NewReader(validGenreVotingRequest()))
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("Authorization", "Bearer token")
@@ -109,7 +109,7 @@ func TestGenreVotingHandlerErrors(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			stub := &genreVotingUseCaseStub{error: test.serviceError}
 			router := gin.New()
-			router.PUT("/api/v1/rooms/:roomId/genre-votes", NewGenreVotingHandler(stub).Submit)
+			router.PUT("/api/v1/rooms/:roomKey/genre-votes", NewGenreVotingHandler(stub).Submit)
 			request := httptest.NewRequest(http.MethodPut, "/api/v1/rooms/550e8400-e29b-41d4-a716-446655440000/genre-votes", strings.NewReader(test.body))
 			request.Header.Set("Content-Type", "application/json")
 			if test.authorization != "" {
