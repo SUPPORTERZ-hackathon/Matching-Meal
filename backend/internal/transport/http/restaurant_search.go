@@ -119,16 +119,7 @@ func newRestaurantSearchResponse(result service.RestaurantSearchResult) restaura
 	response.Data.GenreID = result.GenreID
 	response.Data.Restaurants = make([]restaurantCandidateResponse, 0, len(result.Candidates))
 	for _, candidate := range result.Candidates {
-		var coordinates *restaurantCoordinatesResponse
-		if candidate.Latitude != nil && candidate.Longitude != nil {
-			coordinates = &restaurantCoordinatesResponse{Latitude: *candidate.Latitude, Longitude: *candidate.Longitude}
-		}
-		response.Data.Restaurants = append(response.Data.Restaurants, restaurantCandidateResponse{
-			ID: candidate.RestaurantID, Name: candidate.Name, PhotoURL: candidate.PhotoURL,
-			OpeningHours: candidate.OpeningHours, ClosedDays: candidate.ClosedDays,
-			DinnerBudget: candidate.DinnerBudget, Access: candidate.Access, StationName: candidate.StationName,
-			DetailURL: candidate.DetailURL, Coordinates: coordinates, Source: candidate.Source,
-		})
+		response.Data.Restaurants = append(response.Data.Restaurants, restaurantCandidateToResponse(candidate))
 	}
 	return response
 }

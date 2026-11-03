@@ -36,6 +36,7 @@ func main() {
 	roomRepository := postgres.NewRoomRepository(pool)
 	genreVotingRepository := postgres.NewGenreVotingRepository(pool)
 	restaurantSearchRepository := postgres.NewRestaurantSearchRepository(pool)
+	restaurantVotingRepository := postgres.NewRestaurantVotingRepository(pool)
 	hotPepperClient := hotpepper.NewClient(
 		&http.Client{Timeout: hotPepperRequestTimeout}, hotPepperGourmetSearchURL, os.Getenv("HOTPEPPER_API_KEY"),
 	)
@@ -44,9 +45,13 @@ func main() {
 	restaurantSearchService := service.NewRestaurantSearchService(
 		restaurantSearchRepository, roomRepository, hotPepperClient, randomGenerator, service.SystemClock{},
 	)
+	restaurantVotingService := service.NewRestaurantVotingService(
+		restaurantVotingRepository, roomRepository, randomGenerator, service.SystemClock{},
+	)
 	roomHandler := httptransport.NewRoomHandler(roomService)
 	genreVotingHandler := httptransport.NewGenreVotingHandler(genreVotingService)
 	restaurantSearchHandler := httptransport.NewRestaurantSearchHandler(restaurantSearchService)
+	restaurantVotingHandler := httptransport.NewRestaurantVotingHandler(restaurantVotingService)
 	router := gin.New()
 	router.Use(httptransport.RequestID(randomGenerator), gin.Logger(), gin.Recovery())
 	router.GET("/api/health", func(c *gin.Context) {
@@ -63,6 +68,7 @@ func main() {
 	httptransport.RegisterRoomRoutes(router, roomHandler)
 	httptransport.RegisterGenreVotingRoutes(router, genreVotingHandler)
 	httptransport.RegisterRestaurantSearchRoutes(router, restaurantSearchHandler)
+	httptransport.RegisterRestaurantVotingRoutes(router, restaurantVotingHandler)
 	server := &http.Server{Addr: ":8080", Handler: router, ReadHeaderTimeout: 5 * time.Second}
 	go func() {
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {

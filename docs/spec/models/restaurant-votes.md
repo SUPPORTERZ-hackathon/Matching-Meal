@@ -4,7 +4,7 @@
 - Last updated: 2026-11-03
 - Related issue: None
 - Related specifications: restaurant-candidates.md, rooms-and-participants.md, ../services/restaurant-voting.md, ../screens/restaurant-vote.md, ../screens/restaurant-vote-waiting.md
-- Implementation files: ../../backend/internal/domain/restaurant_vote.go, ../../backend/internal/repository/restaurant_voting.go, ../../backend/internal/repository/postgres/restaurant_voting.go, ../../backend/migrations/000006_create_restaurant_votes.up.sql, ../../backend/migrations/000006_create_restaurant_votes.down.sql
+- Implementation files: ../../../backend/internal/domain/restaurant_vote.go, ../../../backend/internal/repository/restaurant_voting.go, ../../../backend/internal/repository/postgres/restaurant_voting.go, ../../../backend/migrations/000006_create_restaurant_votes.up.sql, ../../../backend/migrations/000006_create_restaurant_votes.down.sql
 
 ## 目的と対象範囲
 
@@ -186,7 +186,8 @@ None。候補全件の一括提出、提出後変更不可、全員完了時の�
 - 検証: Docker Compose内の`go test ./...`、`go vet ./...`、`go test -race ./...`に成功。
 - 検証: 実PostgreSQLで2人×3候補の保存・集計・結果取得、同じニックネームの別参加者、候補順の正規化、不正choiceと別ルーム参加者・候補のロールバック、複合外部キーを確認。
 - 検証: マイグレーションupと再実行の`no change`に成功。downは実行許可がないため未検証。
-- 残作業: Service・HTTP API・OpenAPIの実装と検証。down検証後のStatus `Verified`化。
+- 完了: Service・HTTP API・OpenAPIを実装し、単体・race・実PostgreSQL同時提出テストに成功。
+- 残作業: マイグレーションdown検証後のStatus `Verified`化。
 - ブロッカー: マイグレーションdownの実行許可なし。
 - 関連Issue・PR・コミット: 本変更コミット。
 

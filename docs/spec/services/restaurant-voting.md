@@ -1,10 +1,10 @@
 # 店舗投票サービス
 
-- Status: Approved
+- Status: Implemented
 - Last updated: 2026-11-03
 - Related issue: None
 - Related specifications: ../models/restaurant-votes.md, ../models/restaurant-candidates.md, ../models/rooms-and-participants.md, restaurant-search.md, ../screens/restaurant-vote.md, ../screens/restaurant-vote-waiting.md
-- Implementation files: Not implemented
+- Implementation files: ../../../backend/internal/service/restaurant_voting.go, ../../../backend/internal/service/restaurant_voting_test.go, ../../../backend/internal/transport/http/restaurant_voting.go, ../../../backend/internal/transport/http/restaurant_voting_test.go, ../../../backend/cmd/api/main.go, ../../api/openapi.yaml
 
 ## 目的と対象範囲
 
@@ -252,9 +252,17 @@ None。候補全件の一括提出、提出後変更不可、最多同数時の�
 - 完了: ユーザーが実装方針を承認。
 - 承認: ユーザーが本仕様を承認。
 - 完了: 前提となる店舗投票Domain、DBマイグレーション、Repositoryを実装し、単体・実PostgreSQL・race検査に成功。
-- 残作業: Service・HTTP Handler・ルート登録・OpenAPIの実装と検証。
-- ブロッカー: None。
-- 関連Issue・PR・コミット: None。
+- 完了: ServiceへBearer認証、候補完全一致、冪等再送、提出保存、進捗更新、最終提出時の集計・抽選・`decided`遷移、状態取得を実装。
+- 完了: HTTP Handler、提出・状態取得ルート、店舗情報を含む結果レスポンス、エラーコード対応、`main.go`の依存注入を実装。
+- 完了: OpenAPIとAPI READMEへ店舗投票のパス、Schema、レスポンス例、エラー契約を追加。
+- 検証: Serviceテストで一部提出、最多同数、全員skip、同一・異内容再送、候補不一致、未準備状態を確認。
+- 検証: Handlerテストでルート、正常レスポンス、店舗・座標、Google Maps URL非出力、400・401・403・404・409・500・503、内部エラー非出力を確認。
+- 検証: 実PostgreSQLで同時提出、結果1件、`decided`遷移、version、同名参加者、同一再送非変更、異内容再送拒否を確認。
+- 検証: Docker Compose内の`go test ./...`、`go vet ./...`、`go test -race ./...`に成功。OpenAPI Validator v7.10.0に成功。
+- 未実施: 作成からジャンル決定・候補保存・店舗投票までの実HTTP通し検証、およびマイグレーションdown検証。
+- 残作業: 上記未実施検証後のStatus `Verified`化。フロントエンド接続とGoogle Maps URLは別仕様。
+- ブロッカー: マイグレーションdownの実行許可なし。
+- 関連Issue・PR・コミット: 本変更コミット。
 
 ## Self-Review
 

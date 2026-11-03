@@ -2,7 +2,9 @@ package postgres_test
 
 import (
 	"context"
+	"errors"
 	"os"
+	"sync"
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -221,6 +223,135 @@ func TestRestaurantVoteSubmissionRollbackAndRoomConstraintsIntegration(t *testin
 	})
 	if err == nil {
 		t.Fatal("participant from another room unexpectedly succeeded")
+	}
+}
+
+func TestRestaurantVotingServiceConcurrencyIntegration(t *testing.T) {
+	if os.Getenv(integrationTestEnvironment) != "1" {
+		t.Skip("set INTEGRATION_TEST=1 to run PostgreSQL integration tests")
+	}
+
+	ctx := context.Background()
+	pool, err := pgxpool.New(ctx, "")
+	if err != nil {
+		t.Fatalf("connect to PostgreSQL: %v", err)
+	}
+	t.Cleanup(pool.Close)
+
+	roomRepository := restaurantpostgres.NewRoomRepository(pool)
+	votingRepository := restaurantpostgres.NewRestaurantVotingRepository(pool)
+	randomGenerator := security.RandomGenerator{}
+	roomService := service.NewRoomService(roomRepository, randomGenerator, service.SystemClock{})
+	votingService := service.NewRestaurantVotingService(votingRepository, roomRepository, fixedIndexSelector{index: 1}, service.SystemClock{})
+
+	created, err := roomService.Create(ctx, service.CreateRoomInput{
+		Nickname: "同名", Latitude: 35.658, Longitude: 139.7016, SearchRange: 3,
+	})
+	if err != nil {
+		t.Fatalf("create room: %v", err)
+	}
+	t.Cleanup(func() {
+		if _, err := pool.Exec(context.Background(), "DELETE FROM rooms WHERE id = $1", created.Room.ID); err != nil {
+			t.Errorf("clean up room: %v", err)
+		}
+	})
+	joined, err := roomService.Join(ctx, created.Room.JoinCode, "同名")
+	if err != nil {
+		t.Fatalf("join room: %v", err)
+	}
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO restaurant_candidates (room_id, restaurant_id, position, name, source)
+		VALUES
+			($1, 'JCONCURRENT1', 1, '候補1', 'hotpepper'),
+			($1, 'JCONCURRENT2', 2, '候補2', 'hotpepper'),
+			($1, 'JCONCURRENT3', 3, '候補3', 'hotpepper')
+	`, created.Room.ID); err != nil {
+		t.Fatalf("insert candidates: %v", err)
+	}
+	if _, err := pool.Exec(ctx, `
+		UPDATE rooms SET status = 'restaurant_voting', version = version + 1 WHERE id = $1
+	`, created.Room.ID); err != nil {
+		t.Fatalf("advance room to restaurant voting: %v", err)
+	}
+
+	votesFor := func(likedRestaurantID string) []domain.RestaurantVote {
+		votes := make([]domain.RestaurantVote, 0, 3)
+		for _, restaurantID := range []string{"JCONCURRENT1", "JCONCURRENT2", "JCONCURRENT3"} {
+			choice := domain.RestaurantVoteChoiceSkip
+			if restaurantID == likedRestaurantID {
+				choice = domain.RestaurantVoteChoiceLike
+			}
+			votes = append(votes, domain.RestaurantVote{RestaurantID: restaurantID, Choice: choice})
+		}
+		return votes
+	}
+
+	start := make(chan struct{})
+	errorsByParticipant := make(chan error, 2)
+	var waitGroup sync.WaitGroup
+	for _, submission := range []struct {
+		token string
+		votes []domain.RestaurantVote
+	}{
+		{token: created.SessionToken, votes: votesFor("JCONCURRENT1")},
+		{token: joined.SessionToken, votes: votesFor("JCONCURRENT2")},
+	} {
+		waitGroup.Add(1)
+		go func(token string, votes []domain.RestaurantVote) {
+			defer waitGroup.Done()
+			<-start
+			_, err := votingService.Submit(ctx, created.Room.ID, token, votes)
+			errorsByParticipant <- err
+		}(submission.token, submission.votes)
+	}
+	close(start)
+	waitGroup.Wait()
+	close(errorsByParticipant)
+	for err := range errorsByParticipant {
+		if err != nil {
+			t.Fatalf("submit restaurant votes: %v", err)
+		}
+	}
+
+	state, err := votingService.GetState(ctx, created.Room.ID, created.SessionToken)
+	if err != nil {
+		t.Fatalf("get restaurant voting state: %v", err)
+	}
+	if state.Room.Status != domain.RoomStatusDecided || state.Room.Version != 5 {
+		t.Fatalf("room = %+v", state.Room)
+	}
+	if state.SubmittedParticipantCount != 2 || state.TotalParticipantCount != 2 || len(state.Participants) != 2 {
+		t.Fatalf("state = %+v", state)
+	}
+	if state.Result == nil || state.Result.RestaurantID != "JCONCURRENT2" || state.Result.LikeCount != 1 ||
+		state.Result.DecisionMethod != domain.RestaurantDecisionRandomTie || state.Result.Restaurant.Name != "候補2" {
+		t.Fatalf("result = %+v", state.Result)
+	}
+
+	repeated, err := votingService.Submit(ctx, created.Room.ID, created.SessionToken, votesFor("JCONCURRENT1"))
+	if err != nil {
+		t.Fatalf("repeat same submission: %v", err)
+	}
+	if repeated.Room.Version != state.Room.Version || repeated.Result == nil || repeated.Result.RestaurantID != state.Result.RestaurantID {
+		t.Fatalf("repeated state = %+v, original = %+v", repeated, state)
+	}
+	if _, err := votingService.Submit(ctx, created.Room.ID, created.SessionToken, votesFor("JCONCURRENT3")); !errors.Is(err, service.ErrVoteAlreadySubmitted) {
+		t.Fatalf("different retry error = %v", err)
+	}
+
+	var submissionCount int
+	var voteCount int
+	var resultCount int
+	if err := pool.QueryRow(ctx, `
+		SELECT
+			(SELECT COUNT(*) FROM restaurant_vote_submissions WHERE room_id = $1),
+			(SELECT COUNT(*) FROM restaurant_votes WHERE room_id = $1),
+			(SELECT COUNT(*) FROM restaurant_vote_results WHERE room_id = $1)
+	`, created.Room.ID).Scan(&submissionCount, &voteCount, &resultCount); err != nil {
+		t.Fatalf("inspect stored votes: %v", err)
+	}
+	if submissionCount != 2 || voteCount != 6 || resultCount != 1 {
+		t.Fatalf("stored counts = submissions:%d votes:%d results:%d", submissionCount, voteCount, resultCount)
 	}
 }
 
