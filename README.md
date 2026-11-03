@@ -208,7 +208,7 @@ APIに新しい機能を追加する際は、必要に応じて`backend/internal
 | `POSTGRES_USER` | ローカルDBのユーザー | `meal` |
 | `POSTGRES_PASSWORD` | ローカルDBのパスワード | 開発用の仮パスワード |
 | `POSTGRES_DB` | ローカルDB名 | `meal` |
-| `HOTPEPPER_API_KEY` | 今後の店舗検索に使用 | 空でOK |
+| `HOTPEPPER_API_KEY` | Hot Pepper Gourmet APIによる店舗候補検索に使用。未設定時は店舗検索APIが失敗する | 空 |
 | `DEV_ALLOWED_ORIGIN` | スマホ確認用のホスト名 | 空でOK |
 
 `.env`は個人用、`.env.example`は設定項目を共有する見本です。新しい項目を追加したら見本にも説明を書きます。秘密情報にはブラウザへ公開される`NEXT_PUBLIC_`を付けず、バックエンドで扱います。

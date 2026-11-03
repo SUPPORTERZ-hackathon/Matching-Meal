@@ -65,6 +65,16 @@ func (roomRepository *RoomRepository) Create(ctx context.Context, params reposit
 		return domain.Room{}, domain.Participant{}, fmt.Errorf("insert host participant: %w", err)
 	}
 
+	searchCondition := params.SearchCondition
+	err = tx.QueryRow(ctx, `
+		INSERT INTO room_search_conditions (room_id, latitude, longitude, search_range)
+		VALUES ($1, $2, $3, $4)
+		RETURNING created_at
+	`, searchCondition.RoomID, searchCondition.Latitude, searchCondition.Longitude, searchCondition.Range).Scan(&searchCondition.CreatedAt)
+	if err != nil {
+		return domain.Room{}, domain.Participant{}, fmt.Errorf("insert room search condition: %w", err)
+	}
+
 	if err := tx.Commit(ctx); err != nil {
 		return domain.Room{}, domain.Participant{}, fmt.Errorf("commit create room transaction: %w", err)
 	}

@@ -1,27 +1,27 @@
 # ルーム作成画面 仕様書
 
 - Status: Implemented
-- Last updated: 2026-10-31
+- Last updated: 2026-11-03
 - Related issue: None
-- Related specifications: room-waiting-invite.md, ../components/common-ui.md
-- Implementation files: frontend/src/features/room-create/room-create-screen.tsx, frontend/src/features/room-create/room-create.module.css, frontend/src/features/room/
+- Related specifications: frontend-ui-integration.md, room-waiting-invite.md, ../components/common-ui.md, ../services/room-lifecycle.md, ../services/restaurant-search.md, ../models/restaurant-candidates.md
+- Implementation files: frontend/src/features/room-create/room-create-screen.tsx, frontend/src/features/room-create/room-create.module.css, frontend/src/features/room/current-location.ts, frontend/src/features/room/room-api.ts, frontend/src/features/room/room-session.ts
 
 ## UI統合の現行契約（2026-10-31）
 
-主仕様は[frontend-ui-integration.md](frontend-ui-integration.md)。主要ボタンは共通FixedBottomActionで下部固定し、本文に実測高の余白を確保する。戻る先は/home-preview。nickname・API・集合場所の保存範囲は維持する。 後段の従来ルート/固定処理/モック供給の記録は、相違する部分のみ本契約へ更新する。検証結果は主仕様のProgressへ集約する。
+UI統合の主仕様は[frontend-ui-integration.md](frontend-ui-integration.md)とする。主要ボタンは共通`FixedBottomAction`で下部固定し、本文に実測高の余白を確保する。戻る先は`/home-preview`とする。ルーム作成後の実セッション保存、待機画面、QR・参加・開始は[room-waiting-invite.md](room-waiting-invite.md)を参照する。
 
 ## 現行のAPI接続契約
 
-2026-10-31に承認された[画面03・招待仕様](room-waiting-invite.md)をAPI接続・状態・エラー処理の主仕様とする。既存の画面02の配置・必須入力・12文字上限は維持する。作成APIへ送る項目はnicknameだけで、集合場所と検索範囲はホストのsessionStorage内だけに保持し、未同期である旨を表示する。現在地取得と検索は引き続き未実装。
+`POST /api/v1/rooms`には`nickname`、`searchLocation.latitude`、`searchLocation.longitude`、`searchRange`を送る。現在地と検索範囲が必須であることは、実装済みバックエンド、OpenAPI、`room-lifecycle.md`を正とする。フロントエンドはGeolocation APIの成功後だけこの契約でルームを作成する。
 
 ### 前提・対象外・状態・検証
 
-- 前提：既存Docker Composeのfrontend/backend/dbが稼働し、sessionStorageが利用できること。
-- 対象外：バックエンド/API仕様/DB/Docker/環境変数/PWA/共通UIの変更、場所検索・検索条件保存APIの追加。
-- 状態：入力→送信中→実セッション保存→待機。送信中は連打を防止し、失敗時は同じ画面にエラーを表示する。保存失敗/不正応答/再送の扱いは主仕様の「参加フォーム・状態・永続化」に従う。
-- 受け入れ条件：nicknameだけを既存APIへ送り、成功応答のroom.idで待機へ進むこと。失敗時に架空のQRを表示しないこと。既存の場所/範囲UIを維持し、未同期と分かること。
-- 検証方法：主仕様のAPI/ブラウザー/レスポンシブ/コード検証を適用する。検証結果は主仕様のProgressへ集約する。
-- 未決定事項：今回の接続範囲にはなし。場所検索・検索条件の同期は別作業。
+- 前提：既存Docker Composeのfrontend/backend/dbが稼働し、ブラウザのGeolocation APIとsessionStorageが利用できること。
+- 対象外：駅名・住所のGeocoding、バックエンド/API仕様/DB/Docker/環境変数/PWAの変更。
+- 状態：入力・現在地取得→送信中→実セッション保存→待機。送信中は連打を防止し、失敗時は同じ画面にエラーを表示する。
+- 受け入れ条件：必須4項目を作成APIへ送り、成功応答のroom.idで待機へ進むこと。失敗時に架空のQRを表示しないこと。
+- 検証方法：本仕様のAPI、Geolocation、ブラウザー、レスポンシブ、コード検証に加え、関連UI統合仕様の検証を適用する。
+- 未決定事項：なし。現在地を検索中心とし、駅名・住所のGeocodingを対象外とする方針は承認済み。
 
 ## 1. 画面概要
 
@@ -89,7 +89,10 @@
 - 入力がある場合はクリアボタンを表示する。
 - クリアボタンを押すと入力内容を空にする。
 - 現在地取得ボタンを配置する。
-- 現在地取得機能は現時点ではUIのみで、取得処理は未実装。
+- 現在地取得ボタンでブラウザのGeolocation APIから世界測地系の緯度・経度を取得する。
+- 取得成功後は集合場所欄に「現在地を使用」と表示し、緯度・経度の数値自体は画面に表示しない。
+- 取得拒否、未対応、タイムアウト、その他の取得失敗ではルームを作成せず、再試行可能なエラーを表示する。
+- 駅名・住所の入力とGeocodingは今回の対象外とし、集合場所の自由入力欄は無効化または非表示にする。
 
 ### 3.6 検索範囲
 
@@ -115,8 +118,8 @@
 - 共通UIの `BottomAction` 内に配置する。
 - 共通UIの `Button` を使用する。
 - ボタンの表示文言：`ルームを作成する`
-- ニックネームと集合場所の両方が入力されている場合に有効化する。
-- いずれかが未入力の場合は無効化する。
+- ニックネームが有効で、現在地取得が成功している場合に有効化する。
+- 現在地の取得中、未取得、取得失敗、またはニックネーム不正の場合は無効化する。
 
 ## 4. 操作仕様
 
@@ -124,11 +127,11 @@
 |---|---|
 | 戻るボタン | 前の画面へ戻る |
 | ニックネーム入力 | 入力内容と文字数カウンターを更新する |
-| 集合場所入力 | 入力内容を更新する |
-| クリアボタン | 集合場所の入力内容を消去する |
-| 現在地取得ボタン | 現時点ではUIのみ |
+| 集合場所入力 | 今回は駅名・住所入力を受け付けない |
+| クリアボタン | 取得済み現在地を破棄し、未取得状態へ戻す |
+| 現在地取得ボタン | 取得中表示にして現在地を取得し、成功時に「現在地を使用」と表示する |
 | 検索範囲スライダー | 選択した範囲と徒歩時間を更新する |
-| ルーム作成ボタン | 既存POST /api/v1/roomsへnicknameを送信し、201の実セッションを保存して待機へ進む |
+| ルーム作成ボタン | ニックネーム、取得済み緯度・経度、検索範囲を`POST /api/v1/rooms`へ送り、201の実セッションを保存して待機へ進む |
 
 ## 5. 入力チェック
 
@@ -136,8 +139,8 @@
 
 - ニックネームが空白のみではないこと。
 - ニックネームが12文字以内であること。
+- 現在地の取得が成功し、有効な緯度・経度を保持していること。
 - 制御文字を含まないこと（既存APIに準拠）。
-- 集合場所が空白のみではないこと。
 
 ニックネームは `maxLength={12}` により入力時点で12文字に制限する。
 
@@ -175,28 +178,71 @@
 | 入力状態バッジ | 実装済み |
 | 集合場所入力 | 実装済み |
 | 入力クリア機能 | 実装済み |
-| 現在地取得ボタン | UIのみ |
+| 現在地取得ボタン | Geolocation API接続、取得中・成功・拒否・取得不能・タイムアウト・再試行を実装 |
 | 検索範囲スライダー | 実装済み |
 | 徒歩時間表示 | 実装済み |
-| ルーム作成ボタン | 実API接続・連打防止・sessionStorage復元・待機遷移を実装 |
+| ルーム作成ボタン | 現在地・検索範囲を含むAPI呼出し、連打防止、sessionStorage保存、待機遷移を実装 |
 | ホーム画面からの遷移 | 実装済み |
+
+緯度・経度は画面状態にだけ保持し、作成APIへ送信した後もsessionStorage、画面、URLへ保存・表示しない。sessionStorageには表示用の「現在地を使用」と半径だけを保存する。
 
 ## 9. 今後の実装予定
 
-- 現在地取得機能の実装
-- 集合場所の検索・候補表示
-- 集合場所・検索範囲のバックエンド保存（現APIはnicknameのみ対応）
+- 駅名・住所による集合場所の検索・候補表示は、Geocoding導入を別途承認した場合だけ検討する。
 
-## Progress
+## 10. 対象外
 
-- 完了：承認済みの画面03仕様に合わせ、既存UIを維持して作成APIと接続。QR・参加・開始・検証結果は主仕様に集約する。
-- 旧仕様の「作成未実装」と既存コードのログのみの処理を実API接続へ更新。集合場所/範囲をAPIで保存できる仕様には変更していない。
-- 残り：現在地/場所検索/検索条件の同期。今回の対象外。
-- 検証：ローカル実APIで作成201・待機遷移・再読み込み復元を確認。詳細は主仕様のProgressを参照。
+- 駅名・住所からのGeocoding
+- IPアドレスからの位置推測
+- 取得した現在地の画面表示、ログ出力、ブラウザへの長期保存
+- ルーム作成後の検索地点・検索範囲変更
+
+## 11. 状態とエラー
+
+現在地は`未取得`、`取得中`、`取得済み`、`取得失敗`の4状態とする。取得開始時は取得中、成功時は取得済み、拒否・未対応・タイムアウト・その他失敗時は取得失敗へ遷移する。取得失敗後も現在地取得ボタンで再試行できる。
+
+ルーム作成APIの送信中は二重送信を防止する。入力不正は入力箇所付近、API失敗はルーム作成ボタン付近へ利用者向けメッセージを表示し、現在地とAPIキーをエラー本文へ表示しない。
+
+## 12. 受け入れ条件
+
+1. 現在地取得成功後だけ、有効なニックネームと組み合わせてルーム作成できる。
+2. 取得拒否、未対応、タイムアウト、取得失敗時はルーム作成せず再試行できる。
+3. APIへ緯度、経度、選択中の検索範囲1〜5を送る。
+4. 緯度・経度の数値を画面、通常ログ、URLへ出さない。
+5. 送信中の二重送信を防ぎ、失敗後は再送できる。
+6. 駅名・住所の入力を検索条件として送らない。
+
+## 13. 検証方法
+
+- Geolocation APIをモックし、成功、拒否、未対応、タイムアウト、その他失敗を確認する。
+- 5段階それぞれの検索範囲がAPI値1〜5へ対応することを確認する。
+- ルーム作成リクエスト、二重送信防止、API失敗後の再試行を確認する。
+- 位置情報の数値が画面、URL、テストログへ出ないことを確認する。
+- Docker Compose内でfrontend lint、typecheck、テスト、buildを実行する。
+
+## 14. 未決定事項
+
+None。現在地だけを検索中心に使用し、駅名・住所のGeocodingを対象外とする方針はユーザー承認済み。
+
+## 15. 進捗
+
+- 完了: 現在地取得、検索範囲、ルーム作成APIへの入力契約を定義。
+- 完了: ユーザーが現在地だけを初期実装の検索中心として使用する方針を承認。
+- 完了: マージ相手のUI統合、API呼出し、連打防止、実セッション保存、待機画面遷移を取り込んだ。
+- 完了: 競合解決では実装済みバックエンドとOpenAPIを正とし、`nickname`だけを送る旧フロントエンド契約を採用しなかった。
+- 完了: ユーザーがContext7不要とA案（現在地検索を維持してフロントを接続）を承認。
+- 完了: Geolocation APIの取得・エラー変換、有限かつ範囲内の座標検証、半径からAPI range 1〜5への変換、作成payload接続を実装。
+- 完了: 取得した座標をReact状態だけに保持し、sessionStorage、画面、URLへ残さない構成を実装。
+- 検証: W3C Geolocation Recommendationで`getCurrentPosition`、権限拒否、取得不能、タイムアウトの契約を確認。
+- 検証: Docker Compose内でfrontend lint、typecheck、roomテスト12件、production buildに成功。
+- 未検証: 利用可能なブラウザがなかったため、実ブラウザの許可UI、実際のGPS取得、画面の視覚確認は未実施。
+- 残作業: 実ブラウザまたはスマートフォンで位置情報の許可・拒否・再試行と作成成功を確認後、Statusを`Verified`へ更新する。
+- ブロッカー: None。
+- 関連Issue・PR・コミット: PR #19のマージ競合を解決。今回実装コミット。
 
 ## Self-Review
 
 - Score: 96/100
-- Review date: 2026-10-31
-- Reasons for deductions: 公開URL/実機は別環境での確認が必要（4点）。
-- Revisions made: APIの入出力と端末内だけの検索条件、今回の責任範囲を主仕様に集約した。
+- Review date: 2026-11-03
+- Reasons for deductions: 実ブラウザ・スマートフォンの位置情報許可UIとGPS取得は未検証（4点）。
+- Revisions made: Geolocation APIの状態・エラー、座標の非永続化、API range変換、現行バックエンドpayload、再試行を実装内容に合わせて更新。

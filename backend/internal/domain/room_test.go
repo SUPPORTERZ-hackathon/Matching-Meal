@@ -2,6 +2,7 @@ package domain
 
 import (
 	"errors"
+	"math"
 	"strings"
 	"testing"
 )
@@ -36,6 +37,45 @@ func TestNormalizeNickname(t *testing.T) {
 			}
 			if !errors.Is(err, ErrInvalidNickname) {
 				t.Fatalf("NormalizeNickname() error = %v, want ErrInvalidNickname", err)
+			}
+		})
+	}
+}
+
+func TestNewRoomSearchCondition(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name        string
+		latitude    float64
+		longitude   float64
+		searchRange int
+		expectsOK   bool
+	}{
+		{name: "accepts minimum values", latitude: -90, longitude: -180, searchRange: 1, expectsOK: true},
+		{name: "accepts maximum values", latitude: 90, longitude: 180, searchRange: 5, expectsOK: true},
+		{name: "rejects latitude below range", latitude: -90.1, longitude: 0, searchRange: 3},
+		{name: "rejects longitude above range", latitude: 0, longitude: 180.1, searchRange: 3},
+		{name: "rejects range zero", latitude: 0, longitude: 0, searchRange: 0},
+		{name: "rejects range six", latitude: 0, longitude: 0, searchRange: 6},
+		{name: "rejects NaN", latitude: math.NaN(), longitude: 0, searchRange: 3},
+		{name: "rejects infinity", latitude: 0, longitude: math.Inf(1), searchRange: 3},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			condition, err := NewRoomSearchCondition("room-id", test.latitude, test.longitude, test.searchRange)
+			if test.expectsOK {
+				if err != nil {
+					t.Fatalf("NewRoomSearchCondition() error = %v", err)
+				}
+				if condition.RoomID != "room-id" || condition.Range != int16(test.searchRange) {
+					t.Fatalf("condition = %+v", condition)
+				}
+				return
+			}
+			if !errors.Is(err, ErrInvalidSearchCondition) {
+				t.Fatalf("NewRoomSearchCondition() error = %v, want ErrInvalidSearchCondition", err)
 			}
 		})
 	}

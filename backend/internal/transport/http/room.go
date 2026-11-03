@@ -23,7 +23,14 @@ type RoomHandler struct {
 }
 
 type createRoomRequest struct {
-	Nickname string `json:"nickname" binding:"required"`
+	Nickname       string                 `json:"nickname" binding:"required"`
+	SearchLocation *searchLocationRequest `json:"searchLocation" binding:"required"`
+	SearchRange    int                    `json:"searchRange"`
+}
+
+type searchLocationRequest struct {
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
 }
 
 type joinRoomRequest struct {
@@ -87,9 +94,16 @@ func (handler *RoomHandler) Create(context *gin.Context) {
 		context.JSON(http.StatusBadRequest, errorResponse("INVALID_REQUEST", "入力内容を確認してください。", requestID(context)))
 		return
 	}
-	result, err := handler.service.Create(context.Request.Context(), request.Nickname)
+	result, err := handler.service.Create(context.Request.Context(), service.CreateRoomInput{
+		Nickname: request.Nickname, Latitude: request.SearchLocation.Latitude,
+		Longitude: request.SearchLocation.Longitude, SearchRange: request.SearchRange,
+	})
 	if errors.Is(err, domain.ErrInvalidNickname) {
 		context.JSON(http.StatusBadRequest, errorResponse("INVALID_REQUEST", "ニックネームは1文字以上20文字以下で入力してください。", requestID(context)))
+		return
+	}
+	if errors.Is(err, domain.ErrInvalidSearchCondition) {
+		context.JSON(http.StatusBadRequest, errorResponse("INVALID_SEARCH_CONDITION", "現在地または検索範囲を確認してください。", requestID(context)))
 		return
 	}
 	if errors.Is(err, service.ErrRoomCodeGeneration) {

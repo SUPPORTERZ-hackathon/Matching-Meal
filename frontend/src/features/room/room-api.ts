@@ -1,4 +1,5 @@
-import { ROOM_CONFIG, isRoomId, normalizeJoinCode, parseErrorResponse, parseSessionResponse, parseSnapshotResponse, type JsonValue, type RoomError, type RoomResult, type RoomSession, type RoomSessionData, type RoomSnapshot } from "./room-data";
+import { ROOM_CONFIG, isRoomId, normalizeJoinCode, parseErrorResponse, parseSessionResponse, parseSnapshotResponse, validNickname, type JsonValue, type RoomError, type RoomResult, type RoomSession, type RoomSessionData, type RoomSnapshot } from "./room-data";
+import type { CurrentCoordinates } from "./current-location";
 
 const invalidResponse = (): RoomError => ({ code: "INVALID_RESPONSE", message: "ルーム情報を確認できませんでした。もう一度お試しください。", status: 0 });
 
@@ -28,8 +29,35 @@ export async function request<T>(path: string, method: "GET" | "POST" | "PUT", p
   }
 }
 
-export async function createRoom(nickname: string): Promise<RoomResult<RoomSessionData>> {
-  const result = await request(ROOM_CONFIG.apiBase, "POST", parseSessionResponse, undefined, { nickname: nickname.trim() });
+export type RoomSearchRange = 1 | 2 | 3 | 4 | 5;
+export type CreateRoomInput = {
+  nickname: string;
+  searchLocation: CurrentCoordinates;
+  searchRange: RoomSearchRange;
+};
+
+function validCreateRoomInput(input: CreateRoomInput): boolean {
+  return validNickname(input.nickname)
+    && Number.isFinite(input.searchLocation.latitude)
+    && input.searchLocation.latitude >= -90
+    && input.searchLocation.latitude <= 90
+    && Number.isFinite(input.searchLocation.longitude)
+    && input.searchLocation.longitude >= -180
+    && input.searchLocation.longitude <= 180
+    && Number.isInteger(input.searchRange)
+    && input.searchRange >= 1
+    && input.searchRange <= 5;
+}
+
+export async function createRoom(input: CreateRoomInput): Promise<RoomResult<RoomSessionData>> {
+  if (!validCreateRoomInput(input)) {
+    return { ok: false, error: { code: "INVALID_REQUEST", message: "入力内容を確認してください。", status: 400 } };
+  }
+  const result = await request(ROOM_CONFIG.apiBase, "POST", parseSessionResponse, undefined, {
+    nickname: input.nickname.trim(),
+    searchLocation: input.searchLocation,
+    searchRange: input.searchRange,
+  });
   return result.ok && result.data.participant.role !== "host" ? { ok: false, error: invalidResponse() } : result;
 }
 export async function joinRoom(code: string, nickname: string): Promise<RoomResult<RoomSessionData>> {

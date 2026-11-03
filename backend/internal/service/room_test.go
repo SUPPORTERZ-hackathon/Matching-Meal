@@ -149,6 +149,10 @@ func (stub clockStub) Now() time.Time {
 	return stub.now
 }
 
+func validCreateRoomInput(nickname string) CreateRoomInput {
+	return CreateRoomInput{Nickname: nickname, Latitude: 35.658, Longitude: 139.7016, SearchRange: 3}
+}
+
 func TestRoomServiceCreate(t *testing.T) {
 	t.Parallel()
 	now := time.Date(2026, time.October, 29, 9, 0, 0, 0, time.UTC)
@@ -159,7 +163,7 @@ func TestRoomServiceCreate(t *testing.T) {
 	}
 	roomService := NewRoomService(repositoryStub, generator, clockStub{now: now})
 
-	result, err := roomService.Create(context.Background(), " ひかる ")
+	result, err := roomService.Create(context.Background(), validCreateRoomInput(" ひかる "))
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}
@@ -178,6 +182,10 @@ func TestRoomServiceCreate(t *testing.T) {
 	if len(repositoryStub.calls) != 1 || string(repositoryStub.calls[0].SessionTokenHash) != "token-hash" {
 		t.Fatalf("repository calls = %+v", repositoryStub.calls)
 	}
+	condition := repositoryStub.calls[0].SearchCondition
+	if condition.RoomID != "room-id" || condition.Latitude != 35.658 || condition.Longitude != 139.7016 || condition.Range != 3 {
+		t.Fatalf("search condition = %+v", condition)
+	}
 }
 
 func TestRoomServiceCreateRetriesJoinCodeConflict(t *testing.T) {
@@ -189,7 +197,7 @@ func TestRoomServiceCreateRetriesJoinCodeConflict(t *testing.T) {
 	}
 	roomService := NewRoomService(repositoryStub, generator, clockStub{now: time.Now()})
 
-	result, err := roomService.Create(context.Background(), "同名OK")
+	result, err := roomService.Create(context.Background(), validCreateRoomInput("同名OK"))
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}
@@ -203,9 +211,26 @@ func TestRoomServiceCreateRejectsInvalidNicknameBeforePersistence(t *testing.T) 
 	repositoryStub := &roomRepositoryStub{}
 	roomService := NewRoomService(repositoryStub, &generatorStub{}, clockStub{})
 
-	_, err := roomService.Create(context.Background(), " ")
+	_, err := roomService.Create(context.Background(), validCreateRoomInput(" "))
 	if !errors.Is(err, domain.ErrInvalidNickname) {
 		t.Fatalf("Create() error = %v, want ErrInvalidNickname", err)
+	}
+	if len(repositoryStub.calls) != 0 {
+		t.Fatalf("repository calls = %d, want 0", len(repositoryStub.calls))
+	}
+}
+
+func TestRoomServiceCreateRejectsInvalidSearchConditionBeforePersistence(t *testing.T) {
+	t.Parallel()
+	repositoryStub := &roomRepositoryStub{}
+	generator := &generatorStub{}
+	roomService := NewRoomService(repositoryStub, generator, clockStub{})
+
+	input := validCreateRoomInput("ひかる")
+	input.SearchRange = 6
+	_, err := roomService.Create(context.Background(), input)
+	if !errors.Is(err, domain.ErrInvalidSearchCondition) {
+		t.Fatalf("Create() error = %v, want ErrInvalidSearchCondition", err)
 	}
 	if len(repositoryStub.calls) != 0 {
 		t.Fatalf("repository calls = %d, want 0", len(repositoryStub.calls))

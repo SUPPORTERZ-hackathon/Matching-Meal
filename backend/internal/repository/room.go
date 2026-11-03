@@ -16,6 +16,7 @@ var (
 type CreateRoomParams struct {
 	Room             domain.Room
 	Host             domain.Participant
+	SearchCondition  domain.RoomSearchCondition
 	SessionTokenHash []byte
 }
 

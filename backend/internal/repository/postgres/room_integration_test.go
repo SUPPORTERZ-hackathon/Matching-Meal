@@ -30,9 +30,22 @@ func TestRoomStateIntegration(t *testing.T) {
 
 	repository := roompostgres.NewRoomRepository(pool)
 	roomService := service.NewRoomService(repository, security.RandomGenerator{}, service.SystemClock{})
-	created, err := roomService.Create(ctx, "同名")
+	created, err := roomService.Create(ctx, service.CreateRoomInput{Nickname: "同名", Latitude: 35.658, Longitude: 139.7016, SearchRange: 3})
 	if err != nil {
 		t.Fatalf("create room: %v", err)
+	}
+	var latitude float64
+	var longitude float64
+	var searchRange int
+	if err := pool.QueryRow(ctx, `
+		SELECT latitude, longitude, search_range
+		FROM room_search_conditions
+		WHERE room_id = $1
+	`, created.Room.ID).Scan(&latitude, &longitude, &searchRange); err != nil {
+		t.Fatalf("find room search condition: %v", err)
+	}
+	if latitude != 35.658 || longitude != 139.7016 || searchRange != 3 {
+		t.Fatalf("search condition = latitude:%v longitude:%v range:%d", latitude, longitude, searchRange)
 	}
 	t.Cleanup(func() {
 		if _, err := pool.Exec(context.Background(), "DELETE FROM rooms WHERE id = $1", created.Room.ID); err != nil {
@@ -81,7 +94,7 @@ func TestRoomStartGenreVotingConcurrencyIntegration(t *testing.T) {
 
 	repository := roompostgres.NewRoomRepository(pool)
 	roomService := service.NewRoomService(repository, security.RandomGenerator{}, service.SystemClock{})
-	created, err := roomService.Create(ctx, "ホスト")
+	created, err := roomService.Create(ctx, service.CreateRoomInput{Nickname: "ホスト", Latitude: 35.658, Longitude: 139.7016, SearchRange: 3})
 	if err != nil {
 		t.Fatalf("create room: %v", err)
 	}
@@ -154,7 +167,7 @@ func TestRoomJoinConcurrencyIntegration(t *testing.T) {
 
 	repository := roompostgres.NewRoomRepository(pool)
 	roomService := service.NewRoomService(repository, security.RandomGenerator{}, service.SystemClock{})
-	created, err := roomService.Create(ctx, "同名")
+	created, err := roomService.Create(ctx, service.CreateRoomInput{Nickname: "同名", Latitude: 35.658, Longitude: 139.7016, SearchRange: 3})
 	if err != nil {
 		t.Fatalf("create room: %v", err)
 	}

@@ -103,7 +103,7 @@ func TestRoomHandlerCreate(t *testing.T) {
 	})
 	router.POST("/api/v1/rooms", handler.Create)
 
-	request := httptest.NewRequest(http.MethodPost, "/api/v1/rooms", strings.NewReader(`{"nickname":"ひかる"}`))
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/rooms", strings.NewReader(`{"nickname":"ひかる","searchLocation":{"latitude":35.658,"longitude":139.7016},"searchRange":3}`))
 	request.Header.Set("Content-Type", "application/json")
 	recorder := httptest.NewRecorder()
 	router.ServeHTTP(recorder, request)
@@ -120,6 +120,46 @@ func TestRoomHandlerCreate(t *testing.T) {
 	}
 	if response.Data.Participant.Role != domain.ParticipantRoleHost || response.Data.SessionToken != "plain-token" {
 		t.Fatalf("response = %+v", response.Data)
+	}
+	if strings.Contains(recorder.Body.String(), "35.658") || strings.Contains(recorder.Body.String(), "139.7016") {
+		t.Fatalf("response exposes search location: %s", recorder.Body.String())
+	}
+}
+
+func TestRoomHandlerCreateRejectsMissingOrInvalidSearchCondition(t *testing.T) {
+	tests := []struct {
+		name         string
+		body         string
+		expectedCode string
+	}{
+		{name: "missing location", body: `{"nickname":"ひかる","searchRange":3}`, expectedCode: "INVALID_REQUEST"},
+		{name: "invalid latitude", body: `{"nickname":"ひかる","searchLocation":{"latitude":91,"longitude":139.7016},"searchRange":3}`, expectedCode: "INVALID_SEARCH_CONDITION"},
+		{name: "invalid range", body: `{"nickname":"ひかる","searchLocation":{"latitude":35.658,"longitude":139.7016},"searchRange":6}`, expectedCode: "INVALID_SEARCH_CONDITION"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			gin.SetMode(gin.TestMode)
+			handler := NewRoomHandler(service.NewRoomService(handlerRepositoryStub{}, &handlerGeneratorStub{}, handlerClockStub{}))
+			router := gin.New()
+			router.POST("/api/v1/rooms", handler.Create)
+
+			request := httptest.NewRequest(http.MethodPost, "/api/v1/rooms", strings.NewReader(test.body))
+			request.Header.Set("Content-Type", "application/json")
+			recorder := httptest.NewRecorder()
+			router.ServeHTTP(recorder, request)
+
+			if recorder.Code != http.StatusBadRequest {
+				t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
+			}
+			var response apiErrorResponse
+			if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+				t.Fatalf("decode response: %v", err)
+			}
+			if response.Error.Code != test.expectedCode {
+				t.Fatalf("error code = %q, want %q", response.Error.Code, test.expectedCode)
+			}
+		})
 	}
 }
 

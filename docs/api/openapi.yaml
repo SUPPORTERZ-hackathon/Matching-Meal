@@ -4,7 +4,7 @@ info:
   version: 1.0.0
   description: |
     Matching Mealで現在実装済みのバックエンドAPI。
-    未実装の店舗検索、店舗投票、店舗決定APIは含まない。
+    店舗決定後のGoogle Maps URL APIは含まない。
 servers:
   - url: /
     description: フロントエンドと同一オリジン
@@ -15,6 +15,10 @@ tags:
     description: ルームと参加者
   - name: Genre Voting
     description: ジャンル投票
+  - name: Restaurant Search
+    description: 現在地と確定ジャンルによる店舗候補検索
+  - name: Restaurant Voting
+    description: 店舗投票、集計、決定
 paths:
   /api/health:
     get:
@@ -58,6 +62,10 @@ paths:
               $ref: "#/components/schemas/CreateRoomRequest"
             example:
               nickname: ひかる
+              searchLocation:
+                latitude: 35.658
+                longitude: 139.7016
+              searchRange: 3
       responses:
         "201":
           description: 作成成功
@@ -358,6 +366,190 @@ paths:
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
 
+  /api/v1/rooms/{roomId}/restaurant-candidates/search:
+    post:
+      tags: [Restaurant Search]
+      operationId: searchRestaurantCandidates
+      summary: 店舗候補を検索して保存する
+      description: |
+        ホストだけが実行できる。確定ジャンルと保存済みの現在地・検索範囲でHot Pepper Gourmet APIを検索し、
+        最大100件から最大5件を重複なしで抽選して保存する。保存済みの場合は再検索・再抽選せず同じ候補を返す。
+      security:
+        - participantToken: []
+      parameters:
+        - $ref: "#/components/parameters/RoomId"
+      responses:
+        "200":
+          description: 検索・保存成功、または保存済み候補の取得成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RestaurantSearchResponse"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: 別ルーム参加者、またはホスト以外
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+        "404":
+          $ref: "#/components/responses/RoomNotFound"
+        "409":
+          description: 店舗検索を実行できないルーム状態
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+        "422":
+          description: 条件に合う有効な店舗が0件
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+        "502":
+          description: Hot Pepper Gourmet APIのエラーまたは不正応答
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+        "504":
+          description: Hot Pepper Gourmet APIのタイムアウト
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+
+  /api/v1/rooms/{roomId}/restaurant-candidates:
+    get:
+      tags: [Restaurant Search]
+      operationId: getRestaurantCandidates
+      summary: 保存済み店舗候補を取得する
+      description: 対象ルームの参加者へ保存済みの同じ候補をposition順で返す。外部検索と再抽選は行わない。
+      security:
+        - participantToken: []
+      parameters:
+        - $ref: "#/components/parameters/RoomId"
+      responses:
+        "200":
+          description: 取得成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RestaurantSearchResponse"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/RoomNotFound"
+        "409":
+          description: 候補が未保存
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /api/v1/rooms/{roomId}/restaurant-votes:
+    put:
+      tags: [Restaurant Voting]
+      operationId: submitRestaurantVotes
+      summary: 店舗投票を一括提出する
+      description: |
+        保存済み候補1〜5件すべてへのlikeまたはskipを一括提出する。
+        同一内容の再送は状態を変更せず成功し、最後の参加者の提出時に集計して店舗を決定する。
+      security:
+        - participantToken: []
+      parameters:
+        - $ref: "#/components/parameters/RoomId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitRestaurantVotesRequest"
+      responses:
+        "200":
+          description: 提出成功、または同一内容の再送成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RestaurantVotingResponse"
+              examples:
+                waiting:
+                  $ref: "#/components/examples/RestaurantVotingWaiting"
+                decided:
+                  $ref: "#/components/examples/RestaurantVotingDecided"
+        "400":
+          $ref: "#/components/responses/InvalidRestaurantVotes"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/RoomNotFound"
+        "409":
+          description: 候補集合不一致、投票期間外、または異なる内容で提出済み
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /api/v1/rooms/{roomId}/restaurant-voting:
+    get:
+      tags: [Restaurant Voting]
+      operationId: getRestaurantVotingState
+      summary: 店舗投票状態を取得する
+      description: 他参加者については提出有無だけを返し、個別のchoiceは返さない。決定後は保存済み店舗情報を含む結果を返す。
+      security:
+        - participantToken: []
+      parameters:
+        - $ref: "#/components/parameters/RoomId"
+      responses:
+        "200":
+          description: 取得成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RestaurantVotingResponse"
+              examples:
+                waiting:
+                  $ref: "#/components/examples/RestaurantVotingWaiting"
+                decided:
+                  $ref: "#/components/examples/RestaurantVotingDecided"
+        "400":
+          $ref: "#/components/responses/InvalidRestaurantVotes"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/RoomNotFound"
+        "409":
+          description: 店舗投票の候補が未準備
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
 components:
   securitySchemes:
     participantToken:
@@ -403,10 +595,32 @@ components:
 
     CreateRoomRequest:
       type: object
-      required: [nickname]
+      required: [nickname, searchLocation, searchRange]
       properties:
         nickname:
           $ref: "#/components/schemas/Nickname"
+        searchLocation:
+          $ref: "#/components/schemas/SearchLocation"
+        searchRange:
+          type: integer
+          minimum: 1
+          maximum: 5
+          description: Hot Pepper Gourmet APIの検索範囲。1=300m、2=500m、3=1km、4=2km、5=3km。
+
+    SearchLocation:
+      type: object
+      required: [latitude, longitude]
+      properties:
+        latitude:
+          type: number
+          format: double
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          format: double
+          minimum: -180
+          maximum: 180
 
     JoinRoomRequest:
       type: object
@@ -637,6 +851,217 @@ components:
                 - $ref: "#/components/schemas/GenreVoteResult"
                 - type: "null"
 
+    RestaurantCoordinates:
+      type: object
+      additionalProperties: false
+      required: [latitude, longitude]
+      properties:
+        latitude:
+          type: number
+          format: double
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          format: double
+          minimum: -180
+          maximum: 180
+
+    RestaurantCandidate:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - photoUrl
+        - openingHours
+        - closedDays
+        - dinnerBudget
+        - access
+        - stationName
+        - detailUrl
+        - coordinates
+        - source
+      properties:
+        id:
+          type: string
+          minLength: 1
+        name:
+          type: string
+          minLength: 1
+        photoUrl:
+          type: [string, "null"]
+          format: uri
+        openingHours:
+          type: [string, "null"]
+        closedDays:
+          type: [string, "null"]
+        dinnerBudget:
+          type: [string, "null"]
+        access:
+          type: [string, "null"]
+        stationName:
+          type: [string, "null"]
+        detailUrl:
+          type: [string, "null"]
+          format: uri
+        coordinates:
+          oneOf:
+            - $ref: "#/components/schemas/RestaurantCoordinates"
+            - type: "null"
+        source:
+          type: string
+          enum: [hotpepper]
+
+    RestaurantSearchRoom:
+      type: object
+      additionalProperties: false
+      required: [id, status, version, expiresAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [restaurant_voting, decided]
+        version:
+          type: integer
+          format: int64
+          minimum: 1
+        expiresAt:
+          type: string
+          format: date-time
+
+    RestaurantSearchResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required: [room, genreId, restaurants]
+          properties:
+            room:
+              $ref: "#/components/schemas/RestaurantSearchRoom"
+            genreId:
+              $ref: "#/components/schemas/GenreId"
+            restaurants:
+              type: array
+              minItems: 1
+              maxItems: 5
+              items:
+                $ref: "#/components/schemas/RestaurantCandidate"
+
+    RestaurantVoteChoice:
+      type: string
+      enum: [like, skip]
+
+    RestaurantVote:
+      type: object
+      additionalProperties: false
+      required: [restaurantId, choice]
+      properties:
+        restaurantId:
+          type: string
+          minLength: 1
+        choice:
+          $ref: "#/components/schemas/RestaurantVoteChoice"
+
+    SubmitRestaurantVotesRequest:
+      type: object
+      additionalProperties: false
+      required: [votes]
+      properties:
+        votes:
+          type: array
+          minItems: 1
+          maxItems: 5
+          description: 保存済み店舗候補を重複・不足なく各1件含める。順序は問わない。
+          items:
+            $ref: "#/components/schemas/RestaurantVote"
+
+    RestaurantVotingParticipant:
+      type: object
+      additionalProperties: false
+      required: [id, nickname, role, submitted]
+      properties:
+        id:
+          type: string
+          format: uuid
+        nickname:
+          type: string
+        role:
+          $ref: "#/components/schemas/ParticipantRole"
+        submitted:
+          type: boolean
+
+    RestaurantDecisionMethod:
+      type: string
+      enum: [most_likes, random_tie, random_all_skipped]
+
+    RestaurantVoteResult:
+      type: object
+      additionalProperties: false
+      required: [restaurant, likeCount, decisionMethod, decidedAt]
+      properties:
+        restaurant:
+          $ref: "#/components/schemas/RestaurantCandidate"
+        likeCount:
+          type: integer
+          minimum: 0
+        decisionMethod:
+          $ref: "#/components/schemas/RestaurantDecisionMethod"
+        decidedAt:
+          type: string
+          format: date-time
+
+    RestaurantVotingResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required:
+            - room
+            - currentParticipantId
+            - submitted
+            - submittedAt
+            - submittedParticipantCount
+            - totalParticipantCount
+            - participants
+            - result
+          properties:
+            room:
+              $ref: "#/components/schemas/Room"
+            currentParticipantId:
+              type: string
+              format: uuid
+            submitted:
+              type: boolean
+            submittedAt:
+              oneOf:
+                - type: string
+                  format: date-time
+                - type: "null"
+            submittedParticipantCount:
+              type: integer
+              minimum: 0
+            totalParticipantCount:
+              type: integer
+              minimum: 1
+              maximum: 20
+            participants:
+              type: array
+              items:
+                $ref: "#/components/schemas/RestaurantVotingParticipant"
+            result:
+              oneOf:
+                - $ref: "#/components/schemas/RestaurantVoteResult"
+                - type: "null"
+
     ApiError:
       type: object
       additionalProperties: false
@@ -772,6 +1197,71 @@ components:
             likeCount: 1
             decisionMethod: random_tie
             decidedAt: "2026-10-30T12:02:00Z"
+    RestaurantVotingWaiting:
+      value:
+        data:
+          room:
+            id: 550e8400-e29b-41d4-a716-446655440000
+            joinCode: 7K9M2QXR
+            status: restaurant_voting
+            version: 7
+            expiresAt: "2026-11-04T12:00:00Z"
+          currentParticipantId: 8d5b0ad5-e8c6-47f2-8e87-f6180b175759
+          submitted: true
+          submittedAt: "2026-11-03T12:00:00Z"
+          submittedParticipantCount: 1
+          totalParticipantCount: 2
+          participants:
+            - id: 8d5b0ad5-e8c6-47f2-8e87-f6180b175759
+              nickname: ひかる
+              role: host
+              submitted: true
+            - id: 3a3cf4d0-c2ef-4f40-bcb8-61f0ce680916
+              nickname: ひかる
+              role: member
+              submitted: false
+          result: null
+    RestaurantVotingDecided:
+      value:
+        data:
+          room:
+            id: 550e8400-e29b-41d4-a716-446655440000
+            joinCode: 7K9M2QXR
+            status: decided
+            version: 8
+            expiresAt: "2026-11-04T12:00:00Z"
+          currentParticipantId: 3a3cf4d0-c2ef-4f40-bcb8-61f0ce680916
+          submitted: true
+          submittedAt: "2026-11-03T12:01:00Z"
+          submittedParticipantCount: 2
+          totalParticipantCount: 2
+          participants:
+            - id: 8d5b0ad5-e8c6-47f2-8e87-f6180b175759
+              nickname: ひかる
+              role: host
+              submitted: true
+            - id: 3a3cf4d0-c2ef-4f40-bcb8-61f0ce680916
+              nickname: ひかる
+              role: member
+              submitted: true
+          result:
+            restaurant:
+              id: J001234567
+              name: 店舗名
+              photoUrl: null
+              openingHours: 月〜日 11:00〜23:00
+              closedDays: なし
+              dinnerBudget: 3001〜4000円
+              access: 駅から徒歩3分
+              stationName: 渋谷
+              detailUrl: https://www.hotpepper.jp/strJ001234567/
+              coordinates:
+                latitude: 35.658
+                longitude: 139.7016
+              source: hotpepper
+            likeCount: 2
+            decisionMethod: random_tie
+            decidedAt: "2026-11-03T12:01:00Z"
     InvalidRequest:
       value:
         error:
@@ -783,6 +1273,12 @@ components:
         error:
           code: INVALID_GENRE_VOTES
           message: ジャンル投票を確認してください。
+          requestId: 01JEXAMPLE0000000000000000
+    InvalidRestaurantVotes:
+      value:
+        error:
+          code: INVALID_RESTAURANT_VOTES
+          message: 店舗投票を確認してください。
           requestId: 01JEXAMPLE0000000000000000
     Unauthorized:
       value:
@@ -840,6 +1336,15 @@ components:
           examples:
             invalidGenreVotes:
               $ref: "#/components/examples/InvalidGenreVotes"
+    InvalidRestaurantVotes:
+      description: room ID、JSON、店舗ID、件数、重複またはchoiceが不正
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiErrorResponse"
+          examples:
+            invalidRestaurantVotes:
+              $ref: "#/components/examples/InvalidRestaurantVotes"
     Unauthorized:
       description: Bearerトークンが欠落または不正
       content:

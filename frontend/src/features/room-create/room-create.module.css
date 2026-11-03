@@ -197,6 +197,13 @@
   flex-shrink: 0;
 }
 
+.locationError {
+  margin: 2px 0 0;
+  color: var(--primary-dark);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
 .radiusHeading {
   display: flex;
   align-items: center;
