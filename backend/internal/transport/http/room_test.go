@@ -75,9 +75,9 @@ func TestRegisterRoomRoutes(t *testing.T) {
 
 	expectedRoutes := map[string]bool{
 		"POST /api/v1/rooms":                             false,
-		"POST /api/v1/rooms/:roomRef/participants":       false,
-		"GET /api/v1/rooms/:roomId":                      false,
-		"POST /api/v1/rooms/:roomRef/genre-voting/start": false,
+		"POST /api/v1/rooms/:roomKey/participants":       false,
+		"GET /api/v1/rooms/:roomKey":                     false,
+		"POST /api/v1/rooms/:roomKey/genre-voting/start": false,
 	}
 	for _, route := range router.Routes() {
 		key := route.Method + " " + route.Path
@@ -242,7 +242,7 @@ func TestRoomHandlerJoin(t *testing.T) {
 	router.Use(func(context *gin.Context) {
 		context.Set(requestIDContextKey, "request-id")
 	})
-	router.POST("/api/v1/rooms/:roomRef/participants", handler.Join)
+	router.POST("/api/v1/rooms/:roomKey/participants", handler.Join)
 
 	request := httptest.NewRequest(http.MethodPost, "/api/v1/rooms/eb9ty3ts/participants", strings.NewReader(`{"nickname":"ひかる"}`))
 	request.Header.Set("Content-Type", "application/json")
@@ -327,7 +327,7 @@ func TestRoomHandlerGetState(t *testing.T) {
 	handler := NewRoomHandler(roomService)
 	router := gin.New()
 	router.Use(func(context *gin.Context) { context.Set(requestIDContextKey, "request-id") })
-	router.GET("/api/v1/rooms/:roomId", handler.GetState)
+	router.GET("/api/v1/rooms/:roomKey", handler.GetState)
 
 	request := httptest.NewRequest(http.MethodGet, "/api/v1/rooms/"+roomID, nil)
 	request.Header.Set("Authorization", "Bearer member-token")
@@ -354,7 +354,7 @@ func TestRoomHandlerGetStateRejectsMissingAuthorization(t *testing.T) {
 	handler := NewRoomHandler(service.NewRoomService(handlerRepositoryStub{}, &handlerGeneratorStub{}, handlerClockStub{}))
 	router := gin.New()
 	router.Use(func(context *gin.Context) { context.Set(requestIDContextKey, "request-id") })
-	router.GET("/api/v1/rooms/:roomId", handler.GetState)
+	router.GET("/api/v1/rooms/:roomKey", handler.GetState)
 
 	request := httptest.NewRequest(http.MethodGet, "/api/v1/rooms/550e8400-e29b-41d4-a716-446655440000", nil)
 	recorder := httptest.NewRecorder()
@@ -438,7 +438,7 @@ func TestRoomHandlerStartGenreVoting(t *testing.T) {
 	var logOutput bytes.Buffer
 	router.Use(gin.LoggerWithWriter(&logOutput))
 	router.Use(func(context *gin.Context) { context.Set(requestIDContextKey, "request-id") })
-	router.POST("/api/v1/rooms/:roomRef/genre-voting/start", handler.StartGenreVoting)
+	router.POST("/api/v1/rooms/:roomKey/genre-voting/start", handler.StartGenreVoting)
 
 	request := httptest.NewRequest(http.MethodPost, "/api/v1/rooms/"+roomID+"/genre-voting/start", nil)
 	request.Header.Set("Authorization", "Bearer sensitive-host-token")
@@ -505,7 +505,7 @@ func TestRoomHandlerStartGenreVotingErrors(t *testing.T) {
 			handler := NewRoomHandler(roomService)
 			router := gin.New()
 			router.Use(func(context *gin.Context) { context.Set(requestIDContextKey, "request-id") })
-			router.POST("/api/v1/rooms/:roomRef/genre-voting/start", handler.StartGenreVoting)
+			router.POST("/api/v1/rooms/:roomKey/genre-voting/start", handler.StartGenreVoting)
 
 			request := httptest.NewRequest(http.MethodPost, "/api/v1/rooms/"+roomID+"/genre-voting/start", nil)
 			request.Header.Set("Authorization", "Bearer participant-token")

@@ -55,8 +55,8 @@ func NewRestaurantSearchHandler(restaurantService *service.RestaurantSearchServi
 }
 
 func RegisterRestaurantSearchRoutes(routes gin.IRoutes, handler *RestaurantSearchHandler) {
-	routes.POST("/api/v1/rooms/:roomId/restaurant-candidates/search", handler.Search)
-	routes.GET("/api/v1/rooms/:roomId/restaurant-candidates", handler.Get)
+	routes.POST("/api/v1/rooms/:roomKey/restaurant-candidates/search", handler.Search)
+	routes.GET("/api/v1/rooms/:roomKey/restaurant-candidates", handler.Get)
 }
 
 func (handler *RestaurantSearchHandler) Search(context *gin.Context) {
@@ -76,9 +76,9 @@ func (handler *RestaurantSearchHandler) respond(context *gin.Context, executeSea
 	var result service.RestaurantSearchResult
 	var err error
 	if executeSearch {
-		result, err = handler.service.Search(context.Request.Context(), context.Param(roomIDParam), sessionToken)
+		result, err = handler.service.Search(context.Request.Context(), context.Param(roomKeyParam), sessionToken)
 	} else {
-		result, err = handler.service.Get(context.Request.Context(), context.Param(roomIDParam), sessionToken)
+		result, err = handler.service.Get(context.Request.Context(), context.Param(roomKeyParam), sessionToken)
 	}
 	switch {
 	case errors.Is(err, domain.ErrInvalidRoomID):

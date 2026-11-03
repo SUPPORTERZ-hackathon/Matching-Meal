@@ -1,7 +1,7 @@
 # ルーム作成・参加・投票開始サービス
 
 - Status: Implemented
-- Last updated: 2026-10-31
+- Last updated: 2026-11-03
 - Related issue: None
 - Related specifications: ../models/rooms-and-participants.md, ../models/restaurant-candidates.md, restaurant-search.md, ../screens/genre-vote.md, ../screens/room-create-screen.md
 - Implementation files: backend/cmd/api/main.go, backend/internal/domain/room.go, backend/internal/repository/room.go, backend/internal/repository/postgres/room.go, backend/internal/service/room.go, backend/internal/transport/http/room.go, backend/internal/transport/http/request_id.go, backend/migrations/000004_create_room_search_conditions.up.sql, backend/migrations/000004_create_room_search_conditions.down.sql, docs/api/openapi.yaml
@@ -194,6 +194,13 @@ Bearerトークン必須。
 
 200 OK。状態取得と同じ`room`および`participants`を返す。
 
+## Ginルーティング制約
+
+- 公開APIのパス構造は変更しない。参加APIの同じパス位置は参加コード、その他のAPIはroom UUIDとして扱う。
+- Ginは同一パス位置のワイルドカード名が異なるルートを同じRouterへ登録できないため、実装内部ではすべて`:roomKey`へ統一する。
+- 各Handlerは`roomKey`を取得し、参加APIでは参加コードとして、状態取得・投票開始・投票・店舗検索APIではroom UUIDとして既存Serviceへ渡す。
+- 全HTTPルートを同じRouterへ登録してもpanicしないことを回帰テストで保証する。
+
 ## タイムアウトとサーバー設定
 
 - HTTPサーバーのReadHeader、Read、Write、Idle、Shutdownタイムアウトを名前付き設定へ集約する。
@@ -275,6 +282,9 @@ None。既存API形状、人数、期限、固定方式に加え、ルーム作�
 - 承認: ルーム作成リクエストへ現在地と検索範囲を必須追加し、ルーム・ホストと同じトランザクションで検索条件を保存する。
 - 完了: 現在地・検索範囲のDomain検証、ルーム・ホストとのトランザクション保存、HTTPエラー、OpenAPI契約、新規マイグレーションを実装。
 - 検証: Docker内の`go test ./...`、`go vet ./...`、`go test -race ./...`、実PostgreSQL統合テスト、マイグレーションupとup再実行、OpenAPI検証に成功。
+- 修正: 参加コード用`:roomRef`とroom UUID用`:roomId`を同じパス位置へ登録した際のGin起動panicを再現。公開URLを変えず、内部パラメータ名を`:roomKey`へ統一する方針を確定。
+- 完了: Room、ジャンル投票、店舗検索、店舗投票の全Ginルートで内部パラメータ名を`:roomKey`へ統一し、各Handlerから既存Serviceへ値を渡す処理を修正。
+- 検証: 全10ルートを同一Routerへ登録する回帰テストに成功。Docker Compose内の`go test ./...`、`go vet ./...`、`go test -race ./...`に成功し、起動中backendの`/api/health`が200相当の正常応答を返すことを確認。
 - 未実施: マイグレーションdownは実行許可が得られなかったため未検証。
 - 残作業: 000004マイグレーションdown検証後のStatus `Verified`化。PR作成は未実施。
 - ブロッカー: なし。

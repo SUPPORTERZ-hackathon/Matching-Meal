@@ -62,8 +62,8 @@ func NewRestaurantVotingHandler(votingService restaurantVotingUseCase) *Restaura
 }
 
 func RegisterRestaurantVotingRoutes(routes gin.IRoutes, handler *RestaurantVotingHandler) {
-	routes.PUT("/api/v1/rooms/:roomId/restaurant-votes", handler.Submit)
-	routes.GET("/api/v1/rooms/:roomId/restaurant-voting", handler.GetState)
+	routes.PUT("/api/v1/rooms/:roomKey/restaurant-votes", handler.Submit)
+	routes.GET("/api/v1/rooms/:roomKey/restaurant-voting", handler.GetState)
 }
 
 func (handler *RestaurantVotingHandler) Submit(context *gin.Context) {
@@ -81,7 +81,7 @@ func (handler *RestaurantVotingHandler) Submit(context *gin.Context) {
 	for _, vote := range request.Votes {
 		votes = append(votes, domain.RestaurantVote{RestaurantID: vote.RestaurantID, Choice: vote.Choice})
 	}
-	result, err := handler.service.Submit(context.Request.Context(), context.Param(roomIDParam), sessionToken, votes)
+	result, err := handler.service.Submit(context.Request.Context(), context.Param(roomKeyParam), sessionToken, votes)
 	if writeRestaurantVotingError(context, err) {
 		return
 	}
@@ -94,7 +94,7 @@ func (handler *RestaurantVotingHandler) GetState(context *gin.Context) {
 		context.JSON(http.StatusUnauthorized, errorResponse("UNAUTHORIZED", "認証情報を確認してください。", requestID(context)))
 		return
 	}
-	result, err := handler.service.GetState(context.Request.Context(), context.Param(roomIDParam), sessionToken)
+	result, err := handler.service.GetState(context.Request.Context(), context.Param(roomKeyParam), sessionToken)
 	if writeRestaurantVotingError(context, err) {
 		return
 	}

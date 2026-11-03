@@ -78,8 +78,8 @@ func TestRegisterRestaurantSearchRoutes(t *testing.T) {
 	RegisterRestaurantSearchRoutes(router, handler)
 
 	expected := map[string]bool{
-		"POST /api/v1/rooms/:roomId/restaurant-candidates/search": false,
-		"GET /api/v1/rooms/:roomId/restaurant-candidates":         false,
+		"POST /api/v1/rooms/:roomKey/restaurant-candidates/search": false,
+		"GET /api/v1/rooms/:roomKey/restaurant-candidates":         false,
 	}
 	for _, route := range router.Routes() {
 		key := route.Method + " " + route.Path
@@ -99,7 +99,7 @@ func TestRestaurantSearchHandlerSearch(t *testing.T) {
 	candidates := []domain.RestaurantCandidate{{RestaurantID: "J001", Name: "店舗", Source: "hotpepper"}}
 	handler := newRestaurantHandler(domain.ParticipantRoleHost, candidates, nil)
 	router := gin.New()
-	router.POST("/api/v1/rooms/:roomId/restaurant-candidates/search", handler.Search)
+	router.POST("/api/v1/rooms/:roomKey/restaurant-candidates/search", handler.Search)
 	request := httptest.NewRequest(http.MethodPost, "/api/v1/rooms/"+restaurantHandlerRoomID+"/restaurant-candidates/search", nil)
 	request.Header.Set("Authorization", "Bearer token")
 	recorder := httptest.NewRecorder()
@@ -132,7 +132,7 @@ func TestRestaurantSearchHandlerErrors(t *testing.T) {
 			gin.SetMode(gin.TestMode)
 			handler := newRestaurantHandler(test.role, nil, test.searchErr)
 			router := gin.New()
-			router.Handle(test.method, "/api/v1/rooms/:roomId/restaurant-candidates", func(context *gin.Context) {
+			router.Handle(test.method, "/api/v1/rooms/:roomKey/restaurant-candidates", func(context *gin.Context) {
 				if test.method == http.MethodPost {
 					handler.Search(context)
 				} else {

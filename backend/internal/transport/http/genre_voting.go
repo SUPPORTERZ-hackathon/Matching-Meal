@@ -62,8 +62,8 @@ func NewGenreVotingHandler(genreVotingService genreVotingUseCase) *GenreVotingHa
 }
 
 func RegisterGenreVotingRoutes(routes gin.IRoutes, handler *GenreVotingHandler) {
-	routes.PUT("/api/v1/rooms/:roomId/genre-votes", handler.Submit)
-	routes.GET("/api/v1/rooms/:roomId/genre-voting", handler.GetState)
+	routes.PUT("/api/v1/rooms/:roomKey/genre-votes", handler.Submit)
+	routes.GET("/api/v1/rooms/:roomKey/genre-voting", handler.GetState)
 }
 
 func (handler *GenreVotingHandler) Submit(context *gin.Context) {
@@ -81,7 +81,7 @@ func (handler *GenreVotingHandler) Submit(context *gin.Context) {
 	for _, vote := range request.Votes {
 		votes = append(votes, domain.GenreVote{GenreID: vote.GenreID, Choice: vote.Choice})
 	}
-	result, err := handler.service.Submit(context.Request.Context(), context.Param(roomIDParam), sessionToken, votes)
+	result, err := handler.service.Submit(context.Request.Context(), context.Param(roomKeyParam), sessionToken, votes)
 	if writeGenreVotingError(context, err) {
 		return
 	}
@@ -94,7 +94,7 @@ func (handler *GenreVotingHandler) GetState(context *gin.Context) {
 		context.JSON(http.StatusUnauthorized, errorResponse("UNAUTHORIZED", "認証情報を確認してください。", requestID(context)))
 		return
 	}
-	result, err := handler.service.GetState(context.Request.Context(), context.Param(roomIDParam), sessionToken)
+	result, err := handler.service.GetState(context.Request.Context(), context.Param(roomKeyParam), sessionToken)
 	if writeGenreVotingError(context, err) {
 		return
 	}
