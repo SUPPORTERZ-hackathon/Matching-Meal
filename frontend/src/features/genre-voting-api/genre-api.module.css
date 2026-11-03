@@ -1,0 +1,9 @@
+.page > main { padding: 0; }
+.content { display: grid; gap: 18px; padding: 26px var(--meal-page-gutter); overflow-wrap: anywhere; }
+.content h1 { font-size: 1.375rem; font-weight: 700; }
+.content p { color: var(--muted-foreground); line-height: 1.8; }
+.content a { color: var(--primary); text-decoration: underline; }
+.content button:not([data-size="meal"]), .error button:not([data-size="meal"]) { min-height: 44px; height: auto; white-space: normal; }
+.error { margin-top: 16px; padding: 14px; border-radius: 14px; border: 1px solid var(--border); background: var(--primary-pale); overflow-wrap: anywhere; }
+.error p { line-height: 1.8; }
+.error button { margin-top: 10px; }

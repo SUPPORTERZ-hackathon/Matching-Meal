@@ -6,6 +6,10 @@
 - Related specifications: ../components/common-ui.md, ../themes/design-system.md
 - Implementation files: frontend/src/app/ui-preview/page.tsx, frontend/src/app/ui-preview/button-showcase.tsx
 
+## UI統合の現行契約（2026-10-31）
+
+主仕様は[frontend-ui-integration.md](frontend-ui-integration.md)。開発環境限定で実ルーム導線と既存モックの一連のデモ入口を分離する。ページ先頭のヘッダーは固定し、埋込ヘッダー見本だけsticky=falseとする。 後段の従来ルート/固定処理/モック供給の記録は、相違する部分のみ本契約へ更新する。検証結果は主仕様のProgressへ集約する。
+
 ## 目的と対象範囲
 
 ユーザーの今回の依頼に基づき、共通UIを単独で確認できる/ui-previewを実装する。部品の表示契約はcomponents、寸法と色はthemesを参照し、重複定義しない。

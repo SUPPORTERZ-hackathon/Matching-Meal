@@ -1,6 +1,6 @@
 import { CONFETTI_COLORS } from "../genre-vote-waiting/celebration-config";
 
-export const RESULT_REVEAL = { imageDuration: 850, burstDuration: 1600, cleanupGrace: 100 } as const;
+export const RESULT_REVEAL = { imageDuration: 850, burstDuration: 1600, cleanupGrace: 100, imageReadyTimeout: 700 } as const;
 export { CONFETTI_COLORS as RESULT_BURST_COLORS };
 
 type ResultBurstPiece = {

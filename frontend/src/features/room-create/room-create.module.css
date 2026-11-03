@@ -232,16 +232,13 @@
   text-align: center;
 }
 
-.actions {
-  padding: 8px var(--room-gutter-right)
-    max(20px, env(safe-area-inset-bottom, 0px))
-    var(--room-gutter-left);
-}
-
 .valid {
   color: #16a34a;
   background: #dcfce7;
 }
+
+.apiNote { margin-top: 16px; color: var(--muted-foreground); font-size: .75rem; line-height: 1.8; }
+.apiError { margin-top: 16px; padding: 12px; border-radius: 12px; background: var(--primary-pale); color: var(--primary-dark); font-size: .875rem; line-height: 1.8; }
 
 @media (max-width: 360px) {
   .content {

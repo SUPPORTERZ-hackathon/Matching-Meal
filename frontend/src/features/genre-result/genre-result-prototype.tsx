@@ -10,6 +10,6 @@ type GenreResultPrototypeProps = Pick<GenreResultScreenProps, "result" | "genres
 
 export function GenreResultPrototype(props: GenreResultPrototypeProps) {
   const router = useRouter();
-  const findShops = useCallback((genreId: string) => router.push(restaurantVoteUrl(genreId)), [router]);
+  const findShops = useCallback((genreId: string) => router.push(restaurantVoteUrl(genreId, { demo: true })), [router]);
   return <GenreResultScreen {...props} isPrototype onFindShops={findShops} />;
 }

@@ -75,10 +75,12 @@ test("欠損/重複ID・空名を正常な候補と扱わない", () => {
 });
 
 test("固定ジャンルIDを引き継ぎ、不明/空/重複queryから別ジャンルを推測しない", () => {
-  assert.equal(resolveRestaurantGenre(undefined, GENRES, "ramen").id, "ramen");
-  assert.equal(resolveRestaurantGenre("cafe", GENRES, "ramen").id, "cafe");
-  for (const value of ["", "not-found", ["ramen", "cafe"]]) assert.equal(resolveRestaurantGenre(value, GENRES, "ramen"), undefined);
+  assert.equal(resolveRestaurantGenre("cafe", GENRES).id, "cafe");
+  for (const value of [undefined, "", "not-found", ["ramen", "cafe"]]) assert.equal(resolveRestaurantGenre(value, GENRES), undefined);
   assert.equal(restaurantVoteUrl("sushi-seafood"), "/restaurant-vote?genre=sushi-seafood");
   assert.equal(restaurantWaitingUrl("sushi-seafood"), "/restaurant-vote-waiting?genre=sushi-seafood");
   assert.equal(restaurantVoteUrl("a&b"), "/restaurant-vote?genre=a%26b");
+  assert.equal(restaurantVoteUrl("italian", { demo: true }), "/restaurant-vote?genre=italian&demo=1");
+  assert.equal(restaurantWaitingUrl("italian", { demo: true }), "/restaurant-vote-waiting?genre=italian&demo=1");
+  assert.equal(restaurantWaitingUrl("cafe", { demo: false }), "/restaurant-vote-waiting?genre=cafe");
 });

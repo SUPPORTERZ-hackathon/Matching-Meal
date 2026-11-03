@@ -5,11 +5,11 @@ export const RESTAURANT_VOTE_PATH = "/restaurant-vote";
 export const RESTAURANT_WAITING_PATH = "/restaurant-vote-waiting";
 export const DEFAULT_RESTAURANT_GENRE_ID = "ramen";
 
-export function restaurantVoteUrl(genreId: string): string {
-  return `${RESTAURANT_VOTE_PATH}?genre=${encodeURIComponent(genreId)}`;
+export function restaurantVoteUrl(genreId: string, options?: { demo?: boolean }): string {
+  return `${RESTAURANT_VOTE_PATH}?genre=${encodeURIComponent(genreId)}${options?.demo ? "&demo=1" : ""}`;
 }
-export function restaurantWaitingUrl(genreId: string): string {
-  return `${RESTAURANT_WAITING_PATH}?genre=${encodeURIComponent(genreId)}`;
+export function restaurantWaitingUrl(genreId: string, options?: { demo?: boolean }): string {
+  return `${RESTAURANT_WAITING_PATH}?genre=${encodeURIComponent(genreId)}${options?.demo ? "&demo=1" : ""}`;
 }
 
 // 全項目が表示確認用の架空データ。実店舗/API写真/実検索結果ではない。

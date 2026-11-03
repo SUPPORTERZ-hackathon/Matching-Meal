@@ -6,11 +6,12 @@ import type { Genre } from "../genre-vote/genres";
 import type { RestaurantCandidate } from "./restaurant-data";
 import { RestaurantVoteScreen } from "./restaurant-vote-screen";
 import { restaurantWaitingUrl } from "./prototype-data";
+import { DevelopmentDemoNotice } from "../ui-flow/flow-message";
 
 type RestaurantVotePrototypeProps = { genre?: Genre; restaurants: readonly RestaurantCandidate[]; roomId: string };
 
 export function RestaurantVotePrototype({ genre, restaurants, roomId }: RestaurantVotePrototypeProps) {
   const router = useRouter();
-  const showWaiting = useCallback(() => { if (genre) router.replace(restaurantWaitingUrl(genre.id)); }, [genre, router]);
-  return <RestaurantVoteScreen genre={genre} restaurants={restaurants} roomId={roomId} onComplete={showWaiting} />;
+  const showWaiting = useCallback(() => { if (genre) router.replace(restaurantWaitingUrl(genre.id, { demo: true })); }, [genre, router]);
+  return <RestaurantVoteScreen genre={genre} restaurants={restaurants} roomId={roomId} onComplete={showWaiting} notice={<DevelopmentDemoNotice />} />;
 }

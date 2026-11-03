@@ -18,7 +18,6 @@
 .plate { display: grid; flex-shrink: 0; place-items: center; width: clamp(56px, 22vw, 88px); aspect-ratio: 1; border: 1px solid color-mix(in srgb, var(--primary) 15%, transparent); border-radius: 50%; background: rgb(255 255 255 / 55%); box-shadow: 0 8px 24px rgb(168 55 46 / 8%); }
 .plate svg { width: 42%; height: 42%; }
 .photo { object-fit: cover; transition: opacity 180ms ease; }
-.sampleBadge { position: absolute; top: 14px; left: 14px; z-index: 1; padding: 6px 10px; border-radius: 99px; background: var(--primary); color: var(--primary-foreground); font-size: .625rem; font-weight: 700; }
 .cardContent { padding: 18px; }
 .genreChip { display: inline-block; max-width: 100%; padding: 6px 12px; border-radius: 99px; background: var(--soft); color: var(--muted-foreground); font-size: .75rem; font-weight: 700; overflow-wrap: anywhere; }
 .cardContent h2 { margin-top: 8px; font-size: 1.375rem; line-height: 1.5; font-weight: 500; letter-spacing: -.04em; overflow-wrap: anywhere; }

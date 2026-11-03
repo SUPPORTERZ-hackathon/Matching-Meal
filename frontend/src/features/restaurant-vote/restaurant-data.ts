@@ -3,6 +3,7 @@ export type RestaurantCandidate = {
   readonly name: string;
   readonly photoUrl?: string;
   readonly openingHours?: string;
+  readonly address?: string;
   readonly closedDays?: string;
   readonly dinnerBudget?: string;
   readonly access?: string;
@@ -18,6 +19,7 @@ export type HotPepperShopFields = {
   readonly name: string;
   readonly photo?: { readonly pc?: { readonly l?: string | null; readonly m?: string | null } | null } | null;
   readonly open?: string | null;
+  readonly address?: string | null;
   readonly close?: string | null;
   readonly budget?: { readonly average?: string | null; readonly name?: string | null } | null;
   readonly access?: string | null;
@@ -65,6 +67,7 @@ export function toRestaurantCandidate(shop: HotPepperShopFields): RestaurantCand
     id: shop.id.trim(), name: shop.name.trim(),
     photoUrl: safeRestaurantPhotoUrl(shop.photo?.pc?.l) ?? safeRestaurantPhotoUrl(shop.photo?.pc?.m),
     openingHours: text(shop.open), closedDays: text(shop.close),
+    ...(text(shop.address) ? { address: text(shop.address) } : {}),
     dinnerBudget: text(shop.budget?.average) ?? text(shop.budget?.name),
     access: text(shop.mobile_access) ?? text(shop.access), stationName: text(shop.station_name),
     detailUrl: safeRestaurantDetailUrl(shop.urls?.pc), coordinates, source: "hotpepper",

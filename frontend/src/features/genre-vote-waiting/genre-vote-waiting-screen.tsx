@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { AppHeader } from "@/components/common/app-header";
 import { PageContainer } from "@/components/common/page-container";
 import { ParticipantAvatar } from "@/components/common/participant-avatar";
@@ -11,9 +12,11 @@ export type GenreVoteWaitingScreenProps = {
   roomId?: string;
   currentStep?: MealStep;
   voteSubject?: "ジャンル" | "店舗";
+  children?: ReactNode;
+  notice?: ReactNode;
 };
 
-export function GenreVoteWaitingScreen({ participants, roomId, currentStep = "genre", voteSubject = "ジャンル" }: GenreVoteWaitingScreenProps) {
+export function GenreVoteWaitingScreen({ participants, roomId, currentStep = "genre", voteSubject = "ジャンル", children, notice }: GenreVoteWaitingScreenProps) {
   const headingId = `${currentStep}-waiting-heading`;
   const statusId = `${currentStep}-waiting-status`;
   const { total, completed, remaining, percentage, allComplete } = summarizeParticipants(participants);
@@ -25,6 +28,7 @@ export function GenreVoteWaitingScreen({ participants, roomId, currentStep = "ge
     <div className={styles.background}>
       <PageContainer className={styles.page} header={<AppHeader roomNumber={roomId} className={styles.header} />}>
         <StepProgress currentStep={currentStep} />
+        {notice}
         <div className={styles.content}>
           <section className={styles.hero} aria-labelledby={headingId}>
             <VoteCompletionMark />
@@ -66,6 +70,7 @@ export function GenreVoteWaitingScreen({ participants, roomId, currentStep = "ge
             )}
           </section>
           <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">{announcement}</p>
+          {children}
         </div>
       </PageContainer>
     </div>

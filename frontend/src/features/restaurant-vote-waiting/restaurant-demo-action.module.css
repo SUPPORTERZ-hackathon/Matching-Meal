@@ -1,0 +1,2 @@
+.panel { width: 100%; max-width: var(--meal-max-width); margin-inline: auto; padding: 20px max(var(--meal-page-gutter), env(safe-area-inset-right, 0px)) max(24px, env(safe-area-inset-bottom, 0px)) max(var(--meal-page-gutter), env(safe-area-inset-left, 0px)); border-top: 1px solid var(--border); background: var(--background); }
+.panel p { margin-bottom: 12px; color: var(--muted-foreground); font-size: .875rem; line-height: 1.8; overflow-wrap: anywhere; }

@@ -7,13 +7,14 @@ export type AppHeaderProps = {
   layout?: "default" | "centered";
   leading?: ReactNode;
   className?: string;
+  sticky?: boolean;
 };
 
-export function AppHeader({ roomNumber, layout = "default", leading, className }: AppHeaderProps) {
+export function AppHeader({ roomNumber, layout = "default", leading, className, sticky = true }: AppHeaderProps) {
   const room = roomNumber?.trim();
 
   return (
-    <header className={cn("meal-header", className)} data-layout={layout}>
+    <header className={cn("meal-header", className)} data-layout={layout} data-sticky={sticky}>
       {layout === "centered" && <div className="meal-header-leading">{leading}</div>}
       <AppLogo compact />
       {layout === "centered" && <span aria-hidden="true" />}

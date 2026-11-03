@@ -4,7 +4,10 @@ import { RestaurantVoteWaitingPreview } from "@/features/restaurant-vote-waiting
 
 export const metadata: Metadata = { title: "店舗投票待機・開発プレビュー | メシマッチ", robots: { index: false, follow: false } };
 
-export default function RestaurantVoteWaitingPreviewPage() {
+type WaitingPreviewPageProps = { searchParams: Promise<{ genre?: string | string[] }> };
+export default async function RestaurantVoteWaitingPreviewPage({ searchParams }: WaitingPreviewPageProps) {
   if (process.env.NODE_ENV !== "development") notFound();
-  return <RestaurantVoteWaitingPreview />;
+  const query = await searchParams;
+  const genreId = Array.isArray(query.genre) ? "" : query.genre;
+  return <RestaurantVoteWaitingPreview key={genreId ?? "sample"} initialGenreId={genreId} />;
 }
