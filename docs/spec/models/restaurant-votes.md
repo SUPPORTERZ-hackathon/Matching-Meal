@@ -1,6 +1,6 @@
 # 店舗投票モデル
 
-- Status: Review
+- Status: Approved
 - Last updated: 2026-11-03
 - Related issue: None
 - Related specifications: restaurant-candidates.md, rooms-and-participants.md, ../services/restaurant-voting.md, ../screens/restaurant-vote.md, ../screens/restaurant-vote-waiting.md
@@ -179,7 +179,8 @@ None。候補全件の一括提出、提出後変更不可、全員完了時の�
 - 完了: 既存の店舗候補、ジャンル投票、店舗投票・待機画面、ルーム状態仕様を確認。
 - 完了: 候補1〜5件への一括提出、冪等性、集計、抽選、複合外部キー、トランザクション境界を設計。
 - 完了: ユーザーが実装方針を承認。
-- 残作業: ユーザーによる本仕様の承認、モデル・マイグレーション・Repository・Service・HTTP APIの実装と検証。
+- 承認: ユーザーが本仕様を承認。
+- 残作業: モデル・マイグレーション・Repository・Service・HTTP APIの実装と検証。
 - ブロッカー: None。
 - 関連Issue・PR・コミット: None。
 

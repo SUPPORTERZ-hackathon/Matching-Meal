@@ -1,6 +1,6 @@
 # 店舗投票サービス
 
-- Status: Review
+- Status: Approved
 - Last updated: 2026-11-03
 - Related issue: None
 - Related specifications: ../models/restaurant-votes.md, ../models/restaurant-candidates.md, ../models/rooms-and-participants.md, restaurant-search.md, ../screens/restaurant-vote.md, ../screens/restaurant-vote-waiting.md
@@ -250,7 +250,8 @@ None。候補全件の一括提出、提出後変更不可、最多同数時の�
 - 完了: 既存の店舗投票・待機画面、ジャンル投票API、候補店舗API、ルーム状態を確認。
 - 完了: 提出API、状況取得API、Bearer認証、冪等性、進捗取得、集計、抽選、結果レスポンス、状態遷移、エラー契約を設計。
 - 完了: ユーザーが実装方針を承認。
-- 残作業: ユーザーによる本仕様の承認、実装、OpenAPI更新、検証。
+- 承認: ユーザーが本仕様を承認。
+- 残作業: 実装、OpenAPI更新、検証。
 - ブロッカー: None。
 - 関連Issue・PR・コミット: None。
 
