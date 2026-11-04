@@ -9,7 +9,7 @@ const enabled = base === "http://localhost:3000";
 
 // 明示したローカル開発環境だけで実行し、このテストが作成したルーム以外を操作しない。
 async function makeRoom(http) {
-  const create = await http(`${base}/api/v1/rooms`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ nickname: "API結合確認ホスト" }) });
+  const create = await http(`${base}/api/v1/rooms`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ nickname: "API結合確認ホスト", searchLocation: { latitude: 35.658, longitude: 139.7016 }, searchRange: 3 }) });
   assert.equal(create.status, 201); const host = (await create.json()).data;
   const join = await http(`${base}/api/v1/rooms/${host.room.joinCode}/participants`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ nickname: "API結合確認ゲスト" }) });
   assert.equal(join.status, 201); const guest = (await join.json()).data;

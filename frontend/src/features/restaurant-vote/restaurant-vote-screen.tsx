@@ -21,13 +21,15 @@ type RestaurantVoteScreenProps = {
   restaurants: readonly RestaurantCandidate[];
   roomId?: string;
   onComplete: (votes: readonly RestaurantVote[]) => void;
+  initialVotes?: readonly RestaurantVote[];
+  onVotesChange?: (votes: readonly RestaurantVote[]) => void;
   children?: ReactNode;
   notice?: ReactNode;
 };
 type MotionStyle = CSSProperties & { "--restaurant-exit-duration": string; "--restaurant-enter-duration": string };
 
-export function RestaurantVoteScreen({ genre, restaurants, roomId, onComplete, children, notice }: RestaurantVoteScreenProps) {
-  const { votes, phase, vote, finishAnimation, currentRestaurant: restaurant, complete, locked, valid } = useRestaurantVote(restaurants);
+export function RestaurantVoteScreen({ genre, restaurants, roomId, onComplete, initialVotes = [], onVotesChange, children, notice }: RestaurantVoteScreenProps) {
+  const { votes, phase, vote, finishAnimation, currentRestaurant: restaurant, complete, locked, valid } = useRestaurantVote(restaurants, initialVotes);
   const skipRef = useRef<HTMLButtonElement>(null);
   const likeRef = useRef<HTMLButtonElement>(null);
   const resumeFocus = useRef<RestaurantVoteChoice | null>(null);
@@ -46,6 +48,8 @@ export function RestaurantVoteScreen({ genre, restaurants, roomId, onComplete, c
   useEffect(() => {
     if (complete && !notified.current) { notified.current = true; onComplete(votes); }
   }, [complete, onComplete, votes]);
+
+  useEffect(() => { if (!complete) onVotesChange?.(votes); }, [votes, complete, onVotesChange]);
 
   useEffect(() => {
     if (phase === "idle" && resumeFocus.current) {
