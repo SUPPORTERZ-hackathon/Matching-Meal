@@ -1,14 +1,18 @@
 # 店舗投票完了・待機画面
 
 - Status: Verified
-- Last updated: 2026-10-30
+- Last updated: 2026-11-04
 - Related issue: None
-- Related specifications: restaurant-vote.md, genre-vote-waiting.md, ../components/common-ui.md, ../themes/design-system.md
+- Related specifications: restaurant-voting-api-integration.md, restaurant-vote.md, genre-vote-waiting.md, ../components/common-ui.md, ../themes/design-system.md
 - Implementation files: frontend/src/app/restaurant-vote-waiting/, frontend/src/app/ui-preview/restaurant-vote-waiting/, frontend/src/features/restaurant-vote-waiting/, frontend/src/features/genre-vote-waiting/genre-vote-waiting-screen.tsx
 
 ## UI統合の現行契約（2026-10-31）
 
 主仕様は[frontend-ui-integration.md](frontend-ui-integration.md)。既存参加者/アニメーション/明示デモ結果操作は開発環境のdemo=1に限定する。通常URLは未接続状態を示し、モック参加者や結果を自動補完しない。 後段の従来ルート/固定処理/モック供給の記録は、相違する部分のみ本契約へ更新する。検証結果は主仕様のProgressへ集約する。
+
+## 実API連携の現行契約（2026-11-04）
+
+主仕様は[restaurant-voting-api-integration.md](restaurant-voting-api-integration.md)。実roomでは店舗投票状態APIを2秒間隔で確認し、実参加者の提出状態を表示する。保存済み結果を受け取った場合だけ結果画面へ進む。通常URLの未接続表示は本契約へ更新し、既存待機演出と`demo=1`を維持する。
 
 ## 目的・範囲・承認
 

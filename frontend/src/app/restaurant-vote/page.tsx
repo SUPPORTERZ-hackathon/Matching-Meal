@@ -7,12 +7,16 @@ import { resolveRestaurantGenre } from "@/features/restaurant-vote/route-data";
 import { notFound } from "next/navigation";
 import { isDevelopmentDemo, type QueryValue } from "@/features/ui-flow/development-demo";
 import { FlowMessage } from "@/features/ui-flow/flow-message";
+import { RestaurantVotingEntry } from "@/features/restaurant-voting-api/restaurant-voting-entry";
+import { isRoomId } from "@/features/room/room-data";
 
-export const metadata: Metadata = { title: "店舗投票 | メシマッチ", description: "架空店舗の候補にボタンで投票するUIプロトタイプ。", robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: "店舗投票 | メシマッチ", description: "候補店舗を確認して投票します。", robots: { index: false, follow: false } };
 type RestaurantVotePageProps = { searchParams: Promise<{ genre?: QueryValue; demo?: QueryValue; room?: QueryValue }> };
 
 export default async function RestaurantVotePage({ searchParams }: RestaurantVotePageProps) {
   const query = await searchParams;
+  if (query.room !== undefined) return <RestaurantVotingEntry key={typeof query.room === "string" ? query.room : "invalid"}
+    roomId={typeof query.room === "string" && isRoomId(query.room) ? query.room.toLowerCase() : undefined} screen="vote" />;
   if (query.room === undefined && query.demo === "1" && process.env.NODE_ENV !== "development") notFound();
   if (!isDevelopmentDemo(query.demo, process.env.NODE_ENV, query.room)) return <FlowMessage step="shop" title="店舗候補の取得は準備中です" description="決定ジャンルに対応する店舗候補の取得と投票の送信は、まだ接続されていません。" />;
   const genre = resolveRestaurantGenre(query.genre, GENRES);

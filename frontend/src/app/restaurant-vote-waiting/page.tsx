@@ -9,12 +9,16 @@ import { RestaurantDemoAction } from "@/features/restaurant-vote-waiting/restaur
 import { notFound } from "next/navigation";
 import { isDevelopmentDemo } from "@/features/ui-flow/development-demo";
 import { DevelopmentDemoNotice, FlowMessage } from "@/features/ui-flow/flow-message";
+import { RestaurantVotingEntry } from "@/features/restaurant-voting-api/restaurant-voting-entry";
+import { isRoomId } from "@/features/room/room-data";
 
-export const metadata: Metadata = { title: "店舗投票待機 | メシマッチ", description: "参加者の店舗投票完了を待つ画面のUIプロトタイプ。", robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: "店舗投票待機 | メシマッチ", description: "参加者の店舗投票完了を待つ画面です。", robots: { index: false, follow: false } };
 
 type WaitingPageProps = { searchParams: Promise<{ genre?: string | string[]; demo?: string | string[]; room?: string | string[] }> };
 export default async function RestaurantVoteWaitingPage({ searchParams }: WaitingPageProps) {
   const query = await searchParams;
+  if (query.room !== undefined) return <RestaurantVotingEntry key={typeof query.room === "string" ? query.room : "invalid"}
+    roomId={typeof query.room === "string" && isRoomId(query.room) ? query.room.toLowerCase() : undefined} screen="waiting" />;
   if (query.room === undefined && query.demo === "1" && process.env.NODE_ENV !== "development") notFound();
   const demo = isDevelopmentDemo(query.demo, process.env.NODE_ENV, query.room);
   if (!demo) return <FlowMessage step="shop" title="店舗の投票状況は準備中です" description="参加者の店舗投票の完了状況と最終結果は、まだ接続されていません。" />;
