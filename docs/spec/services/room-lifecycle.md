@@ -1,9 +1,9 @@
 # ルーム作成・参加・投票開始サービス
 
 - Status: Implemented
-- Last updated: 2026-11-03
+- Last updated: 2026-11-05
 - Related issue: None
-- Related specifications: ../models/rooms-and-participants.md, ../models/restaurant-candidates.md, restaurant-search.md, ../screens/genre-vote.md, ../screens/room-create-screen.md
+- Related specifications: ../models/rooms-and-participants.md, ../models/restaurant-candidates.md, room-request-idempotency.md, restaurant-search.md, ../screens/genre-vote.md, ../screens/room-create-screen.md
 - Implementation files: backend/cmd/api/main.go, backend/internal/domain/room.go, backend/internal/repository/room.go, backend/internal/repository/postgres/room.go, backend/internal/service/room.go, backend/internal/transport/http/room.go, backend/internal/transport/http/request_id.go, backend/migrations/000004_create_room_search_conditions.up.sql, backend/migrations/000004_create_room_search_conditions.down.sql, docs/api/openapi.yaml
 
 ## 目的と対象範囲
@@ -62,6 +62,7 @@
 - `message`は利用者向け日本語とし、SQLや内部構造を含めない。
 - `requestId`はリクエスト単位で生成または受け入れ、レスポンスと構造化ログに含める。
 - JSONの未知フィールドは、前方互換性を妨げない範囲で無視する。型不一致、必須値欠落、不正値は400とする。
+- ルーム作成・参加の安全な再送は任意の`Idempotency-Key`で行う。キー形式、再送、競合、トークン再現の詳細は`room-request-idempotency.md`に従う。
 
 ## API 1: ルーム作成
 
@@ -91,7 +92,7 @@
 3. トークンをハッシュ化する。
 4. トランザクション内でルーム、ホスト参加者、検索条件を作成する。
 5. 参加コード衝突時だけ、名前付き上限までコード生成から再試行する。
-6. 平文トークンを成功レスポンスで一度だけ返す。
+6. 平文トークンを成功レスポンスで返す。キーなしでは一度だけ生成し、キー付きの同一操作再送では同じトークンを再現する。
 
 ### レスポンス
 
@@ -285,6 +286,7 @@ None。既存API形状、人数、期限、固定方式に加え、ルーム作�
 - 修正: 参加コード用`:roomRef`とroom UUID用`:roomId`を同じパス位置へ登録した際のGin起動panicを再現。公開URLを変えず、内部パラメータ名を`:roomKey`へ統一する方針を確定。
 - 完了: Room、ジャンル投票、店舗検索、店舗投票の全Ginルートで内部パラメータ名を`:roomKey`へ統一し、各Handlerから既存Serviceへ値を渡す処理を修正。
 - 検証: 全10ルートを同一Routerへ登録する回帰テストに成功。Docker Compose内の`go test ./...`、`go vet ./...`、`go test -race ./...`に成功し、起動中backendの`/api/health`が200相当の正常応答を返すことを確認。
+- 完了: ルーム作成・参加へ任意の`Idempotency-Key`を追加。詳細な契約と検証結果は`room-request-idempotency.md`を正とする。
 - 未実施: マイグレーションdownは実行許可が得られなかったため未検証。
 - 残作業: 000004マイグレーションdown検証後のStatus `Verified`化。PR作成は未実施。
 - ブロッカー: なし。

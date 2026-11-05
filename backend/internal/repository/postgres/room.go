@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -17,6 +18,8 @@ import (
 const (
 	uniqueViolationCode        = "23505"
 	joinCodeConstraintName     = "rooms_join_code_unique"
+	idempotencyStatePending    = "pending"
+	idempotencyStateCompleted  = "completed"
 	transactionRollbackTimeout = 2 * time.Second
 )
 
@@ -41,8 +44,20 @@ func (roomRepository *RoomRepository) Create(ctx context.Context, params reposit
 		rollback(tx)
 	}()
 
+	room, host, err := insertRoomBundle(ctx, tx, params)
+	if err != nil {
+		return domain.Room{}, domain.Participant{}, err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return domain.Room{}, domain.Participant{}, fmt.Errorf("commit create room transaction: %w", err)
+	}
+	return room, host, nil
+}
+
+func insertRoomBundle(ctx context.Context, tx pgx.Tx, params repository.CreateRoomParams) (domain.Room, domain.Participant, error) {
 	room := params.Room
-	err = tx.QueryRow(ctx, `
+	err := tx.QueryRow(ctx, `
 		INSERT INTO rooms (id, join_code, status, version, expires_at)
 		VALUES ($1, $2, $3, $4, $5)
 		RETURNING created_at, updated_at
@@ -75,10 +90,177 @@ func (roomRepository *RoomRepository) Create(ctx context.Context, params reposit
 		return domain.Room{}, domain.Participant{}, fmt.Errorf("insert room search condition: %w", err)
 	}
 
-	if err := tx.Commit(ctx); err != nil {
-		return domain.Room{}, domain.Participant{}, fmt.Errorf("commit create room transaction: %w", err)
-	}
 	return room, host, nil
+}
+
+func (roomRepository *RoomRepository) CreateIdempotent(
+	ctx context.Context,
+	claim repository.RoomIdempotencyClaim,
+	params repository.CreateRoomParams,
+) (domain.Room, domain.Participant, bool, error) {
+	tx, err := roomRepository.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return domain.Room{}, domain.Participant{}, false, fmt.Errorf("begin idempotent create room transaction: %w", err)
+	}
+	defer func() { rollback(tx) }()
+
+	isNew, err := claimRoomIdempotency(ctx, tx, claim)
+	if err != nil {
+		return domain.Room{}, domain.Participant{}, false, err
+	}
+	if !isNew {
+		room, participant, err := loadRoomIdempotencyResult(ctx, tx, claim)
+		if err != nil {
+			return domain.Room{}, domain.Participant{}, false, err
+		}
+		if err := tx.Commit(ctx); err != nil {
+			return domain.Room{}, domain.Participant{}, false, fmt.Errorf("commit idempotent create replay: %w", err)
+		}
+		return room, participant, true, nil
+	}
+
+	room, participant, err := insertRoomBundle(ctx, tx, params)
+	if err != nil {
+		return domain.Room{}, domain.Participant{}, false, err
+	}
+	if err := completeRoomIdempotency(ctx, tx, claim, room, participant); err != nil {
+		return domain.Room{}, domain.Participant{}, false, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return domain.Room{}, domain.Participant{}, false, fmt.Errorf("commit idempotent create room transaction: %w", err)
+	}
+	return room, participant, false, nil
+}
+
+func (roomRepository *RoomRepository) WithinIdempotentTransaction(
+	ctx context.Context,
+	claim repository.RoomIdempotencyClaim,
+	operation func(repository.RoomTransaction) (domain.Room, domain.Participant, error),
+) (domain.Room, domain.Participant, bool, error) {
+	tx, err := roomRepository.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return domain.Room{}, domain.Participant{}, false, fmt.Errorf("begin idempotent room transaction: %w", err)
+	}
+	defer func() { rollback(tx) }()
+
+	isNew, err := claimRoomIdempotency(ctx, tx, claim)
+	if err != nil {
+		return domain.Room{}, domain.Participant{}, false, err
+	}
+	if !isNew {
+		room, participant, err := loadRoomIdempotencyResult(ctx, tx, claim)
+		if err != nil {
+			return domain.Room{}, domain.Participant{}, false, err
+		}
+		if err := tx.Commit(ctx); err != nil {
+			return domain.Room{}, domain.Participant{}, false, fmt.Errorf("commit idempotent room replay: %w", err)
+		}
+		return room, participant, true, nil
+	}
+
+	room, participant, err := operation(&roomTransaction{tx: tx})
+	if err != nil {
+		return domain.Room{}, domain.Participant{}, false, err
+	}
+	if err := completeRoomIdempotency(ctx, tx, claim, room, participant); err != nil {
+		return domain.Room{}, domain.Participant{}, false, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return domain.Room{}, domain.Participant{}, false, fmt.Errorf("commit idempotent room transaction: %w", err)
+	}
+	return room, participant, false, nil
+}
+
+func claimRoomIdempotency(ctx context.Context, tx pgx.Tx, claim repository.RoomIdempotencyClaim) (bool, error) {
+	var inserted int
+	err := tx.QueryRow(ctx, `
+		INSERT INTO room_idempotency_requests (operation, key_hash, request_fingerprint, state)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (operation, key_hash) DO NOTHING
+		RETURNING 1
+	`, claim.Operation, claim.KeyHash, claim.RequestFingerprint, idempotencyStatePending).Scan(&inserted)
+	if err == nil {
+		return true, nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return false, fmt.Errorf("claim room idempotency key: %w", err)
+	}
+
+	var fingerprint []byte
+	var state string
+	err = tx.QueryRow(ctx, `
+		SELECT request_fingerprint, state
+		FROM room_idempotency_requests
+		WHERE operation = $1 AND key_hash = $2
+		FOR UPDATE
+	`, claim.Operation, claim.KeyHash).Scan(&fingerprint, &state)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, repository.ErrIdempotencyCorrupt
+	}
+	if err != nil {
+		return false, fmt.Errorf("lock room idempotency key: %w", err)
+	}
+	if !bytes.Equal(fingerprint, claim.RequestFingerprint) {
+		return false, repository.ErrIdempotencyConflict
+	}
+	if state != idempotencyStateCompleted {
+		return false, repository.ErrIdempotencyCorrupt
+	}
+	return false, nil
+}
+
+func completeRoomIdempotency(
+	ctx context.Context,
+	tx pgx.Tx,
+	claim repository.RoomIdempotencyClaim,
+	room domain.Room,
+	participant domain.Participant,
+) error {
+	command, err := tx.Exec(ctx, `
+		UPDATE room_idempotency_requests
+		SET state = $3, room_id = $4, participant_id = $5,
+			response_room_status = $6, response_room_version = $7, expires_at = $8
+		WHERE operation = $1 AND key_hash = $2 AND state = $9
+	`, claim.Operation, claim.KeyHash, idempotencyStateCompleted, room.ID, participant.ID,
+		room.Status, room.Version, room.ExpiresAt, idempotencyStatePending)
+	if err != nil {
+		return fmt.Errorf("complete room idempotency key: %w", err)
+	}
+	if command.RowsAffected() != 1 {
+		return repository.ErrIdempotencyCorrupt
+	}
+	return nil
+}
+
+func loadRoomIdempotencyResult(
+	ctx context.Context,
+	tx pgx.Tx,
+	claim repository.RoomIdempotencyClaim,
+) (domain.Room, domain.Participant, error) {
+	var room domain.Room
+	var participant domain.Participant
+	err := tx.QueryRow(ctx, `
+		SELECT
+			r.id, r.join_code, i.response_room_status, i.response_room_version,
+			r.expires_at, r.created_at, r.updated_at,
+			p.id, p.room_id, p.nickname, p.role, p.joined_at
+		FROM room_idempotency_requests i
+		JOIN rooms r ON r.id = i.room_id
+		JOIN participants p ON p.id = i.participant_id AND p.room_id = i.room_id
+		WHERE i.operation = $1 AND i.key_hash = $2 AND i.state = $3
+	`, claim.Operation, claim.KeyHash, idempotencyStateCompleted).Scan(
+		&room.ID, &room.JoinCode, &room.Status, &room.Version,
+		&room.ExpiresAt, &room.CreatedAt, &room.UpdatedAt,
+		&participant.ID, &participant.RoomID, &participant.Nickname,
+		&participant.Role, &participant.JoinedAt,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.Room{}, domain.Participant{}, repository.ErrIdempotencyCorrupt
+	}
+	if err != nil {
+		return domain.Room{}, domain.Participant{}, fmt.Errorf("load room idempotency result: %w", err)
+	}
+	return room, participant, nil
 }
 
 func (roomRepository *RoomRepository) WithinTransaction(ctx context.Context, operation func(repository.RoomTransaction) error) error {

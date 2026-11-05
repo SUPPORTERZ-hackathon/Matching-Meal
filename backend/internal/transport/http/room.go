@@ -13,7 +13,11 @@ import (
 	"meal/backend/internal/service"
 )
 
-const roomKeyParam = "roomKey"
+const (
+	roomKeyParam              = "roomKey"
+	idempotencyKeyHeader      = "Idempotency-Key"
+	idempotencyReplayedHeader = "Idempotency-Replayed"
+)
 
 type RoomHandler struct {
 	service *service.RoomService
@@ -86,15 +90,20 @@ func RegisterRoomRoutes(routes gin.IRoutes, handler *RoomHandler) {
 }
 
 func (handler *RoomHandler) Create(context *gin.Context) {
+	idempotencyKey, err := requestIdempotencyKey(context)
+	if err != nil {
+		context.JSON(http.StatusBadRequest, errorResponse("INVALID_IDEMPOTENCY_KEY", "操作キーを確認してください。", requestID(context)))
+		return
+	}
 	var request createRoomRequest
 	if err := context.ShouldBindJSON(&request); err != nil {
 		context.JSON(http.StatusBadRequest, errorResponse("INVALID_REQUEST", "入力内容を確認してください。", requestID(context)))
 		return
 	}
-	result, err := handler.service.Create(context.Request.Context(), service.CreateRoomInput{
+	result, err := handler.service.CreateWithIdempotency(context.Request.Context(), service.CreateRoomInput{
 		Nickname: request.Nickname, Latitude: request.SearchLocation.Latitude,
 		Longitude: request.SearchLocation.Longitude, SearchRange: request.SearchRange,
-	})
+	}, idempotencyKey)
 	if errors.Is(err, domain.ErrInvalidNickname) {
 		context.JSON(http.StatusBadRequest, errorResponse("INVALID_REQUEST", "ニックネームは1文字以上20文字以下で入力してください。", requestID(context)))
 		return
@@ -105,6 +114,14 @@ func (handler *RoomHandler) Create(context *gin.Context) {
 	}
 	if errors.Is(err, service.ErrRoomCodeGeneration) {
 		context.JSON(http.StatusInternalServerError, errorResponse("ROOM_CODE_GENERATION_FAILED", "ルームを作成できませんでした。", requestID(context)))
+		return
+	}
+	if errors.Is(err, service.ErrIdempotencyConflict) {
+		context.JSON(http.StatusConflict, errorResponse("IDEMPOTENCY_KEY_CONFLICT", "この操作キーは別のリクエストで使用されています。", requestID(context)))
+		return
+	}
+	if errors.Is(err, service.ErrIdempotencyUnavailable) {
+		context.JSON(http.StatusServiceUnavailable, errorResponse("SERVICE_UNAVAILABLE", "時間をおいて再度お試しください。", requestID(context)))
 		return
 	}
 	if errors.Is(err, stdcontext.DeadlineExceeded) {
@@ -118,16 +135,24 @@ func (handler *RoomHandler) Create(context *gin.Context) {
 	}
 
 	response := newRoomSessionResponse(result.Room, result.Participant, result.SessionToken)
+	if result.IdempotencyReplayed {
+		context.Header(idempotencyReplayedHeader, "true")
+	}
 	context.JSON(http.StatusCreated, response)
 }
 
 func (handler *RoomHandler) Join(context *gin.Context) {
+	idempotencyKey, err := requestIdempotencyKey(context)
+	if err != nil {
+		context.JSON(http.StatusBadRequest, errorResponse("INVALID_IDEMPOTENCY_KEY", "操作キーを確認してください。", requestID(context)))
+		return
+	}
 	var request joinRoomRequest
 	if err := context.ShouldBindJSON(&request); err != nil {
 		context.JSON(http.StatusBadRequest, errorResponse("INVALID_REQUEST", "入力内容を確認してください。", requestID(context)))
 		return
 	}
-	result, err := handler.service.Join(context.Request.Context(), context.Param(roomKeyParam), request.Nickname)
+	result, err := handler.service.JoinWithIdempotency(context.Request.Context(), context.Param(roomKeyParam), request.Nickname, idempotencyKey)
 	switch {
 	case errors.Is(err, domain.ErrInvalidJoinCode), errors.Is(err, domain.ErrInvalidNickname):
 		context.JSON(http.StatusBadRequest, errorResponse("INVALID_REQUEST", "参加コードまたはニックネームを確認してください。", requestID(context)))
@@ -141,6 +166,12 @@ func (handler *RoomHandler) Join(context *gin.Context) {
 	case errors.Is(err, service.ErrRoomCapacityReached):
 		context.JSON(http.StatusConflict, errorResponse("ROOM_CAPACITY_REACHED", "このルームにはこれ以上参加できません。", requestID(context)))
 		return
+	case errors.Is(err, service.ErrIdempotencyConflict):
+		context.JSON(http.StatusConflict, errorResponse("IDEMPOTENCY_KEY_CONFLICT", "この操作キーは別のリクエストで使用されています。", requestID(context)))
+		return
+	case errors.Is(err, service.ErrIdempotencyUnavailable):
+		context.JSON(http.StatusServiceUnavailable, errorResponse("SERVICE_UNAVAILABLE", "時間をおいて再度お試しください。", requestID(context)))
+		return
 	case errors.Is(err, stdcontext.DeadlineExceeded):
 		context.JSON(http.StatusServiceUnavailable, errorResponse("SERVICE_UNAVAILABLE", "時間をおいて再度お試しください。", requestID(context)))
 		return
@@ -151,6 +182,9 @@ func (handler *RoomHandler) Join(context *gin.Context) {
 	}
 
 	response := newRoomSessionResponse(result.Room, result.Participant, result.SessionToken)
+	if result.IdempotencyReplayed {
+		context.Header(idempotencyReplayedHeader, "true")
+	}
 	context.JSON(http.StatusCreated, response)
 }
 
@@ -264,6 +298,17 @@ func bearerToken(authorization string) (string, bool) {
 		return "", false
 	}
 	return parts[1], true
+}
+
+func requestIdempotencyKey(context *gin.Context) (string, error) {
+	values, exists := context.Request.Header[http.CanonicalHeaderKey(idempotencyKeyHeader)]
+	if !exists {
+		return "", nil
+	}
+	if len(values) != 1 || domain.ValidateIdempotencyKey(values[0]) != nil {
+		return "", domain.ErrInvalidIdempotencyKey
+	}
+	return values[0], nil
 }
 
 func errorResponse(code string, message string, requestID string) apiErrorResponse {

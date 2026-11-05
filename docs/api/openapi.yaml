@@ -54,6 +54,8 @@ paths:
       summary: ルームを作成する
       description: ルームとホスト参加者を作成し、平文セッショントークンを初回だけ返す。
       security: []
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
         required: true
         content:
@@ -69,6 +71,9 @@ paths:
       responses:
         "201":
           description: 作成成功
+          headers:
+            Idempotency-Replayed:
+              $ref: "#/components/headers/IdempotencyReplayed"
           content:
             application/json:
               schema:
@@ -77,7 +82,9 @@ paths:
                 created:
                   $ref: "#/components/examples/CreatedRoomSession"
         "400":
-          $ref: "#/components/responses/InvalidRequest"
+          $ref: "#/components/responses/InvalidRoomMutationRequest"
+        "409":
+          $ref: "#/components/responses/IdempotencyConflict"
         "500":
           description: 参加コード生成失敗または内部エラー
           content:
@@ -105,6 +112,7 @@ paths:
       security: []
       parameters:
         - $ref: "#/components/parameters/RoomRef"
+        - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
         required: true
         content:
@@ -116,6 +124,9 @@ paths:
       responses:
         "201":
           description: 参加成功
+          headers:
+            Idempotency-Replayed:
+              $ref: "#/components/headers/IdempotencyReplayed"
           content:
             application/json:
               schema:
@@ -124,7 +135,7 @@ paths:
                 joined:
                   $ref: "#/components/examples/JoinedRoomSession"
         "400":
-          $ref: "#/components/responses/InvalidRequest"
+          $ref: "#/components/responses/InvalidRoomMutationRequest"
         "404":
           $ref: "#/components/responses/RoomNotFound"
         "409":
@@ -146,6 +157,8 @@ paths:
                       code: ROOM_CAPACITY_REACHED
                       message: このルームにはこれ以上参加できません。
                       requestId: 01JEXAMPLE0000000000000000
+                idempotencyConflict:
+                  $ref: "#/components/examples/IdempotencyConflict"
         "500":
           $ref: "#/components/responses/InternalError"
         "503":
@@ -559,6 +572,17 @@ components:
       description: ルーム作成または参加成功時に返される参加者セッショントークン。
 
   parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: 同じ作成・参加操作の安全な再送に使用する。推奨値は操作ごとに生成するUUID v4。
+      schema:
+        type: string
+        minLength: 16
+        maxLength: 128
+        pattern: "^[A-Za-z0-9_-]+$"
+      example: 550e8400-e29b-41d4-a716-446655440000
     RoomId:
       name: roomId
       in: path
@@ -579,6 +603,13 @@ components:
         maxLength: 8
         pattern: "^[23456789ABCDEFGHJKMNPQRSTVWXYZabcdefghjkmnpqrstvwxyz]{8}$"
       example: 7K9M2QXR
+
+  headers:
+    IdempotencyReplayed:
+      description: 保存済みの初回結果を再現した場合だけ`true`を返す。
+      schema:
+        type: boolean
+        enum: [true]
 
   schemas:
     HealthResponse:
@@ -1268,6 +1299,18 @@ components:
           code: INVALID_REQUEST
           message: 入力内容を確認してください。
           requestId: 01JEXAMPLE0000000000000000
+    InvalidIdempotencyKey:
+      value:
+        error:
+          code: INVALID_IDEMPOTENCY_KEY
+          message: 操作キーを確認してください。
+          requestId: 01JEXAMPLE0000000000000000
+    IdempotencyConflict:
+      value:
+        error:
+          code: IDEMPOTENCY_KEY_CONFLICT
+          message: この操作キーは別のリクエストで使用されています。
+          requestId: 01JEXAMPLE0000000000000000
     InvalidGenreVotes:
       value:
         error:
@@ -1318,6 +1361,26 @@ components:
           requestId: 01JEXAMPLE0000000000000000
 
   responses:
+    InvalidRoomMutationRequest:
+      description: JSON、業務入力、またはIdempotency-Keyが不正
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiErrorResponse"
+          examples:
+            invalidRequest:
+              $ref: "#/components/examples/InvalidRequest"
+            invalidIdempotencyKey:
+              $ref: "#/components/examples/InvalidIdempotencyKey"
+    IdempotencyConflict:
+      description: 同じ操作種別とIdempotency-Keyが異なる正規化済み入力で使用済み
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiErrorResponse"
+          examples:
+            idempotencyConflict:
+              $ref: "#/components/examples/IdempotencyConflict"
     InvalidRequest:
       description: 入力不正
       content:

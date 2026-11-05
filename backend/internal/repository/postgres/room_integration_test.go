@@ -1,6 +1,7 @@
 package postgres_test
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"os"
@@ -152,6 +153,204 @@ func TestRoomStartGenreVotingConcurrencyIntegration(t *testing.T) {
 }
 
 const integrationTestEnvironment = "INTEGRATION_TEST"
+
+func TestRoomCreateIdempotencyConcurrencyIntegration(t *testing.T) {
+	if os.Getenv(integrationTestEnvironment) != "1" {
+		t.Skip("set INTEGRATION_TEST=1 to run PostgreSQL integration tests")
+	}
+
+	ctx := context.Background()
+	pool, err := pgxpool.New(ctx, "")
+	if err != nil {
+		t.Fatalf("connect to PostgreSQL: %v", err)
+	}
+	t.Cleanup(pool.Close)
+
+	idempotencyHMACKey := bytes.Repeat([]byte{0x61}, security.MinIdempotencyHMACKeyBytes)
+	roomService := service.NewRoomService(
+		roompostgres.NewRoomRepository(pool), security.RandomGenerator{}, service.SystemClock{},
+		service.WithRoomIdempotencyKey(idempotencyHMACKey),
+	)
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO room_idempotency_requests (operation, key_hash, request_fingerprint, state)
+		VALUES ('create_room', decode('00', 'hex'), decode(repeat('00', 32), 'hex'), 'pending')
+	`); err == nil {
+		t.Fatal("invalid key hash bypassed room_idempotency_requests CHECK constraint")
+	}
+	const requestCount = 8
+	const idempotencyKey = "550e8400-e29b-41d4-a716-446655440100"
+	results := make(chan service.CreateRoomResult, requestCount)
+	errorsByRequest := make(chan error, requestCount)
+	startLine := make(chan struct{})
+	var waitGroup sync.WaitGroup
+	for range requestCount {
+		waitGroup.Add(1)
+		go func() {
+			defer waitGroup.Done()
+			<-startLine
+			result, requestError := roomService.CreateWithIdempotency(ctx, service.CreateRoomInput{
+				Nickname: "同名", Latitude: 35.658, Longitude: 139.7016, SearchRange: 3,
+			}, idempotencyKey)
+			results <- result
+			errorsByRequest <- requestError
+		}()
+	}
+	close(startLine)
+	waitGroup.Wait()
+	close(results)
+	close(errorsByRequest)
+
+	for requestError := range errorsByRequest {
+		if requestError != nil {
+			t.Fatalf("create room: %v", requestError)
+		}
+	}
+	var expected service.CreateRoomResult
+	for result := range results {
+		if expected.Room.ID == "" {
+			expected = result
+			defer func(roomID string) {
+				if _, cleanupError := pool.Exec(context.Background(), "DELETE FROM rooms WHERE id = $1", roomID); cleanupError != nil {
+					t.Errorf("clean up room: %v", cleanupError)
+				}
+			}(result.Room.ID)
+			continue
+		}
+		if result.Room != expected.Room || result.Participant != expected.Participant || result.SessionToken != expected.SessionToken {
+			t.Fatalf("idempotent create returned different results: got %+v, want %+v", result, expected)
+		}
+	}
+
+	var roomCount int
+	var participantCount int
+	var requestRowCount int
+	var storedKeyHash []byte
+	if err := pool.QueryRow(ctx, "SELECT COUNT(*) FROM rooms WHERE id = $1", expected.Room.ID).Scan(&roomCount); err != nil {
+		t.Fatalf("count rooms: %v", err)
+	}
+	if err := pool.QueryRow(ctx, "SELECT COUNT(*) FROM participants WHERE room_id = $1", expected.Room.ID).Scan(&participantCount); err != nil {
+		t.Fatalf("count participants: %v", err)
+	}
+	if err := pool.QueryRow(ctx, "SELECT COUNT(*) FROM room_idempotency_requests WHERE room_id = $1", expected.Room.ID).Scan(&requestRowCount); err != nil {
+		t.Fatalf("count idempotency requests: %v", err)
+	}
+	if err := pool.QueryRow(ctx, "SELECT key_hash FROM room_idempotency_requests WHERE room_id = $1", expected.Room.ID).Scan(&storedKeyHash); err != nil {
+		t.Fatalf("read stored key hash: %v", err)
+	}
+	if roomCount != 1 || participantCount != 1 || requestRowCount != 1 {
+		t.Fatalf("stored counts = rooms:%d participants:%d requests:%d", roomCount, participantCount, requestRowCount)
+	}
+	if len(storedKeyHash) != 32 || bytes.Equal(storedKeyHash, []byte(idempotencyKey)) {
+		t.Fatalf("stored key hash has unsafe representation: length = %d", len(storedKeyHash))
+	}
+	if _, err := pool.Exec(ctx, "DELETE FROM rooms WHERE id = $1", expected.Room.ID); err != nil {
+		t.Fatalf("delete room for cascade verification: %v", err)
+	}
+	if err := pool.QueryRow(ctx, "SELECT COUNT(*) FROM room_idempotency_requests WHERE room_id = $1", expected.Room.ID).Scan(&requestRowCount); err != nil {
+		t.Fatalf("count idempotency requests after room delete: %v", err)
+	}
+	if requestRowCount != 0 {
+		t.Fatalf("idempotency requests after room delete = %d, want 0", requestRowCount)
+	}
+}
+
+func TestRoomJoinIdempotencyIntegration(t *testing.T) {
+	if os.Getenv(integrationTestEnvironment) != "1" {
+		t.Skip("set INTEGRATION_TEST=1 to run PostgreSQL integration tests")
+	}
+
+	ctx := context.Background()
+	pool, err := pgxpool.New(ctx, "")
+	if err != nil {
+		t.Fatalf("connect to PostgreSQL: %v", err)
+	}
+	t.Cleanup(pool.Close)
+
+	idempotencyHMACKey := bytes.Repeat([]byte{0x62}, security.MinIdempotencyHMACKeyBytes)
+	roomService := service.NewRoomService(
+		roompostgres.NewRoomRepository(pool), security.RandomGenerator{}, service.SystemClock{},
+		service.WithRoomIdempotencyKey(idempotencyHMACKey),
+	)
+	created, err := roomService.Create(ctx, service.CreateRoomInput{
+		Nickname: "ホスト", Latitude: 35.658, Longitude: 139.7016, SearchRange: 3,
+	})
+	if err != nil {
+		t.Fatalf("create room: %v", err)
+	}
+	t.Cleanup(func() {
+		if _, cleanupError := pool.Exec(context.Background(), "DELETE FROM rooms WHERE id = $1", created.Room.ID); cleanupError != nil {
+			t.Errorf("clean up room: %v", cleanupError)
+		}
+	})
+
+	const requestCount = 8
+	const firstKey = "550e8400-e29b-41d4-a716-446655440101"
+	results := make(chan service.JoinRoomResult, requestCount)
+	errorsByRequest := make(chan error, requestCount)
+	startLine := make(chan struct{})
+	var waitGroup sync.WaitGroup
+	for range requestCount {
+		waitGroup.Add(1)
+		go func() {
+			defer waitGroup.Done()
+			<-startLine
+			result, requestError := roomService.JoinWithIdempotency(ctx, created.Room.JoinCode, "同名", firstKey)
+			results <- result
+			errorsByRequest <- requestError
+		}()
+	}
+	close(startLine)
+	waitGroup.Wait()
+	close(results)
+	close(errorsByRequest)
+	for requestError := range errorsByRequest {
+		if requestError != nil {
+			t.Fatalf("join room: %v", requestError)
+		}
+	}
+
+	var expected service.JoinRoomResult
+	for result := range results {
+		if expected.Participant.ID == "" {
+			expected = result
+			continue
+		}
+		if result.Room != expected.Room || result.Participant != expected.Participant || result.SessionToken != expected.SessionToken {
+			t.Fatalf("idempotent join returned different results: got %+v, want %+v", result, expected)
+		}
+	}
+
+	const secondKey = "550e8400-e29b-41d4-a716-446655440102"
+	separateMember, err := roomService.JoinWithIdempotency(ctx, created.Room.JoinCode, "同名", secondKey)
+	if err != nil {
+		t.Fatalf("join same nickname with another key: %v", err)
+	}
+	if separateMember.Participant.ID == expected.Participant.ID {
+		t.Fatal("different idempotency keys returned the same participant")
+	}
+	if _, err := roomService.JoinWithIdempotency(ctx, created.Room.JoinCode, "別名", firstKey); !errors.Is(err, service.ErrIdempotencyConflict) {
+		t.Fatalf("reuse key with another payload error = %v, want ErrIdempotencyConflict", err)
+	}
+
+	if _, err := roomService.StartGenreVoting(ctx, created.Room.ID, created.SessionToken); err != nil {
+		t.Fatalf("start genre voting: %v", err)
+	}
+	replayed, err := roomService.JoinWithIdempotency(ctx, created.Room.JoinCode, "同名", firstKey)
+	if err != nil {
+		t.Fatalf("replay join after room transition: %v", err)
+	}
+	if !replayed.IdempotencyReplayed || replayed.Participant.ID != expected.Participant.ID || replayed.Room.Status != domain.RoomStatusLobby {
+		t.Fatalf("replayed result = %+v", replayed)
+	}
+
+	var participantCount int
+	if err := pool.QueryRow(ctx, "SELECT COUNT(*) FROM participants WHERE room_id = $1", created.Room.ID).Scan(&participantCount); err != nil {
+		t.Fatalf("count participants: %v", err)
+	}
+	if participantCount != 3 {
+		t.Fatalf("participant count = %d, want 3", participantCount)
+	}
+}
 
 func TestRoomJoinConcurrencyIntegration(t *testing.T) {
 	if os.Getenv(integrationTestEnvironment) != "1" {
