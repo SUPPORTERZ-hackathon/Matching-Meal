@@ -1,12 +1,24 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { inviteUrl, isLocalOrigin, isRoomId, normalizeJoinCode, parseErrorResponse, parseSessionResponse, parseSnapshotResponse, parseStoredSessions, roomWaitingUrl, validNickname } from "./room-data.ts";
+import { inviteUrl, isLocalOrigin, isRoomId, normalizeJoinCode, parseErrorResponse, parseSessionResponse, parseSnapshotResponse, parseStoredSessions, roomWaitingUrl, roomResumeUrl, validNickname } from "./room-data.ts";
 
 const room = { id: "550e8400-e29b-41d4-a716-446655440000", joinCode: "7K9M2QXR", status: "lobby", version: 1, expiresAt: "2026-11-01T12:00:00Z" };
 const host = { id: "8d5b0ad5-e8c6-47f2-8e87-f6180b175759", nickname: "ホスト", role: "host" };
 const member = { id: "3a3cf4d0-c2ef-4f40-bcb8-61f0ce680916", nickname: "ホスト", role: "member" };
 const session = { room, participant: host, sessionToken: "test-opaque-token" };
 const snapshot = { room, currentParticipantId: host.id, participants: [host, member] };
+
+test("実状態に応じて進行済みルームへ復帰し、不正/期限切れでは遷移しない", () => {
+  const paths = { lobby: "room-waiting", genre_voting: "genre-vote", restaurant_searching: "genre-result", restaurant_voting: "restaurant-vote", decided: "restaurant-result" };
+  for (const [status, path] of Object.entries(paths)) {
+    assert.equal(roomResumeUrl({ ...room, status }), `/${path}?room=${room.id}`);
+  }
+  assert.equal(roomResumeUrl({ ...room, status: "expired" }), undefined);
+  assert.equal(roomResumeUrl({ ...room, status: "unexpected" }), undefined);
+  assert.equal(roomResumeUrl({ ...room, status: "toString" }), undefined);
+  assert.equal(roomResumeUrl({ ...room, id: "invalid" }), undefined);
+  assert.equal(roomResumeUrl({ ...room, id: room.id.toUpperCase() }), `/room-waiting?room=${room.id}`);
+});
 
 test("APIの8文字コードを正規化し、紛らわしい文字・不正UUIDを拒否する", () => {
   assert.equal(normalizeJoinCode(" 7k9m2qxr "), room.joinCode);

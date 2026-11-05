@@ -21,7 +21,7 @@ export default async function RestaurantResultPage({ searchParams }: RestaurantR
   const genre = resolveRestaurantGenre(query.genre, GENRES);
   if (query.room === undefined && query.demo === "1" && process.env.NODE_ENV !== "development") notFound();
   const demo = isDevelopmentDemo(query.demo, process.env.NODE_ENV, query.room);
-  // 正式な結果取得は未実装。明示デモ以外ではモックを正式結果として供給しない。
+  // 明示デモ以外ではモックを結果として供給しない。実ルームは上のAPI入口へ渡す。
   const result = demo && genre && typeof query.restaurant === "string" && query.restaurant ? createMockRestaurantResult(genre.id, query.restaurant) : null;
-  return <RestaurantResultScreen result={result} genres={GENRES} restaurants={genre && demo ? createMockRestaurants(genre) : []} roomId={demo ? PROTOTYPE_ROOM_ID : undefined} isPrototype={demo}>{!demo && <p className="meal-flow-notice">正式な店舗結果の取得は準備中です。<Link href="/home-preview">ホームに戻る</Link></p>}</RestaurantResultScreen>;
+  return <RestaurantResultScreen result={result} genres={GENRES} restaurants={genre && demo ? createMockRestaurants(genre) : []} roomId={demo ? PROTOTYPE_ROOM_ID : undefined} isPrototype={demo}>{!demo && <p className="meal-flow-notice">参加したタブからルームの結果を開いてください。<Link href="/home-preview">ホームに戻る</Link></p>}</RestaurantResultScreen>;
 }

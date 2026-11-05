@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MapPin, LocateFixed, X, ArrowLeft } from "lucide-react";
 import { AppHeader } from "@/components/common/app-header";
@@ -11,7 +11,7 @@ import { FixedBottomAction } from "@/components/common/fixed-bottom-action";
 import { Button } from "@/components/ui/button";
 import { StepProgress } from "@/components/common/step-progress";
 import { createRoom } from "../room/room-api";
-import { requestCurrentLocation, type CurrentCoordinates, type CurrentLocationErrorCode } from "../room/current-location";
+import { requestCurrentLocation, type CurrentCoordinates, type CurrentLocationErrorCode, type CurrentLocationMode } from "../room/current-location";
 import { roomWaitingUrl, validNickname } from "../room/room-data";
 import { roomStorageAvailable, saveRoomSession } from "../room/room-session";
 import styles from "./room-create.module.css";
@@ -27,9 +27,11 @@ const RADIUS_OPTIONS = [
 const locationErrorMessages: Record<CurrentLocationErrorCode, string> = {
   unsupported: "このブラウザーでは現在地を取得できません。対応ブラウザーで再度お試しください。",
   permission_denied: "現在地の利用が許可されていません。ブラウザーの権限設定を確認して再度お試しください。",
-  position_unavailable: "現在地を取得できませんでした。通信環境を確認して再度お試しください。",
-  timeout: "現在地の取得がタイムアウトしました。場所を変えるか、時間をおいて再度お試しください。",
+  position_unavailable: "端末から現在地を取得できませんでした。通信環境と端末の位置情報設定を確認し、再試行してください。",
+  timeout: "取得方法を変えても現在地を取得できませんでした。通信環境や位置情報設定を確認し、時間をおいて再試行してください。",
   invalid_coordinates: "取得した現在地を使用できませんでした。再度お試しください。",
+  insecure_context: "現在地の取得にはHTTPS、またはこの端末のlocalhostでアプリを開いてください。",
+  cancelled: "現在地の取得を中止しました。",
 };
 
 export function RoomCreateScreen() {
@@ -38,11 +40,15 @@ export function RoomCreateScreen() {
   const [coordinates, setCoordinates] = useState<CurrentCoordinates | null>(null);
   const [locating, setLocating] = useState<boolean>(false);
   const [locationError, setLocationError] = useState<string>("");
+  const [locationMode, setLocationMode] = useState<CurrentLocationMode>("high");
+  const [locationInfo, setLocationInfo] = useState<string>("");
   const [radiusIndex, setRadiusIndex] = useState(2);
   const [creating, setCreating] = useState<boolean>(false);
   const [createError, setCreateError] = useState<string>("");
   const creatingRef = useRef<boolean>(false);
   const locatingRef = useRef<boolean>(false);
+  const locationRequest = useRef<AbortController | null>(null);
+  useEffect(() => () => { locationRequest.current?.abort(); }, []);
 
   const radius = RADIUS_OPTIONS[radiusIndex];
 
@@ -54,14 +60,20 @@ export function RoomCreateScreen() {
     setLocating(true);
     setCoordinates(null);
     setLocationError("");
+    setLocationInfo("");
     setCreateError("");
-    const result = await requestCurrentLocation();
+    const controller = new AbortController();
+    locationRequest.current = controller;
+    const result = await requestCurrentLocation(undefined, { signal: controller.signal, onMode: setLocationMode });
+    if (controller.signal.aborted) return;
     if (result.ok) {
       setCoordinates(result.coordinates);
+      setLocationInfo(result.mode === "standard" ? "標準モードで現在地を取得しました。位置の精度は端末の環境によって異なります。" : "現在地を取得しました。");
     } else {
       setLocationError(locationErrorMessages[result.code]);
     }
     locatingRef.current = false;
+    locationRequest.current = null;
     setLocating(false);
   }
 
@@ -69,6 +81,7 @@ export function RoomCreateScreen() {
     if (locatingRef.current || creatingRef.current) return;
     setCoordinates(null);
     setLocationError("");
+    setLocationInfo("");
   }
 
   async function submitRoom() {
@@ -86,7 +99,7 @@ export function RoomCreateScreen() {
       return;
     }
     setCreateError(["NETWORK_ERROR", "TIMEOUT", "INVALID_RESPONSE"].includes(result.error.code)
-      ? "作成結果を確認できませんでした。再送すると別のルームが作成される可能性があります。接続を確認してください。" : result.error.message);
+      ? "作成結果を確認できませんでした。接続を確認し、入力内容を変えずにもう一度お試しください。" : result.error.status === 503 ? "サービスを利用できませんでした。時間をおいて同じ内容で再試行してください。続く場合は管理者に設定状況をご確認ください。" : result.error.message);
     creatingRef.current = false; setCreating(false);
   }
 
@@ -142,6 +155,7 @@ export function RoomCreateScreen() {
                 id="host-nickname"
                 type="text"
                 value={nickname}
+                disabled={creating}
                 maxLength={12}
                 placeholder="例：ゆうき"
                 onChange={(event) => setNickname(event.target.value)}
@@ -187,9 +201,13 @@ export function RoomCreateScreen() {
                 onClick={locateCurrentPosition}
                 >
                 <LocateFixed aria-hidden="true" />
-                {coordinates ? "現在地を再取得" : "現在地を取得"}
+                {locating ? "現在地を取得中…" : coordinates ? "現在地を再取得" : locationError ? "現在地の取得を再試行" : "現在地を取得"}
                 </Button>
+                {locating && <p className={styles.locationStatus} role="status">{locationMode === "standard" ? "標準モードへ切り替えて取得しています。最大20秒ほどかかります。" : "現在地を取得しています。取得できない場合は方法を切り替えます。"}</p>}
+                {locationInfo && <p className={styles.locationStatus} role="status">{locationInfo}</p>}
                 {locationError && <p id="current-location-error" className={styles.locationError} role="alert">{locationError}</p>}
+                {locationError && <p className={styles.locationStatus}>Edgeでは、このサイトの位置情報の権限と、Windowsの「位置情報サービス」「デスクトップ アプリの位置情報へのアクセス」も確認してください。</p>}
+                <p className={styles.locationStatus}>駅名や住所の手入力には対応していません。</p>
             </div>
           </div>
 
@@ -210,6 +228,7 @@ export function RoomCreateScreen() {
                 max={4}
                 step={1}
                 value={radiusIndex}
+                disabled={creating}
                 onChange={(event) => setRadiusIndex(Number(event.target.value))}
                 />
 
@@ -225,6 +244,7 @@ export function RoomCreateScreen() {
           </div>
           <p className={styles.apiNote}>取得した現在地は店舗検索にだけ使用し、座標の数値は画面やURLに表示しません。</p>
           {createError && <p className={styles.apiError} role="alert">{createError}</p>}
+          {createError && <p className={styles.locationStatus}>同じ内容で再試行できます。入力内容を変更すると新しい作成操作になります。作成結果が不明な間は再読み込みを避けてください。</p>}
         </section>
 
         <FixedBottomAction><BottomAction>

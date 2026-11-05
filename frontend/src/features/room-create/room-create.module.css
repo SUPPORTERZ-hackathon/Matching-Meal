@@ -185,7 +185,8 @@
   align-self: center;
   height: auto;
   border-radius: 10px;
-  font-size: 10px;
+  min-height: 44px;
+  font-size: .8125rem;
   font-weight: 700;
   color: hsl(3, 84%, 56%);
 }
@@ -200,9 +201,11 @@
 .locationError {
   margin: 2px 0 0;
   color: var(--primary-dark);
-  font-size: 11px;
+  font-size: .8125rem;
   line-height: 1.6;
 }
+
+.locationStatus { margin: 0; color: var(--muted-foreground); font-size: .8125rem; line-height: 1.7; overflow-wrap: anywhere; }
 
 .radiusHeading {
   display: flex;

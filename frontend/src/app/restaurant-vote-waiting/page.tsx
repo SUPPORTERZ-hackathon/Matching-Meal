@@ -21,7 +21,7 @@ export default async function RestaurantVoteWaitingPage({ searchParams }: Waitin
     roomId={typeof query.room === "string" && isRoomId(query.room) ? query.room.toLowerCase() : undefined} screen="waiting" />;
   if (query.room === undefined && query.demo === "1" && process.env.NODE_ENV !== "development") notFound();
   const demo = isDevelopmentDemo(query.demo, process.env.NODE_ENV, query.room);
-  if (!demo) return <FlowMessage step="shop" title="店舗の投票状況は準備中です" description="参加者の店舗投票の完了状況と最終結果は、まだ接続されていません。" />;
+  if (!demo) return <FlowMessage step="shop" title="ルーム情報を確認してください" description="店舗の投票状況を確認するには、作成・参加したタブからルームを開いてください。" />;
   const genre = resolveRestaurantGenre(query.genre, GENRES);
   // 表示用に先頭候補を選ぶだけで、勝者の決定や投票集計は行わない。
   const restaurant = demo && genre ? createMockRestaurants(genre)[0] : undefined;

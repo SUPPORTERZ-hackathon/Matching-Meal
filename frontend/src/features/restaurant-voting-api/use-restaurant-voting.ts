@@ -5,6 +5,7 @@ import { ROOM_CONFIG, isRoomId, type RoomError, type RoomSession } from "../room
 import { loadRoomSession } from "../room/room-session";
 import { getRestaurantCandidates, getRestaurantVoting, searchRestaurantCandidates } from "./restaurant-voting-api";
 import type { RestaurantCandidatesSnapshot, RestaurantVotingSnapshot } from "./restaurant-voting-data";
+import { createRestaurantCandidateLoader, type CandidateReadReason } from "./restaurant-candidate-loader";
 
 export type RestaurantVotingView = { kind: "loading" } | { kind: "error"; error: RoomError }
   | { kind: "ready"; session: RoomSession; candidates: RestaurantCandidatesSnapshot; voting: RestaurantVotingSnapshot; staleError?: RoomError };
@@ -12,29 +13,31 @@ export type RestaurantVotingView = { kind: "loading" } | { kind: "error"; error:
 export function useRestaurantVoting(roomId: string | undefined, polling: boolean) {
   const [view, setView] = useState<RestaurantVotingView>({ kind: "loading" });
   const refreshRef = useRef<(() => Promise<void>) | null>(null);
+  const loaderRef = useRef<{ identity: string; loader: ReturnType<typeof createRestaurantCandidateLoader> } | null>(null);
   useEffect(() => {
-    let disposed = false, inFlight = false, terminal = false, refreshQueued = false;
+    let disposed = false, inFlight = false, terminal = false;
+    let queued: CandidateReadReason | undefined;
     let timer: number | undefined, active: AbortController | undefined;
     const clearTimer = () => { if (timer !== undefined) window.clearTimeout(timer); timer = undefined; };
-    async function refresh(force = false) {
+    async function refresh(reason: CandidateReadReason = "read", force = false) {
       if (disposed || (!force && (document.hidden || terminal))) return;
-      if (inFlight) { if (force) refreshQueued = true; return; }
+      if (inFlight) { if (force) queued = reason === "retry" ? "retry" : queued ?? reason; return; }
       clearTimer();
       const validId = roomId && isRoomId(roomId) ? roomId.toLowerCase() : undefined;
       const session = validId ? loadRoomSession(validId) : undefined;
       if (!session) { terminal = true; setView({ kind: "error", error: { code: "SESSION_MISSING", status: 0, message: "このタブにルームの参加情報がありません。作成・参加したタブを開いてください。" } }); return; }
+      const identity = `${session.room.id}:${session.participant.id}`;
+      if (loaderRef.current?.identity !== identity) loaderRef.current = { identity, loader: createRestaurantCandidateLoader(getRestaurantCandidates, searchRestaurantCandidates) };
       inFlight = true; active = new AbortController();
       let pendingCandidates = false;
       try {
-        let candidateResult = await getRestaurantCandidates(session, active.signal);
-        if (!candidateResult.ok && candidateResult.error.code === "RESTAURANT_CANDIDATES_NOT_READY") {
-          if (session.participant.role === "host") candidateResult = await searchRestaurantCandidates(session, active.signal);
-          else pendingCandidates = true;
-        }
+        const candidateResult = await loaderRef.current.loader.load(session, reason, active.signal);
+        pendingCandidates = !candidateResult.ok && candidateResult.error.code === "RESTAURANT_CANDIDATES_NOT_READY";
         if (disposed || document.hidden || (!candidateResult.ok && candidateResult.error.code === "CANCELLED")) return;
         if (!candidateResult.ok) {
           if (pendingCandidates) setView((previous) => previous.kind === "ready" ? previous : { kind: "loading" });
-          else { terminal = [400, 401, 403, 404].includes(candidateResult.error.status) || candidateResult.error.code === "INVALID_RESPONSE"; setView({ kind: "error", error: candidateResult.error }); }
+          else { terminal = [400, 401, 403, 404].includes(candidateResult.error.status) || candidateResult.error.code === "INVALID_RESPONSE";
+            setView(previous => previous.kind === "ready" && !terminal ? { ...previous, staleError: candidateResult.error } : { kind: "error", error: candidateResult.error }); }
           return;
         }
         const votingResult = await getRestaurantVoting(session, active.signal);
@@ -53,13 +56,13 @@ export function useRestaurantVoting(roomId: string | undefined, polling: boolean
             : { kind: "ready", session, candidates: candidateResult.data, voting: votingResult.data });
       } finally {
         inFlight = false;
-        if (!disposed && refreshQueued && !document.hidden) { refreshQueued = false; void refresh(true); }
+        if (!disposed && queued && !document.hidden) { const next = queued; queued = undefined; void refresh(next, true); }
         else if ((pendingCandidates || polling) && !disposed && !terminal && !document.hidden) timer = window.setTimeout(() => { void refresh(); }, ROOM_CONFIG.pollInterval);
       }
     }
-    refreshRef.current = () => refresh(true);
-    function resume() { clearTimer(); if (document.hidden) active?.abort(); else if (!terminal) void refresh(true); }
-    queueMicrotask(() => { void refresh(true); });
+    refreshRef.current = () => refresh("retry", true);
+    function resume() { clearTimer(); if (document.hidden) active?.abort(); else if (!terminal) void refresh("read", true); }
+    queueMicrotask(() => { if (!disposed) void refresh("initial", true); });
     document.addEventListener("visibilitychange", resume); window.addEventListener("online", resume); window.addEventListener("focus", resume);
     return () => { disposed = true; clearTimer(); active?.abort(); refreshRef.current = null;
       document.removeEventListener("visibilitychange", resume); window.removeEventListener("online", resume); window.removeEventListener("focus", resume); };
