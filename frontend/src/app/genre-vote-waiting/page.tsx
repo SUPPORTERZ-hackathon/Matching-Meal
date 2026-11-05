@@ -1,5 +1,4 @@
-import type { Metadata, Viewport } from "next";
-import { GENRE_ICON_PATH, GENRE_MANIFEST_PATH, GENRE_THEME_COLOR } from "@/features/genre-vote/prototype-config";
+import type { Metadata } from "next";
 import { GenreVoteWaitingPreview } from "@/features/genre-vote-waiting/genre-vote-waiting-preview";
 import { isDevelopmentDemo, type QueryValue } from "@/features/ui-flow/development-demo";
 import { FlowMessage } from "@/features/ui-flow/flow-message";
@@ -10,11 +9,7 @@ import { normalizeVotingRoomId } from "@/features/genre-voting-api/genre-voting-
 export const metadata: Metadata = {
   title: "ジャンル投票待機 | メシマッチ",
   description: "みんなのジャンル投票の完了を待つUIプロトタイプ。",
-  manifest: GENRE_MANIFEST_PATH,
-  appleWebApp: { capable: true, title: "メシマッチ", statusBarStyle: "default" },
-  icons: { apple: `${GENRE_ICON_PATH}/apple-180.png`, icon: `${GENRE_ICON_PATH}/icon-192.png` },
 };
-export const viewport: Viewport = { themeColor: GENRE_THEME_COLOR };
 
 type WaitingPageProps = { searchParams: Promise<{ demo?: QueryValue; room?: QueryValue }> };
 export default async function GenreVoteWaitingPage({ searchParams }: WaitingPageProps) {

@@ -1,9 +1,9 @@
 # ジャンル投票画面・UIプロトタイプ
 
 - Status: Verified
-- Last updated: 2026-10-31
+- Last updated: 2026-11-06
 - Related issue: None
-- Related specifications: ../components/common-ui.md, ../themes/design-system.md, genre-vote-waiting.md
+- Related specifications: ../components/common-ui.md, ../themes/design-system.md, genre-vote-waiting.md, ../providers/pwa.md
 - Implementation files: frontend/src/app/genre-vote/, frontend/src/features/genre-vote/, frontend/public/genres/, frontend/public/genre-vote/
 
 ## 実API連携の現行契約（2026-11-01）
@@ -126,7 +126,9 @@ prefers-reduced-motionはCSSとmatchMediaで検出。回転/登場移動/待ち�
 
 ## PWA対応方針
 
-既存はviewport-fit=cover、フォント、safe-areaのみ。manifest・アイコン・theme-color・standalone・Service Workerはない。今回`/genre-vote/manifest.webmanifest`と画面専用の192/512px PNG・180px Appleアイコンを用意し、start_url/scope/idを/genre-voteに限定する。Next.jsのmanifest規約はappルート用のため、この画面専用manifestは型付きデータと明示的な静的Route Handlerで配信する。Content-Typeはapplication/manifest+json。page.tsxのmetadata/viewportだけにmanifest・Apple設定・テーマ色を追加し、他ページの設定は変えない。アイコンは既存ロゴを参考にしたローカルSVGから生成する。
+2026-11-06更新：PWAの現行契約は[アプリ全体のPWA仕様](../providers/pwa.md)を正とする。rootの`/manifest.webmanifest`を全画面が参照し、start_url=/home-preview、scope=/、display=standalone。旧アプリIDと既存192/512px画像URLを保持し、旧manifest URLは共通URLへ転送する。以下の画面限定PWA設定・過去の検証ログは初期実装の履歴であり、全画面にmanifestを追加しないという条件は現行契約ではない。
+
+初期実装ではviewport-fit=cover、フォント、safe-areaに加えて`/genre-vote/manifest.webmanifest`と192/512px PNG・180px Appleアイコンを用意し、start_url/scope/idを/genre-voteに限定していた。画面専用manifestを型付きデータと静的Route Handlerで配信し、page.tsxだけにmanifest・Apple設定・テーマ色を追加していた。アイコンは既存ロゴを参考にしたローカルSVGから生成した。
 
 Service WorkerはAPI/他画面のキャッシュに影響するため追加しない。オフライン動作は対象外。manifest/アイコン/viewportを検証し、実機HTTPSでのインストール確認とは区別して報告する。
 
@@ -143,7 +145,7 @@ Figmaは3件・外部写真・「戻す」・どちらの選択も同じindex更
 3. ボタンとスワイプで同じ選択結果、アニメーション中の二重操作抑止、退場後の次カード、全16件完了と再試行を確認。
 4. 320/375/390/430/768/1024px、短い画面/横向きで横スクロール・内部スクロール・下部見切れなし。実際のタッチイベントで縦スクロールを検証する。実機の操作感・safe-areaは別途未検証として報告する。
 5. Tab/Enter/Space・focus・読み上げ属性・reduced-motionを検証。既存/と/ui-previewと/api/healthに回帰なし。
-6. manifest/アイコン/テーマ色/viewport、他ページにmanifest/SWが追加されないことを確認する。
+6. manifest/アイコン/テーマ色/viewportが全ページで共通設定を参照し、SWが追加されないことを確認する（現行PWA条件は../providers/pwa.md）。
 7. Docker Composeでfrontendのlint/typecheck/buildとロジックのNode標準テストを実行する。Go test/vetはGo/API/DB変更なしのため対象外。
 
 ## 実装ファイル一覧
@@ -151,7 +153,7 @@ Figmaは3件・外部写真・「戻す」・どちらの選択も同じindex更
 | 区分 | リポジトリ相対パス |
 | --- | --- |
 | 画面 | frontend/src/app/genre-vote/page.tsx |
-| manifest配信 | frontend/src/app/genre-vote/manifest.webmanifest/route.ts |
+| manifest配信 | frontend/src/app/manifest.ts（共通）、frontend/src/app/genre-vote/manifest.webmanifest/route.ts（旧URL転送） |
 | ジャンルデータ・型 | frontend/src/features/genre-vote/genres.ts |
 | 投票データ・順序/重複防止 | frontend/src/features/genre-vote/vote-state.ts |
 | ジェスチャー・動きの定数/純粋関数 | frontend/src/features/genre-vote/swipe-config.ts |
@@ -159,8 +161,8 @@ Figmaは3件・外部写真・「戻す」・どちらの選択も同じindex更
 | 画面UI・完了・フォーカス | frontend/src/features/genre-vote/genre-vote-screen.tsx |
 | 写真/プレースホルダー | frontend/src/features/genre-vote/genre-artwork.tsx |
 | 画面専用スタイル | frontend/src/features/genre-vote/genre-vote.module.css |
-| PWAのURL/色定数 | frontend/src/features/genre-vote/prototype-config.ts |
-| 型付きmanifest | frontend/src/features/genre-vote/pwa-manifest.ts |
+| PWAのURL/色定数 | frontend/src/features/pwa/pwa-config.ts（旧prototype-config.tsはQRアイコン参照名の互換export） |
+| 型付きmanifest | frontend/src/features/pwa/pwa-manifest.ts |
 | ロジックテスト | frontend/src/features/genre-vote/genre-vote.test.mjs |
 | 写真追加手順 | frontend/public/genres/README.md |
 | アイコン原本 | frontend/public/genre-vote/icons/source.svg |
