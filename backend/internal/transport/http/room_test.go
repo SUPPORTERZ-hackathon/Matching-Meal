@@ -15,6 +15,7 @@ import (
 
 	"meal/backend/internal/domain"
 	"meal/backend/internal/repository"
+	"meal/backend/internal/security"
 	"meal/backend/internal/service"
 )
 
@@ -123,6 +124,90 @@ func TestRoomHandlerCreate(t *testing.T) {
 	}
 	if strings.Contains(recorder.Body.String(), "35.658") || strings.Contains(recorder.Body.String(), "139.7016") {
 		t.Fatalf("response exposes search location: %s", recorder.Body.String())
+	}
+}
+
+type idempotencyHandlerRepositoryStub struct {
+	handlerRepositoryStub
+}
+
+func (stub idempotencyHandlerRepositoryStub) CreateIdempotent(
+	ctx context.Context,
+	_ repository.RoomIdempotencyClaim,
+	params repository.CreateRoomParams,
+) (domain.Room, domain.Participant, bool, error) {
+	room, participant, err := stub.Create(ctx, params)
+	return room, participant, true, err
+}
+
+func (idempotencyHandlerRepositoryStub) WithinIdempotentTransaction(
+	_ context.Context,
+	_ repository.RoomIdempotencyClaim,
+	_ func(repository.RoomTransaction) (domain.Room, domain.Participant, error),
+) (domain.Room, domain.Participant, bool, error) {
+	return domain.Room{}, domain.Participant{}, false, errors.New("unexpected idempotent transaction")
+}
+
+func TestRoomHandlerCreateIdempotencyReplayHeader(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	hmacKey := bytes.Repeat([]byte{0x51}, security.MinIdempotencyHMACKeyBytes)
+	roomService := service.NewRoomService(
+		idempotencyHandlerRepositoryStub{},
+		&handlerGeneratorStub{},
+		handlerClockStub{},
+		service.WithRoomIdempotencyKey(hmacKey),
+	)
+	router := gin.New()
+	router.POST("/api/v1/rooms", NewRoomHandler(roomService).Create)
+
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/rooms", strings.NewReader(`{"nickname":"ひかる","searchLocation":{"latitude":35.658,"longitude":139.7016},"searchRange":3}`))
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set(idempotencyKeyHeader, "550e8400-e29b-41d4-a716-446655440010")
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusCreated {
+		t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
+	}
+	if recorder.Header().Get(idempotencyReplayedHeader) != "true" {
+		t.Fatalf("%s = %q", idempotencyReplayedHeader, recorder.Header().Get(idempotencyReplayedHeader))
+	}
+}
+
+func TestRoomHandlerCreateRejectsInvalidIdempotencyKey(t *testing.T) {
+	tests := []struct {
+		name   string
+		values []string
+	}{
+		{name: "too short", values: []string{"short"}},
+		{name: "invalid character", values: []string{"550e8400-e29b-41d4-a716-44665544001!"}},
+		{name: "multiple values", values: []string{"550e8400-e29b-41d4-a716-446655440011", "550e8400-e29b-41d4-a716-446655440012"}},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			gin.SetMode(gin.TestMode)
+			router := gin.New()
+			router.POST("/api/v1/rooms", NewRoomHandler(service.NewRoomService(handlerRepositoryStub{}, &handlerGeneratorStub{}, handlerClockStub{})).Create)
+			request := httptest.NewRequest(http.MethodPost, "/api/v1/rooms", strings.NewReader(`{"nickname":"ひかる","searchLocation":{"latitude":35.658,"longitude":139.7016},"searchRange":3}`))
+			request.Header.Set("Content-Type", "application/json")
+			for _, value := range test.values {
+				request.Header.Add(idempotencyKeyHeader, value)
+			}
+			recorder := httptest.NewRecorder()
+			router.ServeHTTP(recorder, request)
+
+			if recorder.Code != http.StatusBadRequest {
+				t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
+			}
+			var response apiErrorResponse
+			if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+				t.Fatalf("decode response: %v", err)
+			}
+			if response.Error.Code != "INVALID_IDEMPOTENCY_KEY" {
+				t.Fatalf("error code = %q", response.Error.Code)
+			}
+		})
 	}
 }
 
@@ -261,6 +346,60 @@ func TestRoomHandlerJoin(t *testing.T) {
 	}
 	if response.Data.SessionToken != "member-token" {
 		t.Fatalf("session token = %q", response.Data.SessionToken)
+	}
+}
+
+type idempotencyJoinHandlerRepositoryStub struct {
+	joinHandlerRepositoryStub
+	participant domain.Participant
+}
+
+func (idempotencyJoinHandlerRepositoryStub) CreateIdempotent(
+	_ context.Context,
+	_ repository.RoomIdempotencyClaim,
+	_ repository.CreateRoomParams,
+) (domain.Room, domain.Participant, bool, error) {
+	return domain.Room{}, domain.Participant{}, false, errors.New("unexpected idempotent create")
+}
+
+func (stub idempotencyJoinHandlerRepositoryStub) WithinIdempotentTransaction(
+	_ context.Context,
+	_ repository.RoomIdempotencyClaim,
+	_ func(repository.RoomTransaction) (domain.Room, domain.Participant, error),
+) (domain.Room, domain.Participant, bool, error) {
+	return stub.room, stub.participant, true, nil
+}
+
+func TestRoomHandlerJoinIdempotencyReplayHeader(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	now := handlerClockStub{}.Now()
+	repositoryStub := idempotencyJoinHandlerRepositoryStub{
+		joinHandlerRepositoryStub: joinHandlerRepositoryStub{room: domain.Room{
+			ID: "room-id", JoinCode: "EB9TY3TS", Status: domain.RoomStatusLobby,
+			Version: 2, ExpiresAt: now.Add(time.Hour),
+		}},
+		participant: domain.Participant{
+			ID: "participant-id", RoomID: "room-id", Nickname: "ひかる", Role: domain.ParticipantRoleMember,
+		},
+	}
+	hmacKey := bytes.Repeat([]byte{0x52}, security.MinIdempotencyHMACKeyBytes)
+	roomService := service.NewRoomService(
+		repositoryStub, joinHandlerGeneratorStub{}, handlerClockStub{}, service.WithRoomIdempotencyKey(hmacKey),
+	)
+	router := gin.New()
+	router.POST("/api/v1/rooms/:roomKey/participants", NewRoomHandler(roomService).Join)
+
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/rooms/EB9TY3TS/participants", strings.NewReader(`{"nickname":"ひかる"}`))
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set(idempotencyKeyHeader, "550e8400-e29b-41d4-a716-446655440013")
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusCreated {
+		t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
+	}
+	if recorder.Header().Get(idempotencyReplayedHeader) != "true" {
+		t.Fatalf("%s = %q", idempotencyReplayedHeader, recorder.Header().Get(idempotencyReplayedHeader))
 	}
 }
 

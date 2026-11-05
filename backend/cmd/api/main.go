@@ -33,6 +33,7 @@ func main() {
 	}
 	defer pool.Close()
 	randomGenerator := security.RandomGenerator{}
+	idempotencyKey, _ := security.DecodeIdempotencyHMACKey(os.Getenv("ROOM_IDEMPOTENCY_HMAC_KEY"))
 	roomRepository := postgres.NewRoomRepository(pool)
 	genreVotingRepository := postgres.NewGenreVotingRepository(pool)
 	restaurantSearchRepository := postgres.NewRestaurantSearchRepository(pool)
@@ -40,7 +41,9 @@ func main() {
 	hotPepperClient := hotpepper.NewClient(
 		&http.Client{Timeout: hotPepperRequestTimeout}, hotPepperGourmetSearchURL, os.Getenv("HOTPEPPER_API_KEY"),
 	)
-	roomService := service.NewRoomService(roomRepository, randomGenerator, service.SystemClock{})
+	roomService := service.NewRoomService(
+		roomRepository, randomGenerator, service.SystemClock{}, service.WithRoomIdempotencyKey(idempotencyKey),
+	)
 	genreVotingService := service.NewGenreVotingService(genreVotingRepository, roomRepository, randomGenerator, service.SystemClock{})
 	restaurantSearchService := service.NewRestaurantSearchService(
 		restaurantSearchRepository, roomRepository, hotPepperClient, randomGenerator, service.SystemClock{},

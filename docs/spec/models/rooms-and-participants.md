@@ -1,9 +1,9 @@
 # ルーム・参加者モデル
 
 - Status: Verified
-- Last updated: 2026-10-30
+- Last updated: 2026-11-05
 - Related issue: None
-- Related specifications: ../services/room-lifecycle.md, ../screens/genre-vote.md
+- Related specifications: ../services/room-lifecycle.md, ../services/room-request-idempotency.md, ../screens/genre-vote.md
 - Implementation files: ../../backend/internal/domain/room.go, ../../backend/internal/security/random.go, ../../backend/internal/repository/room.go, ../../backend/internal/repository/postgres/room.go, ../../backend/migrations/000002_create_rooms_and_participants.up.sql, ../../backend/migrations/000002_create_rooms_and_participants.down.sql, ../../backend/migrations/000003_create_genre_votes.up.sql, ../../backend/migrations/000003_create_genre_votes.down.sql
 
 ## 目的と対象範囲
@@ -58,8 +58,9 @@
 
 ## セッションと秘密情報
 
-- 参加時に暗号学的乱数32バイトをBase64 URLエンコードしたセッショントークンを発行する。
-- APIレスポンスで平文トークンを返すのは作成・参加成功時の一度だけとする。
+- キーなしの作成・参加では、暗号学的乱数32バイトをBase64 URLエンコードしたセッショントークンを発行する。
+- `Idempotency-Key`付きの作成・参加では、再送時に同じトークンを復元できるHMAC方式を使用する。詳細は`../services/room-request-idempotency.md`に従う。
+- APIレスポンスで平文トークンを返すのは成功時だけとする。冪等再送では初回と同じ成功レスポンスとして再返却する。
 - DBにはトークンのSHA-256ハッシュだけを保存する。
 - 以後のAPIは`Authorization: Bearer <token>`で参加者を特定する。
 - 参加コードは認証情報ではない。QRコードへ含めてよいが、セッショントークンは含めない。
@@ -152,6 +153,7 @@ None。参加者上限20人、最小2人、有効期限24時間は本仕様レ�
 - 承認: ジャンル決定後と店舗候補保存完了前を区別する`restaurant_searching`状態を追加し、新規マイグレーションでCHECK制約を更新する。
 - 完了: `restaurant_searching`をDomainへ追加し、新規マイグレーションでroomsのCHECK制約を更新。
 - 検証: マイグレーションup、down、再upと、ジャンル確定時の`restaurant_searching`遷移を実PostgreSQL・実HTTPで確認。
+- 完了: ルーム作成・参加の冪等レコードと決定的セッショントークンを追加。詳細なモデルと検証結果は`../services/room-request-idempotency.md`を正とする。
 - 残作業: なし。
 - ブロッカー: なし。
 - 関連Issue・PR・コミット: `ae8f14ca`（ルーム状態取得API）、本変更コミット（ジャンル投票保存・集計）、PR未作成。

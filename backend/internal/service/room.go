@@ -14,18 +14,21 @@ import (
 const (
 	joinCodeGenerationAttempts = 5
 	roomOperationTimeout       = 5 * time.Second
+	roomTimestampPrecision     = time.Microsecond
 )
 
 var (
-	ErrRoomCapacityReached   = errors.New("room capacity reached")
-	ErrRoomCodeGeneration    = errors.New("room code generation failed")
-	ErrRoomNotFound          = errors.New("room not found")
-	ErrRoomNotJoinable       = errors.New("room not joinable")
-	ErrUnauthorized          = errors.New("unauthorized")
-	ErrForbidden             = errors.New("forbidden")
-	ErrHostRequired          = errors.New("host required")
-	ErrNotEnoughParticipants = errors.New("not enough participants")
-	ErrInvalidRoomTransition = errors.New("invalid room transition")
+	ErrRoomCapacityReached    = errors.New("room capacity reached")
+	ErrRoomCodeGeneration     = errors.New("room code generation failed")
+	ErrRoomNotFound           = errors.New("room not found")
+	ErrRoomNotJoinable        = errors.New("room not joinable")
+	ErrIdempotencyConflict    = errors.New("idempotency key conflict")
+	ErrIdempotencyUnavailable = errors.New("idempotency unavailable")
+	ErrUnauthorized           = errors.New("unauthorized")
+	ErrForbidden              = errors.New("forbidden")
+	ErrHostRequired           = errors.New("host required")
+	ErrNotEnoughParticipants  = errors.New("not enough participants")
+	ErrInvalidRoomTransition  = errors.New("invalid room transition")
 )
 
 type Clock interface {
@@ -39,15 +42,17 @@ func (SystemClock) Now() time.Time {
 }
 
 type RoomService struct {
-	repository repository.RoomRepository
-	generator  security.Generator
-	clock      Clock
+	repository     repository.RoomRepository
+	generator      security.Generator
+	clock          Clock
+	idempotencyKey []byte
 }
 
 type CreateRoomResult struct {
-	Room         domain.Room
-	Participant  domain.Participant
-	SessionToken string
+	Room                domain.Room
+	Participant         domain.Participant
+	SessionToken        string
+	IdempotencyReplayed bool
 }
 
 type CreateRoomInput struct {
@@ -58,9 +63,10 @@ type CreateRoomInput struct {
 }
 
 type JoinRoomResult struct {
-	Room         domain.Room
-	Participant  domain.Participant
-	SessionToken string
+	Room                domain.Room
+	Participant         domain.Participant
+	SessionToken        string
+	IdempotencyReplayed bool
 }
 
 type GetRoomStateResult struct {
@@ -69,17 +75,41 @@ type GetRoomStateResult struct {
 	Participants         []domain.Participant
 }
 
-func NewRoomService(roomRepository repository.RoomRepository, generator security.Generator, clock Clock) *RoomService {
-	return &RoomService{repository: roomRepository, generator: generator, clock: clock}
+type RoomServiceOption func(*RoomService)
+
+func WithRoomIdempotencyKey(key []byte) RoomServiceOption {
+	return func(roomService *RoomService) {
+		roomService.idempotencyKey = append([]byte(nil), key...)
+	}
+}
+
+func NewRoomService(roomRepository repository.RoomRepository, generator security.Generator, clock Clock, options ...RoomServiceOption) *RoomService {
+	roomService := &RoomService{repository: roomRepository, generator: generator, clock: clock}
+	for _, option := range options {
+		option(roomService)
+	}
+	return roomService
 }
 
 func (service *RoomService) Create(ctx context.Context, input CreateRoomInput) (CreateRoomResult, error) {
+	return service.CreateWithIdempotency(ctx, input, "")
+}
+
+func (service *RoomService) CreateWithIdempotency(ctx context.Context, input CreateRoomInput, idempotencyKey string) (CreateRoomResult, error) {
 	operationContext, cancel := context.WithTimeout(ctx, roomOperationTimeout)
 	defer cancel()
 
 	nickname, err := domain.NormalizeNickname(input.Nickname)
 	if err != nil {
 		return CreateRoomResult{}, err
+	}
+	if idempotencyKey != "" {
+		if err := domain.ValidateIdempotencyKey(idempotencyKey); err != nil {
+			return CreateRoomResult{}, err
+		}
+		if len(service.idempotencyKey) < security.MinIdempotencyHMACKeyBytes {
+			return CreateRoomResult{}, ErrIdempotencyUnavailable
+		}
 	}
 	searchCondition, err := domain.NewRoomSearchCondition("", input.Latitude, input.Longitude, input.SearchRange)
 	if err != nil {
@@ -94,12 +124,20 @@ func (service *RoomService) Create(ctx context.Context, input CreateRoomInput) (
 	if err != nil {
 		return CreateRoomResult{}, fmt.Errorf("generate participant id: %w", err)
 	}
-	sessionToken, sessionTokenHash, err := service.generator.SessionToken()
-	if err != nil {
-		return CreateRoomResult{}, fmt.Errorf("generate participant session: %w", err)
+	var sessionToken string
+	var sessionTokenHash []byte
+	if idempotencyKey == "" {
+		sessionToken, sessionTokenHash, err = service.generator.SessionToken()
+		if err != nil {
+			return CreateRoomResult{}, fmt.Errorf("generate participant session: %w", err)
+		}
+	} else {
+		sessionToken, sessionTokenHash, _ = security.DeriveIdempotentSessionToken(
+			service.idempotencyKey, string(repository.RoomIdempotencyCreate), idempotencyKey, participantID,
+		)
 	}
 
-	createdAt := service.clock.Now()
+	createdAt := service.clock.Now().Truncate(roomTimestampPrecision)
 	searchCondition.RoomID = roomID
 	for attempt := 0; attempt < joinCodeGenerationAttempts; attempt++ {
 		joinCode, err := service.generator.JoinCode()
@@ -119,21 +157,54 @@ func (service *RoomService) Create(ctx context.Context, input CreateRoomInput) (
 			Nickname: nickname,
 			Role:     domain.ParticipantRoleHost,
 		}
-		storedRoom, storedHost, err := service.repository.Create(operationContext, repository.CreateRoomParams{
+		params := repository.CreateRoomParams{
 			Room: room, Host: host, SearchCondition: searchCondition, SessionTokenHash: sessionTokenHash,
-		})
+		}
+		var storedRoom domain.Room
+		var storedHost domain.Participant
+		var replayed bool
+		if idempotencyKey == "" {
+			storedRoom, storedHost, err = service.repository.Create(operationContext, params)
+		} else {
+			idempotencyRepository, ok := service.repository.(repository.RoomIdempotencyRepository)
+			if !ok {
+				return CreateRoomResult{}, ErrIdempotencyUnavailable
+			}
+			storedRoom, storedHost, replayed, err = idempotencyRepository.CreateIdempotent(
+				operationContext,
+				newRoomIdempotencyClaim(repository.RoomIdempotencyCreate, idempotencyKey, createRoomFingerprint(nickname, searchCondition)),
+				params,
+			)
+			if errors.Is(err, repository.ErrIdempotencyConflict) {
+				return CreateRoomResult{}, ErrIdempotencyConflict
+			}
+		}
 		if errors.Is(err, repository.ErrJoinCodeConflict) {
 			continue
 		}
 		if err != nil {
 			return CreateRoomResult{}, err
 		}
-		return CreateRoomResult{Room: storedRoom, Participant: storedHost, SessionToken: sessionToken}, nil
+		if replayed {
+			if !service.clock.Now().Before(storedRoom.ExpiresAt) {
+				return CreateRoomResult{}, ErrRoomNotFound
+			}
+			sessionToken, _, _ = security.DeriveIdempotentSessionToken(
+				service.idempotencyKey, string(repository.RoomIdempotencyCreate), idempotencyKey, storedHost.ID,
+			)
+		}
+		return CreateRoomResult{
+			Room: storedRoom, Participant: storedHost, SessionToken: sessionToken, IdempotencyReplayed: replayed,
+		}, nil
 	}
 	return CreateRoomResult{}, ErrRoomCodeGeneration
 }
 
 func (service *RoomService) Join(ctx context.Context, rawJoinCode string, rawNickname string) (JoinRoomResult, error) {
+	return service.JoinWithIdempotency(ctx, rawJoinCode, rawNickname, "")
+}
+
+func (service *RoomService) JoinWithIdempotency(ctx context.Context, rawJoinCode string, rawNickname string, idempotencyKey string) (JoinRoomResult, error) {
 	operationContext, cancel := context.WithTimeout(ctx, roomOperationTimeout)
 	defer cancel()
 
@@ -145,52 +216,102 @@ func (service *RoomService) Join(ctx context.Context, rawJoinCode string, rawNic
 	if err != nil {
 		return JoinRoomResult{}, err
 	}
+	if idempotencyKey != "" {
+		if err := domain.ValidateIdempotencyKey(idempotencyKey); err != nil {
+			return JoinRoomResult{}, err
+		}
+		if len(service.idempotencyKey) < security.MinIdempotencyHMACKeyBytes {
+			return JoinRoomResult{}, ErrIdempotencyUnavailable
+		}
+	}
 
 	var result JoinRoomResult
-	err = service.repository.WithinTransaction(operationContext, func(transaction repository.RoomTransaction) error {
+	joinOperation := func(transaction repository.RoomTransaction) (domain.Room, domain.Participant, error) {
 		room, err := transaction.FindByJoinCodeForUpdate(operationContext, joinCode)
 		if errors.Is(err, repository.ErrRoomNotFound) {
-			return ErrRoomNotFound
+			return domain.Room{}, domain.Participant{}, ErrRoomNotFound
 		}
 		if err != nil {
-			return err
+			return domain.Room{}, domain.Participant{}, err
 		}
 		if !service.clock.Now().Before(room.ExpiresAt) {
-			return ErrRoomNotFound
+			return domain.Room{}, domain.Participant{}, ErrRoomNotFound
 		}
 		if room.Status != domain.RoomStatusLobby {
-			return ErrRoomNotJoinable
+			return domain.Room{}, domain.Participant{}, ErrRoomNotJoinable
 		}
 
 		participantCount, err := transaction.CountParticipants(operationContext, room.ID)
 		if err != nil {
-			return err
+			return domain.Room{}, domain.Participant{}, err
 		}
 		if participantCount >= domain.MaxRoomParticipants {
-			return ErrRoomCapacityReached
+			return domain.Room{}, domain.Participant{}, ErrRoomCapacityReached
 		}
 
 		participantID, err := service.generator.UUID()
 		if err != nil {
-			return fmt.Errorf("generate participant id: %w", err)
+			return domain.Room{}, domain.Participant{}, fmt.Errorf("generate participant id: %w", err)
 		}
-		sessionToken, sessionTokenHash, err := service.generator.SessionToken()
-		if err != nil {
-			return fmt.Errorf("generate participant session: %w", err)
+		var sessionToken string
+		var sessionTokenHash []byte
+		if idempotencyKey == "" {
+			sessionToken, sessionTokenHash, err = service.generator.SessionToken()
+			if err != nil {
+				return domain.Room{}, domain.Participant{}, fmt.Errorf("generate participant session: %w", err)
+			}
+		} else {
+			sessionToken, sessionTokenHash, _ = security.DeriveIdempotentSessionToken(
+				service.idempotencyKey, string(repository.RoomIdempotencyJoin), idempotencyKey, participantID,
+			)
 		}
 		participant, err := transaction.InsertParticipant(operationContext, domain.Participant{
 			ID: participantID, RoomID: room.ID, Nickname: nickname, Role: domain.ParticipantRoleMember,
 		}, sessionTokenHash)
 		if err != nil {
-			return err
+			return domain.Room{}, domain.Participant{}, err
 		}
 		room, err = transaction.IncrementRoomVersion(operationContext, room.ID)
 		if err != nil {
-			return err
+			return domain.Room{}, domain.Participant{}, err
 		}
 		result = JoinRoomResult{Room: room, Participant: participant, SessionToken: sessionToken}
-		return nil
-	})
+		return room, participant, nil
+	}
+
+	if idempotencyKey == "" {
+		err = service.repository.WithinTransaction(operationContext, func(transaction repository.RoomTransaction) error {
+			_, _, operationError := joinOperation(transaction)
+			return operationError
+		})
+	} else {
+		idempotencyRepository, ok := service.repository.(repository.RoomIdempotencyRepository)
+		if !ok {
+			return JoinRoomResult{}, ErrIdempotencyUnavailable
+		}
+		var room domain.Room
+		var participant domain.Participant
+		var replayed bool
+		room, participant, replayed, err = idempotencyRepository.WithinIdempotentTransaction(
+			operationContext,
+			newRoomIdempotencyClaim(repository.RoomIdempotencyJoin, idempotencyKey, joinRoomFingerprint(joinCode, nickname)),
+			joinOperation,
+		)
+		if errors.Is(err, repository.ErrIdempotencyConflict) {
+			return JoinRoomResult{}, ErrIdempotencyConflict
+		}
+		if err == nil && replayed {
+			if !service.clock.Now().Before(room.ExpiresAt) {
+				return JoinRoomResult{}, ErrRoomNotFound
+			}
+			sessionToken, _, _ := security.DeriveIdempotentSessionToken(
+				service.idempotencyKey, string(repository.RoomIdempotencyJoin), idempotencyKey, participant.ID,
+			)
+			result = JoinRoomResult{
+				Room: room, Participant: participant, SessionToken: sessionToken, IdempotencyReplayed: true,
+			}
+		}
+	}
 	if err != nil {
 		return JoinRoomResult{}, err
 	}
