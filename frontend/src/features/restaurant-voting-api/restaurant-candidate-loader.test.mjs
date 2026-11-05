@@ -28,6 +28,22 @@ test("保存済み候補があれば明示再試行でもPOSTせず、ゲスト�
   assert.equal(posts, 0);
 });
 
+test("初回GETの失敗・中断後は自動POSTせず、検索未開始を明示して再試行できる", async () => {
+  for (const code of ["NETWORK_ERROR", "CANCELLED"]) {
+    let posts = 0, gets = 0;
+    const loader = createRestaurantCandidateLoader(async () => ++gets === 1
+      ? { ok: false, error: { code, status: 0, message: "取得できません" } } : pending,
+    async () => { posts++; return ready; });
+    assert.equal((await loader.load(session, "initial")).error.code, code);
+    for (let i = 0; i < 3; i++) {
+      assert.equal((await loader.load(session, "read")).error.code, "RESTAURANT_SEARCH_NOT_STARTED");
+      assert.equal(posts, 0);
+    }
+    assert.deepEqual(await loader.load(session, "retry"), ready);
+    assert.equal(posts, 1);
+  }
+});
+
 test("並行初回取得で二重POSTせず、キャンセル後も自動再送しない", async () => {
   let posts = 0, finish;
   const loader = createRestaurantCandidateLoader(async () => pending, () => { posts++; return new Promise(resolve => { finish = resolve; }); });

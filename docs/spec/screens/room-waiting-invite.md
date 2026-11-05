@@ -1,14 +1,18 @@
 # 画面03・既存APIによるルーム待機と招待
 
 - Status: Implemented
-- Last updated: 2026-10-31
+- Last updated: 2026-11-06
 - Related issue: None
 - Related specifications: room-create-screen.md, qr-scan-screen.md, ../services/room-lifecycle.md, ../models/rooms-and-participants.md, ../components/common-ui.md, ../themes/design-system.md
 - Implementation files: frontend/src/app/room-waiting/page.tsx, frontend/src/app/j/[joinCode]/page.tsx, frontend/src/app/genre-vote/page.tsx, frontend/src/features/room/{room-data.ts,room-api.ts,room-session.ts,use-room-state.ts,room-waiting-screen.tsx,room-join-screen.tsx,invite-card.tsx,room-fixed-action.tsx,room-genre-entry.tsx,room-waiting.module.css,room-data.test.mjs}, frontend/src/features/room-create/{room-create-screen.tsx,room-create.module.css}, frontend/package.json, frontend/package-lock.json
 
 ## UI統合の現行契約（2026-10-31）
 
-主仕様は[frontend-ui-integration.md](frontend-ui-integration.md)。待機/参加画面の固定領域を共通FixedBottomActionへ移す。/j/{joinCode}を唯一の参加フォームとし、旧/room-joinは正規化する。実API開始後の/genre-vote?room=UUIDでは投票保存未接続を明示し、モックへ接続しない。開始/検知/Pulse/参加情報の保存は維持する。 後段の従来ルート/固定処理/モック供給の記録は、相違する部分のみ本契約へ更新する。検証結果は主仕様のProgressへ集約する。
+UI統合の主仕様は[frontend-ui-integration.md](frontend-ui-integration.md)。固定領域は共通FixedBottomAction、参加フォームは/j/{joinCode}に統一する。実ルームの投票は[genre-voting-api-integration.md](genre-voting-api-integration.md)と[restaurant-voting-api-integration.md](restaurant-voting-api-integration.md)でAPI接続済みであり、開発モックへ接続しない。
+
+2026-11-06の復帰・再送制御の主仕様は[frontend-location-and-flow.md](frontend-location-and-flow.md)。認証済みGETの実状態からジャンル投票・ジャンル結果・店舗投票・店舗結果へ復帰する。作成/参加POSTは冪等キー付きで同じ入力を明示再送できる。検索中心の座標・範囲は現在の作成APIに保存され、「端末内のみ・未同期」という案内はしない。開始/検知/Pulse/QR/参加情報の保存は維持する。今回の検証結果は同主仕様へ集約する。
+
+以下の初期調査・承認案・検証ログは2026-10-31時点の履歴であり、「nicknameのみの作成」「集合場所未同期」「投票未接続」「冪等キーなし」は現行契約ではない。
 
 ## 目的・範囲
 

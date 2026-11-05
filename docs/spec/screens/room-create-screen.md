@@ -1,7 +1,7 @@
 # ルーム作成画面 仕様書
 
 - Status: Implemented
-- Last updated: 2026-11-03
+- Last updated: 2026-11-06
 - Related issue: None
 - Related specifications: frontend-ui-integration.md, room-waiting-invite.md, ../components/common-ui.md, ../services/room-lifecycle.md, ../services/restaurant-search.md, ../models/restaurant-candidates.md
 - Implementation files: frontend/src/features/room-create/room-create-screen.tsx, frontend/src/features/room-create/room-create.module.css, frontend/src/features/room/current-location.ts, frontend/src/features/room/room-api.ts, frontend/src/features/room/room-session.ts
@@ -13,6 +13,8 @@ UI統合の主仕様は[frontend-ui-integration.md](frontend-ui-integration.md)�
 ## 現行のAPI接続契約
 
 `POST /api/v1/rooms`には`nickname`、`searchLocation.latitude`、`searchLocation.longitude`、`searchRange`を送る。現在地と検索範囲が必須であることは、実装済みバックエンド、OpenAPI、`room-lifecycle.md`を正とする。フロントエンドはGeolocation APIの成功後だけこの契約でルームを作成する。
+
+2026-11-06の取得方式・再送制御・検証結果の主仕様は[frontend-location-and-flow.md](frontend-location-and-flow.md)。高精度15秒から標準20秒への条件付きフォールバック、取得状況・失敗理由・再試行の表示、作成POSTの冪等キーを追加した。許可拒否では再取得しない。住所欄はreadOnlyのままで、住所文字列だけを送信する機能はない。後段の過去の検証記録とは区別する。
 
 ### 前提・対象外・状態・検証
 

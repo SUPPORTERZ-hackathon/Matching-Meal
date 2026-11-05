@@ -1,7 +1,7 @@
 # 現在地取得・ルーム復帰・再送制御の修正
 
-- Status: Approved
-- Last updated: 2026-11-05
+- Status: Implemented
+- Last updated: 2026-11-06
 - Related issue: None
 - Related specifications: room-create-screen.md, room-waiting-invite.md, room-join-screen.md, restaurant-voting-api-integration.md, ../services/room-request-idempotency.md
 - Implementation files: frontend/src/features/room/, frontend/src/features/room-create/, frontend/src/features/restaurant-voting-api/, frontend/src/app/restaurant-{vote,vote-waiting,result}/page.tsx
@@ -57,6 +57,7 @@ restaurant_searchingは「候補検索前」と「検索要求中」をAPIで区
 
 - 候補GET、初回検索POST、明示再検索を別の取得理由として扱う。ホストの初回候補未準備時だけ自動検索を1回許可し、その後のtimer/focus/online/visibility復帰はGETのみ。
 - ユーザーの再試行だけが再検索を許可する。再試行でもGETで候補があればPOSTしない。ゲストはPOSTしない。Strict Modeのeffect再実行でも検索開始済みの記録をuseRefで保持する。
+- 初回の候補GETが失敗・中断しPOSTをまだ送っていない場合も、表示復帰のGETから自動POSTしない。ホストに候補未準備が返ったときは「検索未開始」と明示再試行を表示し、操作できない読み込み状態に留めない。
 - 検索失敗は直近エラーを保持し、通常のGETが409未準備に戻ってもエラーを無言で読み込み表示へ消さない。キャンセルで結果不明の場合も、GETで確認し、明示再試行なしにPOSTを増やさない。
 - cleanup後の応答はUIへ反映しない。abort、timer、listenerを解除し、再試行キューを通常取得より優先しても並列検索しない。既存の投票送信・結果表示は変更しない。
 
@@ -80,9 +81,19 @@ restaurant_searchingは「候補検索前」と「検索要求中」をAPIで区
 ## Progress
 
 - 完了：作業ブランチ/クリーン状態/未マージPRなしを確認し、現行コードと冪等API・状態遷移を照合。
-- 進行中：承認範囲のフロント修正とテスト。
-- 検証：未実施。
-- コミット/プッシュ/PR作成：なし。
+- 完了：現在地の段階的取得/エラー/キャンセル、作成・参加の冪等キー、実状態による復帰、検索GETとPOSTの分離、古い利用者向け説明文の修正、関連テストを実装。
+- 2026-11-06再開時：fix/frontend-location-and-flow、HEAD 9cd8779c258e4dfc6df28038806a5f2de290d895（ユーザーが保存した作業途中コミット）、作業ツリーはクリーン。main 275d132に対し同コミット1件。コミット内容を保持し、再実装・ブランチ切替はしていない。
+- コード検証（2026-11-06）：追加の境界ケース修正後、Docker Composeで`npm run lint`、`npm run typecheck`、`npm run build`が成功。既存と追加のフロントエンドテスト111件中107件成功、失敗0、実API結合テスト4件は既定どおりskip。既存の`MODULE_TYPELESS_PACKAGE_JSON`警告あり。`git diff --check main`と`git diff --check`も終了コード0。
+- テスト内訳：合成位置情報で高精度成功/timeout・取得不能から標準成功/拒否時1回のみ/両段階失敗/再試行/不正座標/キャンセルを確認。API stubで取得座標の作成POST引継ぎ、同一キー再送・新操作・503/応答消失・保存不可・並行呼出しを確認。復帰先は全状態・不正ID・期限切れを純粋関数とAPIエラー処理で確認。検索初回失敗後の通常GET4回でもPOSTは1回、明示再試行でのみ2回目となり、ゲスト/取得済み候補/キャンセル後の暗黙POSTがない。
+- ブラウザー確認：localhostのアプリ内ブラウザーで、ルーム作成の高精度取得中→標準モード切替→timeout案内、再試行ボタンと再試行中の無効化、readOnly維持を確認。今回の環境では位置取得自体は両段階ともtimeoutであり、実座標の取得成功とはしていない。Consoleのerror/warnは確認時0件。
+- 表示確認：作成・参加フォームを320/375/390/430/768/1024pxと844×390px横向きで確認し、横スクロールなし、固定下部領域が画面下端にあることを確認。参加フォームは入力欄1つ・入力後のボタン有効化を確認し、実参加POSTは行わない。不正room/セッション欠落でエラー表示を確認。
+- 回帰確認：明示demo=1でジャンル投票16件、取り消し、ジャンル待機・モック結果・ランキング、店舗投票4件、店舗待機・モック最終結果までUI操作。390pxの最終結果でスクロール後もヘッダー上端0・固定ボタン下端844、本文側の固定領域用spacerを確認。実API保存・集計の確認とは区別する。
+- スクリーンショット：390pxで位置取得失敗・再試行案内をGit管理外の`C:/Users/TanaT/.codex/visualizations/2026/10/27/01a17eaf-0c75-7db0-a708-c505d44d081a/location-fallback-390-20261106.jpg`へ保存。
+- 制約・残件：稼働backendの`ROOM_IDEMPOTENCY_HMAC_KEY`と`HOTPEPPER_API_KEY`は未設定（値は取得・記録していない）。実キー付き作成/参加にはHMAC設定が必要で、未設定なら契約上503。実店舗検索にはHot Pepper設定が必要で、未設定なら検索失敗となる。設定変更・キーなし送信への退避はしていない。
+- 未検証：隔離DBを用いた実作成/参加・複数人/進行済みルームへのブラウザー復帰・実API再送、Edge/Windows/スマートフォン実機の取得成功と許可拒否、200%文字拡大、実ソフトウェアキーボード、実機safe-area。DB書込・実権限変更を伴う検証は実行していないためStatusはVerifiedにしない。
+- 文書の差異：旧room-waiting-inviteのnicknameのみ作成/検索条件未同期/投票未接続/冪等キーなしは初期調査の履歴であり現行契約ではない。関連画面仕様へ本仕様の参照を追加した。既存の住所手入力・Geocodingの未実装は維持。
+- 最終確認で追加修正：初回GET失敗・中断後のfocus相当GETが候補未準備を返すと、検索POSTが未実行のまま読み込み表示になり得た。候補loaderだけへ`RESTAURANT_SEARCH_NOT_STARTED`を追加し、既存のエラー・再試行UIに接続。追加回帰テストは修正前に失敗、修正後に成功し、通常GET3回でもPOST0回、明示再試行時だけPOST1回を確認した。通信失敗/キャンセルの両方を検証。この追加分のブラウザーでの通信障害再現は未実施。
+- 実装コミット・バックエンド/DB/Docker/環境変数/API仕様/PWA/README/共通UIを変更しない。コミット/プッシュ/PR作成：なし。
 
 ## Self-Review
 

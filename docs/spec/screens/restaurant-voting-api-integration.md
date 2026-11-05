@@ -1,7 +1,7 @@
 # 店舗検索・投票・待機・結果の実API連携
 
 - Status: Implemented
-- Last updated: 2026-11-04
+- Last updated: 2026-11-06
 - Related issue: None
 - Related specifications: restaurant-vote.md, restaurant-vote-waiting.md, restaurant-result.md, genre-voting-api-integration.md, ../services/restaurant-search.md, ../services/restaurant-voting.md, ../models/restaurant-candidates.md, ../models/restaurant-votes.md
 - Implementation files: frontend/src/features/restaurant-voting-api/, frontend/src/features/restaurant-vote/restaurant-vote-screen.tsx, frontend/src/features/restaurant-vote/use-restaurant-vote.ts, frontend/src/features/genre-voting-api/genre-voting-entry.tsx, frontend/src/app/restaurant-vote/page.tsx, frontend/src/app/restaurant-vote-waiting/page.tsx, frontend/src/app/restaurant-result/page.tsx
@@ -65,6 +65,8 @@ decided + resultあり → /restaurant-result
 - 確定結果取得後はポーリングを停止する。人数だけを見て結果画面へ進まず、必ず保存済み`result`を確認する。
 
 ## 店舗候補の準備
+
+検索POSTの初回・再試行・通常GETの制御と今回の検証結果は[frontend-location-and-flow.md](frontend-location-and-flow.md)を正とする。タイマー、focus、online、visibility復帰はGETのみ。初回POSTが失敗・キャンセルされても、これらの取得からPOSTを増やさず、エラーを保持する。明示的な再試行でも、GETで候補が取得できた場合はPOSTしない。
 
 1. `room=UUID`を検証し、同一roomのセッションを読み込む。
 2. 候補GETを実行する。
