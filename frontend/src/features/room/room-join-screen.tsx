@@ -7,7 +7,7 @@ import { ChevronRight, Users } from "lucide-react";
 import { AppHeader } from "@/components/common/app-header";
 import { PageContainer } from "@/components/common/page-container";
 import { Button } from "@/components/ui/button";
-import { ROOM_CONFIG, normalizeJoinCode, roomWaitingUrl, validNickname } from "./room-data";
+import { ROOM_CONFIG, normalizeJoinCode, roomWaitingUrl, roomResumeUrl, validNickname } from "./room-data";
 import { getRoomState, joinRoom } from "./room-api";
 import { findRoomSession, forgetRoomSession, roomStorageAvailable, saveRoomSession } from "./room-session";
 import { RoomFixedAction } from "./room-fixed-action";
@@ -21,6 +21,7 @@ export function RoomJoinScreen({ joinCode }: RoomJoinScreenProps) {
   const [nickname, setNickname] = useState<string>("");
   const [error, setError] = useState<string>("");
   const [joining, setJoining] = useState<boolean>(false);
+  const [checkVersion, setCheckVersion] = useState(0);
   const locked = useRef<boolean>(false);
   useEffect(() => {
     let disposed = false;
@@ -31,11 +32,12 @@ export function RoomJoinScreen({ joinCode }: RoomJoinScreenProps) {
       if (!existing) { setPhase("form"); return; }
       const result = await getRoomState(existing, controller.signal);
       if (disposed) return;
-      if (result.ok) router.replace(roomWaitingUrl(result.data.room.id));
-      else { setError(result.error.message); setPhase("session-error"); }
+      const destination = result.ok ? roomResumeUrl(result.data.room) : undefined;
+      if (destination) router.replace(destination);
+      else { setError(result.ok ? "このルームへは復帰できません。招待元にルームの状態を確認してください。" : result.error.message); setPhase("session-error"); }
     });
     return () => { disposed = true; controller.abort(); };
-  }, [code, router]);
+  }, [code, router, checkVersion]);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!code || locked.current || phase !== "form" || !validNickname(nickname)) return;
@@ -48,7 +50,7 @@ export function RoomJoinScreen({ joinCode }: RoomJoinScreenProps) {
       return;
     }
     setError(["NETWORK_ERROR", "TIMEOUT", "INVALID_RESPONSE"].includes(result.error.code)
-      ? "参加結果を確認できませんでした。再送すると別の参加者になる可能性があります。接続を確認してください。" : result.error.message);
+      ? "参加結果を確認できませんでした。接続を確認し、同じニックネームでもう一度お試しください。" : result.error.status === 503 ? "サービスを利用できませんでした。時間をおいて再試行してください。続く場合は管理者に設定状況をご確認ください。" : result.error.message);
     locked.current = false; setJoining(false);
   }
   function enterAgain() {
@@ -64,7 +66,8 @@ export function RoomJoinScreen({ joinCode }: RoomJoinScreenProps) {
             <section className={styles.joinHero}><div className={styles.roomIcon}><Users aria-hidden="true" /></div><p className={styles.kicker}>招待されています</p><h1>ルームに参加しよう</h1><p className={styles.code}>参加コード：{code}</p></section>
             {phase === "form" && <form id="join-room-form" className={`meal-card ${styles.joinForm}`} onSubmit={submit}><label htmlFor="join-nickname">ニックネーム</label><input id="join-nickname" value={nickname} maxLength={ROOM_CONFIG.nicknameLimit} autoComplete="nickname" placeholder="例：みさき" onChange={(event) => setNickname(event.target.value)} disabled={joining} aria-describedby="join-nickname-help" /><div className={styles.fieldMeta}><p id="join-nickname-help">ルーム内で表示される名前です</p><span>{nickname.length}/{ROOM_CONFIG.nicknameLimit}</span></div></form>}
             {error && <p className={styles.error} role="alert">{error}</p>}
-            {phase === "session-error" && <div className={styles.message}><Button type="button" variant="outline" onClick={enterAgain}>保存済み情報を破棄して参加し直す</Button><Link href="/home-preview">ホームに戻る</Link></div>}
+            {phase === "form" && error && <p className={styles.localNote}>同じ内容で再試行できます。ニックネームを変更すると新しい参加操作になります。</p>}
+            {phase === "session-error" && <div className={styles.message}><Button type="button" variant="outline" onClick={() => { setPhase("checking"); setError(""); setCheckVersion(value => value + 1); }}>参加情報をもう一度確認する</Button><Button type="button" variant="outline" onClick={enterAgain}>保存済み情報を破棄して参加し直す</Button><Link href="/home-preview">ホームに戻る</Link></div>}
           </>}
     </div>
   </PageContainer></div>;

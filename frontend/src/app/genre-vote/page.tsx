@@ -1,4 +1,4 @@
-import type { Metadata, Viewport } from "next";
+import type { Metadata } from "next";
 import { GENRES } from "@/features/genre-vote/genres";
 import { GenreVotePrototype } from "@/features/genre-vote/genre-vote-prototype";
 import { RoomGenreEntry } from "@/features/room/room-genre-entry";
@@ -6,16 +6,12 @@ import { isRoomId } from "@/features/room/room-data";
 import { notFound } from "next/navigation";
 import { isDevelopmentDemo } from "@/features/ui-flow/development-demo";
 import { FlowMessage } from "@/features/ui-flow/flow-message";
-import { GENRE_ICON_PATH, GENRE_MANIFEST_PATH, GENRE_THEME_COLOR, PROTOTYPE_ROOM_ID } from "@/features/genre-vote/prototype-config";
+import { PROTOTYPE_ROOM_ID } from "@/features/genre-vote/prototype-config";
 
 export const metadata: Metadata = {
   title: "ジャンル投票 | メシマッチ",
   description: `${GENRES.length}ジャンルから今日の食べたい気分を選ぶUIプロトタイプ。`,
-  manifest: GENRE_MANIFEST_PATH,
-  appleWebApp: { capable: true, title: "メシマッチ", statusBarStyle: "default" },
-  icons: { apple: `${GENRE_ICON_PATH}/apple-180.png`, icon: `${GENRE_ICON_PATH}/icon-192.png` },
 };
-export const viewport: Viewport = { themeColor: GENRE_THEME_COLOR };
 
 type GenreVotePageProps = { searchParams: Promise<{ room?: string | string[]; demo?: string | string[] }> };
 export default async function GenreVotePage({ searchParams }: GenreVotePageProps) {

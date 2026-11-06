@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { AppHeader } from "@/components/common/app-header";
 import { PageContainer } from "@/components/common/page-container";
@@ -15,8 +15,8 @@ import { submitRestaurantAnswers } from "./restaurant-voting-api";
 import type { RestaurantCandidatesSnapshot } from "./restaurant-voting-data";
 import styles from "../genre-voting-api/genre-api.module.css";
 
-type RoomRestaurantVoteProps = { session: RoomSession; candidates: RestaurantCandidatesSnapshot; onSaved: () => void };
-export function RoomRestaurantVote({ session, candidates, onSaved }: RoomRestaurantVoteProps) {
+type RoomRestaurantVoteProps = { session: RoomSession; candidates: RestaurantCandidatesSnapshot; onSaved: () => void; notice?: ReactNode };
+export function RoomRestaurantVote({ session, candidates, onSaved, notice }: RoomRestaurantVoteProps) {
   const [initial] = useState(() => loadRestaurantDraft(session, candidates.restaurants));
   const [answers, setAnswers] = useState<readonly RestaurantVote[] | null>(initial.sealed ? initial.votes : null);
   const [sending, setSending] = useState(false), [error, setError] = useState<RoomError | null>(null), [storageWarning, setStorageWarning] = useState(false);
@@ -40,7 +40,7 @@ export function RoomRestaurantVote({ session, candidates, onSaved }: RoomRestaur
     if (!saveRestaurantDraft(session, { votes, sealed: true, candidateIds })) setStorageWarning(true);
     void send(votes);
   }, [session, candidateIds, send]);
-  const warning = storageWarning ? <p className="meal-flow-notice" role="status">回答はこの画面に保持しています。端末への保存ができないため、送信が完了するまで再読み込みしないでください。</p> : undefined;
+  const warning = <>{notice}{storageWarning && <p className="meal-flow-notice" role="status">回答はこの画面に保持しています。端末への保存ができないため、送信が完了するまで再読み込みしないでください。</p>}</>;
   const genre = GENRES.find((row) => row.id === candidates.genreId);
   if (!answers) return <RestaurantVoteScreen genre={genre} restaurants={candidates.restaurants} roomId={session.room.joinCode}
     initialVotes={initial.votes} onVotesChange={persist} onComplete={complete} notice={warning} />;

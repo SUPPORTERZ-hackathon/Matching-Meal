@@ -30,10 +30,10 @@ export function RestaurantVotingEntry({ roomId, screen }: RestaurantVotingEntryP
   if (view.kind !== "ready" || target !== screen) return <PageContainer className={styles.page} header={<AppHeader roomNumber={roomNumber} />}><StepProgress currentStep="shop" />
     <section className={styles.content} role={view.kind === "error" ? "alert" : "status"}><h1>{view.kind === "error" ? "店舗情報を確認できません" : "店舗を準備しています"}</h1>
       <p>{view.kind === "error" ? view.error.message : "候補店舗と投票状況を確認しています。"}</p>
-      {view.kind === "error" && <Button type="button" variant="outline" onClick={retry}>もう一度確認する</Button>}<Link href="/home-preview">ホームに戻る</Link>
+      {view.kind === "error" && <Button type="button" variant="outline" onClick={retry}>候補を再確認して再試行する</Button>}<Link href="/home-preview">ホームに戻る</Link>
     </section></PageContainer>;
-  if (screen === "vote") return <RoomRestaurantVote key={view.session.participant.id} session={view.session} candidates={view.candidates} onSaved={saved} />;
   const stale = view.staleError ? <div className={styles.error} role="alert"><p>{view.staleError.message} 最後に取得した投票状況を表示しています。</p><Button type="button" variant="outline" onClick={retry}>再取得する</Button></div> : undefined;
+  if (screen === "vote") return <RoomRestaurantVote key={view.session.participant.id} session={view.session} candidates={view.candidates} onSaved={saved} notice={stale} />;
   if (screen === "waiting") return <RestaurantVoteWaitingScreen participants={waitingRestaurantParticipants(view.voting)} roomId={roomNumber}>{stale}</RestaurantVoteWaitingScreen>;
   const result = restaurantResultPresentation(view.voting, view.candidates);
   const restaurant = view.voting.result?.restaurant;

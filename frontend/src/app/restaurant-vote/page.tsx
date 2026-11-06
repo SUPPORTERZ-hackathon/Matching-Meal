@@ -18,8 +18,8 @@ export default async function RestaurantVotePage({ searchParams }: RestaurantVot
   if (query.room !== undefined) return <RestaurantVotingEntry key={typeof query.room === "string" ? query.room : "invalid"}
     roomId={typeof query.room === "string" && isRoomId(query.room) ? query.room.toLowerCase() : undefined} screen="vote" />;
   if (query.room === undefined && query.demo === "1" && process.env.NODE_ENV !== "development") notFound();
-  if (!isDevelopmentDemo(query.demo, process.env.NODE_ENV, query.room)) return <FlowMessage step="shop" title="店舗候補の取得は準備中です" description="決定ジャンルに対応する店舗候補の取得と投票の送信は、まだ接続されていません。" />;
+  if (!isDevelopmentDemo(query.demo, process.env.NODE_ENV, query.room)) return <FlowMessage step="shop" title="ルーム情報を確認してください" description="参加したタブでジャンル結果から進んでください。店舗候補と投票状況の取得には、ルームの参加情報が必要です。" />;
   const genre = resolveRestaurantGenre(query.genre, GENRES);
-  // 将来は取得済みの表示用データを渡す。ここでは通信せず、架空候補のみを生成する。
+  // 明示的な開発デモだけで架空候補を使用する。実ルームは上のAPI入口へ渡す。
   return <RestaurantVotePrototype key={genre?.id ?? "invalid"} genre={genre} restaurants={genre ? createMockRestaurants(genre) : []} roomId={PROTOTYPE_ROOM_ID} />;
 }
