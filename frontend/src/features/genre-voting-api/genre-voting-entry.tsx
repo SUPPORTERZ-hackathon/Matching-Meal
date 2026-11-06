@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { GENRES } from "../genre-vote/genres";
 import { GenreVoteWaitingScreen } from "../genre-vote-waiting/genre-vote-waiting-screen";
 import { GenreResultScreen } from "../genre-result/genre-result-screen";
+import { GuestResultWaiting } from "../genre-result/guest-result-waiting";
 import { clearGenreDraft } from "./genre-draft";
 import { genreVotingStage, genreVotingUrl, resultPresentation, waitingParticipants, type GenreVotingStage } from "./genre-voting-data";
 import { useGenreVoting } from "./use-genre-voting";
@@ -38,5 +39,7 @@ export function GenreVotingEntry({ roomId, screen }: GenreVotingEntryProps) {
   const stale = view.staleError ? <div className={styles.error} role="alert"><p>{view.staleError.message} 最後に取得した投票状況を表示しています。</p><Button type="button" variant="outline" onClick={retry}>再取得する</Button></div> : undefined;
   if (screen === "waiting") return <GenreVoteWaitingScreen participants={waitingParticipants(view.snapshot)} roomId={roomNumber}>{stale}</GenreVoteWaitingScreen>;
   const result = resultPresentation(view.snapshot);
-  return result ? <GenreResultScreen result={result} genres={GENRES} roomId={roomNumber} onFindShops={findShops}>{stale}</GenreResultScreen> : null;
+  return result ? <GenreResultScreen result={result} genres={GENRES} roomId={roomNumber}
+    onFindShops={view.session.participant.role === "host" ? findShops : undefined}
+    bottomAction={view.session.participant.role === "member" ? <GuestResultWaiting roomId={view.snapshot.room.id} /> : undefined}>{stale}</GenreResultScreen> : null;
 }

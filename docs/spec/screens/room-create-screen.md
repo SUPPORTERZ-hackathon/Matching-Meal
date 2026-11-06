@@ -1,10 +1,14 @@
 # ルーム作成画面仕様
 
 - Status: Implemented
-- Last updated: 2026-11-06
+- Last updated: 2026-11-07
 - Related issue: None
-- Related specifications: frontend-ui-integration.md, room-waiting-invite.md, ../components/common-ui.md, ../services/room-lifecycle.md, ../services/restaurant-search.md, ../models/restaurant-candidates.md
+- Related specifications: frontend-ui-integration.md, room-waiting-invite.md, ../components/common-ui.md, ../services/room-lifecycle.md, ../services/restaurant-search.md, ../models/restaurant-candidates.md, mobile-genre-flow-ux.md
 - Implementation files: frontend/src/features/room-create/room-create-screen.tsx, frontend/src/features/room-create/room-create.module.css, frontend/src/features/room-create/station-search.tsx, frontend/src/features/room-create/station-data.ts, frontend/src/features/room-create/location-selection.ts, frontend/src/features/room-create/station-search.test.mjs, frontend/src/features/room-create/location-selection.test.mjs, frontend/src/features/room/current-location.ts, frontend/src/features/room/room-api.ts, frontend/src/features/room/room-session.ts, frontend/scripts/generate-stations.mjs, frontend/public/data/stations-2025.json, frontend/public/data/README.md
+
+## モバイル入力文字サイズ（2026-11-07）
+
+ニックネーム・駅検索の文字入力を16pxとし、既存の入力高さ・候補選択・viewport設定を維持する。主仕様と検証結果は[mobile-genre-flow-ux.md](mobile-genre-flow-ux.md)を参照する。
 
 ## 目的と対象範囲
 

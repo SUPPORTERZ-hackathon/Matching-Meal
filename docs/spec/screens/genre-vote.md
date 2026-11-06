@@ -1,10 +1,14 @@
 # ジャンル投票画面・UIプロトタイプ
 
 - Status: Verified
-- Last updated: 2026-11-06
+- Last updated: 2026-11-07
 - Related issue: None
-- Related specifications: ../components/common-ui.md, ../themes/design-system.md, genre-vote-waiting.md, ../providers/pwa.md
+- Related specifications: ../components/common-ui.md, ../themes/design-system.md, genre-vote-waiting.md, ../providers/pwa.md, mobile-genre-flow-ux.md
 - Implementation files: frontend/src/app/genre-vote/, frontend/src/features/genre-vote/, frontend/public/genres/, frontend/public/genre-vote/
+
+## モバイルカード操作（2026-11-07）
+
+カード上の単指縦パンを抑止し、既存の横投票・縦操作の非投票・カード外スクロールを維持する。主仕様と検証結果は[mobile-genre-flow-ux.md](mobile-genre-flow-ux.md)を参照する。
 
 ## 実API連携の現行契約（2026-11-01）
 
