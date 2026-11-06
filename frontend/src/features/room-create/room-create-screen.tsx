@@ -3,7 +3,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { MapPin, LocateFixed, X, ArrowLeft } from "lucide-react";
+import { LocateFixed, X, ArrowLeft } from "lucide-react";
 import { AppHeader } from "@/components/common/app-header";
 import { PageContainer } from "@/components/common/page-container";
 import { BottomAction } from "@/components/common/bottom-action";
@@ -11,9 +11,17 @@ import { FixedBottomAction } from "@/components/common/fixed-bottom-action";
 import { Button } from "@/components/ui/button";
 import { StepProgress } from "@/components/common/step-progress";
 import { createRoom } from "../room/room-api";
-import { requestCurrentLocation, type CurrentCoordinates, type CurrentLocationErrorCode } from "../room/current-location";
+import { requestCurrentLocation, type CurrentLocationErrorCode } from "../room/current-location";
 import { roomWaitingUrl, validNickname } from "../room/room-data";
 import { roomStorageAvailable, saveRoomSession } from "../room/room-session";
+import { StationSearch } from "./station-search";
+import type { Station } from "./station-data";
+import {
+  clearLocationAfterStationEdit,
+  selectCurrentLocation,
+  selectStationLocation,
+  type LocationSelection,
+} from "./location-selection";
 import styles from "./room-create.module.css";
 
 const RADIUS_OPTIONS = [
@@ -35,9 +43,10 @@ const locationErrorMessages: Record<CurrentLocationErrorCode, string> = {
 export function RoomCreateScreen() {
   const router = useRouter();
   const [nickname, setNickname] = useState("");
-  const [coordinates, setCoordinates] = useState<CurrentCoordinates | null>(null);
+  const [location, setLocation] = useState<LocationSelection | null>(null);
   const [locating, setLocating] = useState<boolean>(false);
   const [locationError, setLocationError] = useState<string>("");
+  const [stationResetToken, setStationResetToken] = useState(0);
   const [radiusIndex, setRadiusIndex] = useState(2);
   const [creating, setCreating] = useState<boolean>(false);
   const [createError, setCreateError] = useState<string>("");
@@ -46,18 +55,18 @@ export function RoomCreateScreen() {
 
   const radius = RADIUS_OPTIONS[radiusIndex];
 
-  const canCreate = validNickname(nickname) && nickname.length <= 12 && coordinates !== null;
+  const canCreate = validNickname(nickname) && nickname.length <= 12 && location !== null;
 
   async function locateCurrentPosition() {
     if (locatingRef.current || creatingRef.current) return;
     locatingRef.current = true;
     setLocating(true);
-    setCoordinates(null);
     setLocationError("");
     setCreateError("");
     const result = await requestCurrentLocation();
     if (result.ok) {
-      setCoordinates(result.coordinates);
+      setLocation(selectCurrentLocation(result.coordinates));
+      setStationResetToken((token) => token + 1);
     } else {
       setLocationError(locationErrorMessages[result.code]);
     }
@@ -67,21 +76,28 @@ export function RoomCreateScreen() {
 
   function clearCurrentPosition() {
     if (locatingRef.current || creatingRef.current) return;
-    setCoordinates(null);
+    if (location?.source === "current") setLocation(null);
     setLocationError("");
   }
 
+  function selectStation(station: Station | null) {
+    if (creatingRef.current) return;
+    setLocationError("");
+    setCreateError("");
+    setLocation(station ? selectStationLocation(station) : clearLocationAfterStationEdit());
+  }
+
   async function submitRoom() {
-    if (!canCreate || !coordinates || creatingRef.current) return;
+    if (!canCreate || !location || locatingRef.current || creatingRef.current) return;
     if (!roomStorageAvailable()) { setCreateError("このブラウザーでは参加情報を保存できません。ストレージの設定を確認してください。"); return; }
     creatingRef.current = true; setCreating(true); setCreateError("");
     const result = await createRoom({
       nickname,
-      searchLocation: coordinates,
+      searchLocation: location.coordinates,
       searchRange: radius.apiRange,
     });
     if (result.ok) {
-      saveRoomSession({ ...result.data, localSearch: { location: "現在地を使用", radiusMeters: radius.value } });
+      saveRoomSession({ ...result.data, localSearch: { location: location.displayName, radiusMeters: radius.value } });
       router.push(roomWaitingUrl(result.data.room.id));
       return;
     }
@@ -144,6 +160,7 @@ export function RoomCreateScreen() {
                 value={nickname}
                 maxLength={12}
                 placeholder="例：ゆうき"
+                disabled={creating}
                 onChange={(event) => setNickname(event.target.value)}
                 />
                 <div className={styles.footerRow}>
@@ -156,28 +173,8 @@ export function RoomCreateScreen() {
           <div className={`meal-card ${styles.card}`}>
             <div className={styles.field}>
                 <label htmlFor="room-location">集合場所</label>
-                <div className={styles.locationInput}>
-                <MapPin aria-hidden="true" />
-                <input
-                    id="room-location"
-                    type="text"
-                    value={coordinates ? "現在地を使用" : ""}
-                    placeholder="現在地を取得してください"
-                    readOnly
-                    aria-describedby={locationError ? "current-location-error" : undefined}
-                />
-                {coordinates && (
-                    <button
-                    type="button"
-                    className={styles.clearButton}
-                    aria-label="取得した現在地をクリア"
-                    onClick={clearCurrentPosition}
-                    disabled={creating}
-                    >
-                    <X aria-hidden="true" />
-                    </button>
-                )}
-                </div>
+                <StationSearch key={stationResetToken} disabled={creating || locating} onStationChange={selectStation} />
+                <div className={styles.locationDivider}><span>または</span></div>
                 <Button
                 type="button"
                 variant="ghost"
@@ -187,8 +184,16 @@ export function RoomCreateScreen() {
                 onClick={locateCurrentPosition}
                 >
                 <LocateFixed aria-hidden="true" />
-                {coordinates ? "現在地を再取得" : "現在地を取得"}
+                {location?.source === "current" ? "現在地を再取得" : "現在地を取得"}
                 </Button>
+                {location?.source === "current" && (
+                  <div className={styles.currentLocationSelected}>
+                    <span>現在地を使用中</span>
+                    <button type="button" aria-label="取得した現在地をクリア" onClick={clearCurrentPosition} disabled={creating}>
+                      <X aria-hidden="true" />
+                    </button>
+                  </div>
+                )}
                 {locationError && <p id="current-location-error" className={styles.locationError} role="alert">{locationError}</p>}
             </div>
           </div>
@@ -210,6 +215,7 @@ export function RoomCreateScreen() {
                 max={4}
                 step={1}
                 value={radiusIndex}
+                disabled={creating}
                 onChange={(event) => setRadiusIndex(Number(event.target.value))}
                 />
 
@@ -223,7 +229,7 @@ export function RoomCreateScreen() {
                 </p>
             </div>
           </div>
-          <p className={styles.apiNote}>取得した現在地は店舗検索にだけ使用し、座標の数値は画面やURLに表示しません。</p>
+          <p className={styles.apiNote}>選択した現在地または駅は店舗検索にだけ使用し、座標の数値は画面やURLに表示しません。</p>
           {createError && <p className={styles.apiError} role="alert">{createError}</p>}
         </section>
 
@@ -232,7 +238,7 @@ export function RoomCreateScreen() {
             type="button"
             variant="primary"
             size="meal"
-            disabled={!canCreate || creating}
+            disabled={!canCreate || locating || creating}
             loading={creating}
             onClick={submitRoom}
           >

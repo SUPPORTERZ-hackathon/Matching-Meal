@@ -13,7 +13,8 @@
     "test:genre-result": "node --experimental-strip-types --test src/features/genre-result/*.test.mjs",
     "test:restaurant-vote": "node --experimental-strip-types --test src/features/restaurant-vote/*.test.mjs",
     "test:restaurant-result": "node --experimental-strip-types --test src/features/restaurant-result/*.test.mjs",
-    "test:room": "node --experimental-strip-types --test src/features/room/*.test.mjs"
+    "test:room": "node --experimental-strip-types --test src/features/room/*.test.mjs src/features/room-create/*.test.mjs",
+    "data:stations": "node scripts/generate-stations.mjs"
   },
   "dependencies": {
     "@radix-ui/react-slot": "1.5.0",
