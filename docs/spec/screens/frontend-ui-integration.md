@@ -1,7 +1,7 @@
 # フロントエンド全画面のUI・導線統合
 
 - Status: Implemented
-- Last updated: 2026-11-06
+- Last updated: 2026-11-07
 - Related issue: None
 - Related specifications: room-waiting-invite.md, room-join-screen.md, room-create-screen.md, home-screen.md, qr-scan-screen.md, genre-vote.md, genre-vote-waiting.md, genre-result.md, restaurant-vote.md, restaurant-vote-waiting.md, restaurant-result.md, ../components/common-ui.md, ../themes/design-system.md
 - Implementation files: frontend/src/components/common/, frontend/src/app/globals.css, frontend/src/app/{room-join,genre-vote,genre-vote-waiting,genre-result,restaurant-vote,restaurant-vote-waiting,restaurant-result,ui-preview}/, frontend/src/features/{ui-flow,home-preview,room-create,room,qr-scan,genre-vote,genre-vote-waiting,genre-result,restaurant-vote,restaurant-vote-waiting,restaurant-result}/
@@ -30,7 +30,7 @@ backend/DB/マイグレーション/API仕様/Docker/環境変数/PWA/READMEの�
 ## 共通レイアウト
 
 - AppHeaderは既存Propsを維持しsticky?:booleanを追加（既定true）。header自身と既存境界線をposition:sticky/top:0/z-indexで一体化し、背景は既存paper色で不透明にして本文の透けを防ぐ。通常フローに高さを確保するため上のダミー余白は追加しない。ui-preview内の埋込見本だけsticky=false。
-- 既存の最大430px、左右22px、セーフエリア、通常ページスクロールを維持。高さ500px以下ではFigma用の最低44px上部余白だけを実safe-area値へ縮め、短い画面に不要な空白を作らない。ロゴ/ボタン文字自体を小さくして収めない。
+- 既存の最大430px、左右22px、セーフエリア、通常ページスクロールを維持。上部余白とヘッダー寸法は[テーマ仕様の2026-11-07更新](../themes/design-system.md#共通ヘッダーのコンパクト化2026-11-07)に従う。ロゴ/ボタン文字自体を小さくして収めない。
 - FixedBottomActionは固定領域と同じ実測高の通常フローspacerを返す。共通BottomActionの16px/22px/下safe-area余白を使用し、古い画面別の下部予約を除去して二重余白を防ぐ。最大幅430px・中央配置・既存の淡い背景。本文末尾が固定領域より上までスクロールできること。
 - ResizeObserverとrAFで高さ/フォント変化を追従し、VisualViewportのresize/scrollとwindow resizeで可視領域下端との差を補正する。ズーム中は独自のキーボード補正をしない。フォーカス中の入力がstickyヘッダーや固定領域に重なる場合は通常スクロールで露出させる。イベント/rAF/observerはアンマウント時に解除する。
 - S06はp要素の非操作待機表示・既存Pulseを維持。S03開始権限・disabled・API・開始検知は維持。S09の発表演出は維持し、S12は静的なまま。
