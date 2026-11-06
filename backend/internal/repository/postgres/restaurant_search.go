@@ -122,14 +122,14 @@ func (restaurantRepository *RestaurantSearchRepository) SaveCandidatesAndAdvance
 		candidate.Position = int16(index + 1)
 		err := tx.QueryRow(ctx, `
 			INSERT INTO restaurant_candidates (
-				room_id, restaurant_id, position, name, photo_url, opening_hours, closed_days,
+				room_id, restaurant_id, position, name, address, photo_url, opening_hours, closed_days,
 				dinner_budget, access, station_name, detail_url, latitude, longitude, source
 			)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 			RETURNING created_at
 		`,
 			candidate.RoomID, candidate.RestaurantID, candidate.Position, candidate.Name,
-			candidate.PhotoURL, candidate.OpeningHours, candidate.ClosedDays, candidate.DinnerBudget,
+			candidate.Address, candidate.PhotoURL, candidate.OpeningHours, candidate.ClosedDays, candidate.DinnerBudget,
 			candidate.Access, candidate.StationName, candidate.DetailURL,
 			candidate.Latitude, candidate.Longitude, candidate.Source,
 		).Scan(&candidate.CreatedAt)
@@ -159,7 +159,7 @@ func (restaurantRepository *RestaurantSearchRepository) SaveCandidatesAndAdvance
 
 func listRestaurantCandidates(ctx context.Context, queryer rowsQueryer, roomID string) ([]domain.RestaurantCandidate, error) {
 	rows, err := queryer.Query(ctx, `
-		SELECT room_id, restaurant_id, position, name, photo_url, opening_hours, closed_days,
+		SELECT room_id, restaurant_id, position, name, address, photo_url, opening_hours, closed_days,
 		       dinner_budget, access, station_name, detail_url, latitude, longitude, source, created_at
 		FROM restaurant_candidates
 		WHERE room_id = $1
@@ -175,7 +175,7 @@ func listRestaurantCandidates(ctx context.Context, queryer rowsQueryer, roomID s
 		var candidate domain.RestaurantCandidate
 		if err := rows.Scan(
 			&candidate.RoomID, &candidate.RestaurantID, &candidate.Position, &candidate.Name,
-			&candidate.PhotoURL, &candidate.OpeningHours, &candidate.ClosedDays, &candidate.DinnerBudget,
+			&candidate.Address, &candidate.PhotoURL, &candidate.OpeningHours, &candidate.ClosedDays, &candidate.DinnerBudget,
 			&candidate.Access, &candidate.StationName, &candidate.DetailURL,
 			&candidate.Latitude, &candidate.Longitude, &candidate.Source, &candidate.CreatedAt,
 		); err != nil {

@@ -904,6 +904,7 @@ components:
       required:
         - id
         - name
+        - address
         - photoUrl
         - openingHours
         - closedDays
@@ -920,6 +921,8 @@ components:
         name:
           type: string
           minLength: 1
+        address:
+          type: [string, "null"]
         photoUrl:
           type: [string, "null"]
           format: uri
@@ -1279,6 +1282,7 @@ components:
             restaurant:
               id: J001234567
               name: 店舗名
+              address: 東京都渋谷区東1-2-3
               photoUrl: null
               openingHours: 月〜日 11:00〜23:00
               closedDays: なし

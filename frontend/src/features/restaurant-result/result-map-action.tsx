@@ -11,7 +11,7 @@ import styles from "./restaurant-result.module.css";
 type ResultMapActionProps = { restaurant?: RestaurantCandidate };
 
 export function ResultMapAction({ restaurant }: ResultMapActionProps) {
-  const url = createGoogleMapsUrl(restaurant?.coordinates);
+  const url = createGoogleMapsUrl(restaurant);
   return <FixedBottomAction data-final-action>
     <BottomAction>
       {url ? <Button asChild variant="dark" size="meal" className={styles.mapButton}><a href={url} target="_blank" rel="noopener noreferrer" aria-label={`${restaurant?.name}をGoogleマップで開く（別タブで開く）`} aria-describedby="restaurant-map-note"><Map aria-hidden="true" /><span>Googleマップで開く</span></a></Button>

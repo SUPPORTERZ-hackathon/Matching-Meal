@@ -24,6 +24,7 @@ type restaurantCoordinatesResponse struct {
 type restaurantCandidateResponse struct {
 	ID           string                         `json:"id"`
 	Name         string                         `json:"name"`
+	Address      *string                        `json:"address"`
 	PhotoURL     *string                        `json:"photoUrl"`
 	OpeningHours *string                        `json:"openingHours"`
 	ClosedDays   *string                        `json:"closedDays"`

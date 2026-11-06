@@ -7,17 +7,24 @@ import { GENRES } from "../genre-vote/genres.ts";
 import { createMockRestaurants } from "../restaurant-vote/prototype-data.ts";
 import { toRestaurantCandidate } from "../restaurant-vote/restaurant-data.ts";
 
-test("Maps URLsにapi=1とエンコードした座標を含め、キーやAPI通信を使わない", () => {
-  const url = createGoogleMapsUrl({ latitude: 35.5, longitude: 139.75 });
-  assert.equal(url, "https://www.google.com/maps/search/?api=1&query=35.5%2C139.75");
+test("店舗名と住所を優先してMaps検索語へ設定し、キーやAPI通信を使わない", () => {
+  const url = createGoogleMapsUrl({ id: "J001", name: " 店舗 A ", address: " 東京都渋谷区1-2-3 ", coordinates: { latitude: 35.5, longitude: 139.75 }, source: "hotpepper" });
+  assert.equal(url, "https://www.google.com/maps/search/?api=1&query=%E5%BA%97%E8%88%97+A+%E6%9D%B1%E4%BA%AC%E9%83%BD%E6%B8%8B%E8%B0%B7%E5%8C%BA1-2-3");
   const parsed = new URL(url);
-  assert.equal(parsed.searchParams.get("query"), "35.5,139.75");
+  assert.equal(parsed.searchParams.get("query"), "店舗 A 東京都渋谷区1-2-3");
   assert.equal(parsed.searchParams.has("key"), false);
 });
 
+test("住所がない候補はエンコードした座標へフォールバックする", () => {
+  const url = createGoogleMapsUrl({ id: "J001", name: "店舗", coordinates: { latitude: 35.5, longitude: 139.75 }, source: "hotpepper" });
+  assert.equal(url, "https://www.google.com/maps/search/?api=1&query=35.5%2C139.75");
+  const parsed = new URL(url);
+  assert.equal(parsed.searchParams.get("query"), "35.5,139.75");
+});
+
 test("座標の0と境界値は有効、欠損・文字列・非有限・範囲外はリンクを生成しない", () => {
-  for (const coordinates of [{ latitude: 0, longitude: 0 }, { latitude: -90, longitude: 180 }, { latitude: 90, longitude: -180 }]) assert(createGoogleMapsUrl(coordinates));
-  for (const coordinates of [undefined, {}, { latitude: 35 }, { longitude: 139 }, { latitude: "35", longitude: 139 }, { latitude: null, longitude: 139 }, { latitude: NaN, longitude: 139 }, { latitude: 35, longitude: Infinity }, { latitude: 90.01, longitude: 0 }, { latitude: 0, longitude: -180.01 }]) assert.equal(createGoogleMapsUrl(coordinates), undefined);
+  for (const coordinates of [{ latitude: 0, longitude: 0 }, { latitude: -90, longitude: 180 }, { latitude: 90, longitude: -180 }]) assert(createGoogleMapsUrl({ id: "J001", name: "店舗", coordinates, source: "hotpepper" }));
+  for (const coordinates of [undefined, {}, { latitude: 35 }, { longitude: 139 }, { latitude: "35", longitude: 139 }, { latitude: null, longitude: 139 }, { latitude: NaN, longitude: 139 }, { latitude: 35, longitude: Infinity }, { latitude: 90.01, longitude: 0 }, { latitude: 0, longitude: -180.01 }]) assert.equal(createGoogleMapsUrl({ id: "J001", name: "店舗", coordinates, source: "hotpepper" }), undefined);
 });
 
 test("16ジャンルの固定IDから日本語名と既存店舗を参照し、同一モックを重複定義しない", () => {
@@ -29,7 +36,7 @@ test("16ジャンルの固定IDから日本語名と既存店舗を参照し、�
     assert.equal(view.genre.name, genre.name);
     assert.equal(view.restaurant, candidates[1]);
     assert.equal(view.unanimous, true);
-    assert.equal(createGoogleMapsUrl(view.restaurant.coordinates), undefined);
+    assert.equal(createGoogleMapsUrl(view.restaurant), undefined);
   }
 });
 

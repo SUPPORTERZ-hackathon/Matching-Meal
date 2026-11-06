@@ -15,6 +15,7 @@ type RestaurantCandidate struct {
 	RestaurantID string
 	Position     int16
 	Name         string
+	Address      *string
 	PhotoURL     *string
 	OpeningHours *string
 	ClosedDays   *string
