@@ -21,7 +21,7 @@ func TestClientSearchMapsRequestAndResponse(t *testing.T) {
 		}
 		writer.Header().Set("Content-Type", "application/json")
 		_, _ = writer.Write([]byte(`{"results":{"shop":[
-			{"id":"J001","name":" 店舗A ","lat":35.6,"lng":139.7,"open":"11時","close":"なし","mobile_access":"駅前","station_name":"渋谷","photo":{"pc":{"l":"https://img.example/a.jpg"}},"budget":{"average":"3000円"},"urls":{"pc":"https://www.hotpepper.jp/strJ001/"}},
+			{"id":"J001","name":" 店舗A ","address":" 東京都渋谷区東1-2-3 ","lat":35.6,"lng":139.7,"open":"11時","close":"なし","mobile_access":"駅前","station_name":"渋谷","photo":{"pc":{"l":"https://img.example/a.jpg"}},"budget":{"average":"3000円"},"urls":{"pc":"https://www.hotpepper.jp/strJ001/"}},
 			{"id":"","name":"欠損店舗"},
 			{"id":"J002","name":"店舗B","lat":999,"lng":139.7,"photo":{"pc":{"l":"http://unsafe.example/a.jpg"}},"urls":{"pc":"https://evil.example/strJ002/"}}
 		]}}`))
@@ -42,11 +42,14 @@ func TestClientSearchMapsRequestAndResponse(t *testing.T) {
 	if first.RestaurantID != "J001" || first.Name != "店舗A" || first.PhotoURL == nil || first.DetailURL == nil {
 		t.Fatalf("first candidate = %+v", first)
 	}
+	if first.Address == nil || *first.Address != "東京都渋谷区東1-2-3" {
+		t.Fatalf("address = %v", first.Address)
+	}
 	if first.Access == nil || *first.Access != "駅前" || first.DinnerBudget == nil || *first.DinnerBudget != "3000円" {
 		t.Fatalf("mapped optional fields = %+v", first)
 	}
 	second := candidates[1]
-	if second.PhotoURL != nil || second.DetailURL != nil || second.Latitude != nil || second.Longitude != nil {
+	if second.Address != nil || second.PhotoURL != nil || second.DetailURL != nil || second.Latitude != nil || second.Longitude != nil {
 		t.Fatalf("unsafe fields were not removed: %+v", second)
 	}
 }

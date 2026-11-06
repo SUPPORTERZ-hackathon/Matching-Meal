@@ -115,6 +115,7 @@ type searchResponse struct {
 type shopResponse struct {
 	ID           string  `json:"id"`
 	Name         string  `json:"name"`
+	Address      string  `json:"address"`
 	Lat          float64 `json:"lat"`
 	Lng          float64 `json:"lng"`
 	Open         string  `json:"open"`
@@ -161,6 +162,7 @@ func candidateFromShop(shop shopResponse) (domain.RestaurantCandidate, bool) {
 	return domain.RestaurantCandidate{
 		RestaurantID: restaurantID,
 		Name:         name,
+		Address:      optionalString(shop.Address),
 		PhotoURL:     photoURL,
 		OpeningHours: optionalString(shop.Open),
 		ClosedDays:   optionalString(shop.Close),

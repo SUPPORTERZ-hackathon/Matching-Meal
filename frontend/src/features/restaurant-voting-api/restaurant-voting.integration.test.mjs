@@ -43,7 +43,7 @@ test("実API: 候補検索・2人の店舗投票・待機・決定結果・同�
   const decidedCandidates = await getRestaurantCandidates(host);
   assert(decidedCandidates.ok);
   assert.equal(decidedCandidates.data.room.status, "decided");
-  assert(createGoogleMapsUrl(hostResult.data.result.restaurant.coordinates));
+  assert(createGoogleMapsUrl(hostResult.data.result.restaurant));
   const repeated = await submitRestaurantAnswers(host, searched.data.restaurants, votes); assert(repeated.ok);
   assert.equal(repeated.data.room.version, hostResult.data.room.version); assert.deepEqual(repeated.data.result, hostResult.data.result);
 });
