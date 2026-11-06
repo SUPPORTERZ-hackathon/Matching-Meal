@@ -1,14 +1,112 @@
 # メシマッチ共通UIデザイン仕様
 
-- Status: Verified
-- Last updated: 2026-10-28
+- Status: Implemented
+- Last updated: 2026-11-07
 - Related issue: None
 - Related specifications: ../components/common-ui.md
 - Implementation files: frontend/src/app/globals.css, frontend/src/app/layout.tsx, frontend/src/components/ui/button.tsx, frontend/src/components/common/
 
 ## UI統合の現行契約（2026-10-31）
 
-主仕様は[frontend-ui-integration.md](../screens/frontend-ui-integration.md)。共通ヘッダーは不透明な既存背景色と境界線を一体でsticky表示する。最大430px/左右22pxとsafe-areaを維持し、高さ500px以下だけ仮の44px上部余白を実safe-areaへ縮める。固定領域の実測予約により本文末尾の隠れを防ぐ。 後段の従来ルート/固定処理/モック供給の記録は、相違する部分のみ本契約へ更新する。検証結果は主仕様のProgressへ集約する。
+主仕様は[frontend-ui-integration.md](../screens/frontend-ui-integration.md)。共通ヘッダーは不透明な既存背景色と境界線を一体でsticky表示する。最大430px/左右22pxと実際のsafe-areaを維持する。固定領域の実測予約により本文末尾の隠れを防ぐ。後段の従来ルート/固定処理/モック供給の記録は、相違する部分のみ本契約へ更新する。検証結果は各変更のProgressへ記録する。
+
+## 共通ヘッダーのコンパクト化（2026-11-07）
+
+### 目的・範囲・前提
+
+スマートフォン実機で上部空白がまだ大きいとの報告を受け、共通ヘッダーの高さと上下paddingを一体で縮める。対象は `.meal-header` の寸法のみ。既存の全12画面、ロゴ・色・左右余白・境界線・sticky・下部固定領域・画面遷移・API・PWA設定は維持する。`layout.tsx` の `viewportFit: "cover"` と `--meal-safe-top: env(safe-area-inset-top, 0px)` を前提とする。
+
+### 再現・期待動作・状態
+
+- 旧390×844ブラウザー相当、safe-area 0pxではヘッダー84px、上padding16px、下padding18px、ロゴ上端約33.3px、中央配置の戻るボタン上端約25.3px。上paddingだけ変更しても84pxの最小高が空白を残す。
+- 新寸法は最小高 `64px + 実際の上部safe-area`、上padding `8px + 実際の上部safe-area`、下padding15px。Safe Area 0pxでは通常ヘッダーを64pxにし、40pxの戻るボタンも上8px・下15px・境界線1pxに収める。正のSafe Area `s` では上部の安全領域を正確に `s` 加算する。
+- ヘッダーの子要素が40pxを超える、ルーム番号が折り返す、文字が拡大される場合は、`min-height` を超えて自然に高くしてよい。内容を切り取らず、ヘッダーの下へ本文を通常フローで配置する。
+- ヘッダーと区切り線を同一のsticky要素として保持する。画面下部のSafe Areaと固定ボタンには触れない。
+
+### 入力・エラー・境界条件
+
+入力はCSSの `safe-area-inset-top`（未提供時0px）、画面幅、高さ、表示文字量。上部insetが0なら余分な固定値を加えない。insetが正ならロゴ・戻るボタン・ルーム番号をその下に配置する。320〜1024px、短い画面、中央配置、長いルーム番号、スクロール時に重なり・横スクロールを発生させない。実機ノッチ・Dynamic Islandと文字200%は実機・ブラウザー条件に応じて確認し、未実施なら明記する。
+
+### 受け入れ条件・検証方法
+
+1. 390px、safe-area 0pxで上padding8px、下padding15px、ヘッダー高64pxを計算済みスタイルと実測値で確認する。ロゴと戻るボタンの上端を旧値と比較する。
+2. 正のsafe-areaを加えるCSS式を確認し、実機での保護範囲は実機確認事項として分ける。
+3. ホーム、ルーム作成、QR、待機、投票、結果の共通ヘッダーと区切り線が維持される。320/375/390/430/768/1024pxで横スクロールなし、短い画面でstickyと固定下部領域を確認する。
+4. Docker Composeでfrontend lint、typecheck、既存テスト、build、`git diff --check`を実施する。
+
+### 未決定事項
+
+なし。64/8/15pxは既存40px戻るボタンと利用者の64/8px目安から確定する。実機のsafe-area実値は端末依存の検証事項である。
+
+### Progress
+
+- 完了: 既存の未コミット3ファイルを確認し保持。共通CSSを最小高64px+実safe-area、上padding8px+実safe-area、下padding15pxへ変更。390×844の旧計算値と通常/中央配置のロゴ・戻るボタンを比較した。
+- ブラウザー検証: 390px、safe-area 0pxでヘッダー実高64px、上padding8px、下padding15px、ロゴ上端約16.3px、本文開始64px、横スクロールなし。ルーム作成画面の戻るボタン上端約8.3px。ホームとルーム作成は320/375/390/430/768/1024pxで横スクロールなし。390×500のルーム作成画面をスクロールしたとき、ヘッダー上端0px、固定下部領域の下端500pxを確認。QR、ジャンル投票待機・結果、店舗投票待機・結果でも共通ヘッダーとstickyを確認した。認証・結果データを要する画面では空状態を確認し、実ルーム操作は行っていない。
+- 品質検証: Docker Composeでfrontend lint・typecheck・build成功。既存テスト145件中139件成功・6件スキップ・失敗0件。`git diff --check`成功。
+- 残作業: iPhone/Androidの通常ブラウザーとインストール済みPWAで正のsafe-area値、ノッチ/Dynamic Island、横向き・アドレスバー変化・文字200%を実機確認する。実機未検証のためStatusはVerifiedにしない。
+- 関連Issue・PR・コミット: なし。
+
+### Self-Review
+
+- Score: 96/100
+- Review date: 2026-11-07
+- Reasons for deductions: 実機の正のSafe Areaと文字200%の実測は未了。
+- Revisions made: 上paddingだけでは残る最小高の問題、40px戻るボタンに必要な上下寸法、内容拡大時の自動高を明記した。
+
+## モバイル上部Safe Area修正契約（2026-11-06、寸法は2026-11-07の契約へ更新）
+
+以下の84px/16pxは2026-11-06時点の記録であり、現行のヘッダー寸法は上記の2026-11-07契約を参照する。
+
+### 目的・範囲・対象外
+
+共通ヘッダーを使うS-01〜S-12の通常ブラウザーとインストール済みPWAで、必要な上部安全領域を確保しながら余分な44pxの空白を除く。対象は共通CSSの上部safe-area変数と、その結果変わるヘッダーの上余白・最小高である。ロゴ、配色、横余白、sticky、下部安全領域、画面固有UI、API、PWA設定は変更しない。
+
+### 前提・再現・現行仕様との差
+
+- `layout.tsx` は `viewportFit: "cover"` を設定済み。ヘッダーは `.meal-header` を共用する。
+- 高さ844px・幅390pxの通常ブラウザー相当で `env(safe-area-inset-top)=0px` のとき、旧 `--meal-safe-top=max(44px, 0px)` により `padding-top=60px`、`min-height=128px`、実測ヘッダー高128pxとなる。ロゴ上端は約77.3px。
+- 旧仕様は高さ500px以下だけ44pxを除いていた。今回の利用者報告と実測を優先し、画面高さにかかわらず実際のsafe-area値を用いる。これは従来の「通常時は最低44px」というテーマ仕様からの意図的な変更である。
+- `viewport-fit=cover` と `env(safe-area-inset-*)` の関係は [WebKitの説明](https://webkit.org/blog/7929/designing-websites-for-iphone-x/) と [MDNのCSS env説明](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Values/env) に従う。
+
+### 入力・状態・期待動作
+
+| 入力状態 | 上部安全領域変数 | ヘッダー上padding | ヘッダー最小高 |
+| --- | --- | --- | --- |
+| `env(safe-area-inset-top)=0px` | 0px | 16px | 84px |
+| `env(safe-area-inset-top)=s`（s>0） | s | s+16px | s+84px |
+
+ブラウザーのアドレスバー・PWAのステータスバー・縦横向きによって環境値が変われば、CSSがその値に追従する。ヘッダー本体と区切り線を同じsticky要素として上端に維持する。ロゴとルーム番号は通常フロー内に置き、文字拡大や折り返しによって必要ならヘッダー高が最小高を超える。本文・固定下部領域・縦スクロールを維持する。
+
+### エラー・境界条件
+
+CSS環境変数が未提供なら `env(..., 0px)` のfallbackを用いる。画面幅320〜1024px、高さ500px以下、文字200%、中央配置/ルーム番号あり/なし、スクロール後も要素の重なりや横スクロールを発生させない。実機固有のノッチ値・iOS PWAの挙動はエミュレーションから断定せず、実機未検証として残す。
+
+### 受け入れ条件・検証方法
+
+1. Safe Area 0pxで上部の固定44pxが消え、390×844の計算済み `padding-top=16px`、`min-height=84px`を確認する。
+2. 正のSafe Areaでは16pxに実際の値だけが加わるCSS式となり、ノッチを覆わない。
+3. S-01〜S-12の共通ヘッダーと区切り線、中央配置・戻る・ルーム番号を維持する。指定幅と短い画面で横スクロール・本文や下部固定領域との重なりを確認する。
+4. Docker Composeのfrontend lint、typecheck、既存テスト、build、および`git diff --check`を実施する。実行不能なら理由と影響を記録する。
+
+### 未決定事項
+
+なし。実機で返されるsafe-area値は端末・ブラウザーに依存し、受け入れ条件の未決定事項ではなく追加検証事項である。
+
+### Progress
+
+- 完了: 開始時のGit作業ツリーがクリーンであること、共通ヘッダー/viewport/既存仕様/画面参照、390×844での旧CSS計算値と表示の確認。共通変数を実safe-area値に変更し、短い画面だけの重複指定を除去した。
+- ブラウザー検証: 390×844の通常ブラウザー相当で `env=0px`、上padding16px・最小高/実高84px・ロゴ上端約33.3px・本文開始84px・横スクロールなしを確認。320/375/390/430/768/1024pxのホームでもpadding16px・高さ84px・横スクロールなし。390×500のルーム作成ではスクロール後もヘッダー上端0px、固定下部領域は画面下端500px。ルーム作成/待機、QR、参加、ジャンル投票/待機/結果、店舗投票/待機/結果および招待・結果プレビューのヘッダーを確認し、いずれも84px/16px/sticky/横スクロールなし。実ルーム固有データは操作しない。
+- 品質検証: Docker Composeでfrontend lint、typecheck、build成功。既存フロントエンドテスト130件中126件成功・4件スキップ・失敗0件。`git diff --check`成功。
+- 残作業: iPhone/Androidの通常ブラウザーとインストール済みPWAで実safe-area値、ノッチ/Dynamic Island、横向き・アドレスバー変化・文字200%を実機確認する。実機未検証のためStatusはVerifiedにしない。
+- ブロッカー: なし。Dockerの通常権限はWindowsパイプへのアクセスを拒否したが、許可された昇格実行で既存frontendコンテナーの検証は完了した。
+- 関連Issue・PR・コミット: なし。
+
+### Self-Review
+
+- Score: 96/100
+- Review date: 2026-11-06
+- Reasons for deductions: 実機iPhone/AndroidのSafe Area実測はこの環境では未確認（表示の再現性14/15、検証9/10、状態19/20）。
+- Revisions made: 旧44px仕様との差、0px/正値/未提供の状態、CSS式と受け入れ条件を明記した。
 
 ## 今回の実装契約（2026-10-28）
 
@@ -47,7 +145,7 @@ globals.cssの既存CSS変数を維持し、Tailwind CSS 4の@theme inlineから
 ### 配置・寸法・レスポンシブ
 
 - PageContainerだけに幅100%・最大430px・中央配置・min-height:100svhを適用する。body全体の最小幅や高さ固定、横はみ出し隠蔽、内部スクロールは設けない。
-- 本文は上24px・左右max(22px, safe-area)・下24px。ヘッダーは上max(44px, safe-area-top)+16px、左右max(20px, safe-area)、下18px、最小高84px+上部安全領域。通常は左ロゴと右ルーム番号、折り返し可。中央配置は同じロゴ・色・余白を使う。
+- 本文は上24px・左右max(22px, safe-area)・下24px。ヘッダーは上safe-area-top+8px、左右max(20px, safe-area)、下15px、最小高64px+上部安全領域。通常は左ロゴと右ルーム番号、折り返し可。中央配置は同じロゴ・色・余白を使う。
 - BottomActionは通常フロー、上16px・左右max(22px, safe-area)・下max(20px, safe-area-bottom)。短いページではflexの残り領域により下端へ配置し、長いページでは本文に続く。固定・absolute・stickyにしないため可変高の予約余白は不要。
 - 700px以上はアプリ外側上下24px、角丸30px、最小高calc(100svh - 48px)。320px未満も流動幅で折り返す。検証幅は320/375/390/430/699/700/1024pxと横向き844×390、文字200%。
 - ロゴは通常26px・マーク42px/24px、compactは18px・マーク32px/18px。間隔10px、太さ800、字間-.06em、マーク回転-3度と元CSSの角丸を使用。
