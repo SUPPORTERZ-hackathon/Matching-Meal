@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type Po
 import type { Genre } from "./genres";
 import { recordGenreVote, undoGenreVote, type GenreVote, type VoteChoice } from "./vote-state";
 import { canCommitSwipe, detectAxis, directionOpacity, dragMotion, REST_MOTION, SWIPE, type CardMotion, type GestureAxis } from "./swipe-config";
+import { useGenreVoteSound } from "./use-genre-vote-sound";
 
 export type VotePhase = "idle" | "dragging" | "returning" | "exiting" | "entering" | "undoing" | "undo-entering" | "complete";
 type LastVoteAction = { type: "vote"; vote: GenreVote } | { type: "undo"; genreId: string } | null;
@@ -34,6 +35,7 @@ export function useGenreVote(genres: readonly Genre[], initialVotes: readonly Ge
   const pendingVoteRef = useRef<GenreVote | null>(null);
   const frameRef = useRef<number | null>(null);
   const pendingMotionRef = useRef<CardMotion>(REST_MOTION);
+  const { playVoteSound, playUndoSound } = useGenreVoteSound();
 
   const changePhase = useCallback((next: VotePhase) => {
     phaseRef.current = next;
@@ -122,6 +124,7 @@ export function useGenreVote(genres: readonly Genre[], initialVotes: readonly Ge
     const genre = genres[votesRef.current.length];
     const card = cardRef.current;
     if (!genre || !card) return;
+    playVoteSound();
     setCardWidth(card.offsetWidth);
     releaseGesture();
     pendingVoteRef.current = { genreId: genre.id, choice };
@@ -143,6 +146,7 @@ export function useGenreVote(genres: readonly Genre[], initialVotes: readonly Ge
 
   function undo() {
     if (votesRef.current.length === 0 || (phaseRef.current !== "idle" && phaseRef.current !== "complete")) return;
+    playUndoSound();
     const wasComplete = phaseRef.current === "complete";
     changePhase("undoing");
     releaseGesture();
