@@ -7,6 +7,8 @@ import { parseStations, searchStations, type Station, type StationDataDocument }
 import styles from "./room-create.module.css";
 
 const STATION_DATA_URL = "/data/stations-2025.json";
+const CANDIDATE_VIEWPORT_GAP = 12;
+const MIN_VISIBLE_CANDIDATES = 156;
 
 type StationSearchProps = {
   disabled: boolean;
@@ -25,6 +27,8 @@ export function StationSearch({ disabled, onStationChange }: StationSearchProps)
   const [loadError, setLoadError] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const composingRef = useRef(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -51,6 +55,44 @@ export function StationSearch({ disabled, onStationChange }: StationSearchProps)
   const activeOptionId = activeIndex >= 0 && results[activeIndex]
     ? `${listboxId}-option-${results[activeIndex].id}`
     : undefined;
+
+  useEffect(() => {
+    if (!showResults) return;
+    const input = inputRef.current, list = listRef.current;
+    const action = input?.closest(".meal-page")?.querySelector<HTMLElement>("[data-fixed-action]");
+    if (!input || !list || !action) return;
+    let frame: number | undefined;
+    function fitCandidates() {
+      frame = undefined;
+      if (!input || !list || !action) return;
+      if (!action.hidden) { list.style.removeProperty("max-height"); return; }
+      const viewport = window.visualViewport;
+      const bottom = (viewport?.offsetTop ?? 0) + (viewport?.height ?? window.innerHeight) - CANDIDATE_VIEWPORT_GAP;
+      const header = input.closest(".meal-page")?.querySelector<HTMLElement>(".meal-header[data-sticky=true]");
+      const top = Math.max(viewport?.offsetTop ?? 0, header?.getBoundingClientRect().bottom ?? 0) + CANDIDATE_VIEWPORT_GAP;
+      const listTop = list.getBoundingClientRect().top;
+      const scrollNeeded = Math.max(0, listTop + MIN_VISIBLE_CANDIDATES - bottom);
+      const scrollPossible = Math.max(0, input.getBoundingClientRect().top - top);
+      if (scrollNeeded && scrollPossible) window.scrollBy({ top: Math.min(scrollNeeded, scrollPossible), behavior: "instant" });
+      const available = Math.max(0, bottom - list.getBoundingClientRect().top);
+      list.style.maxHeight = `${Math.floor(available)}px`;
+    }
+    function schedule() { if (frame === undefined) frame = window.requestAnimationFrame(fitCandidates); }
+    const observer = new MutationObserver(schedule);
+    observer.observe(action, { attributes: true, attributeFilter: ["hidden"] });
+    window.addEventListener("scroll", schedule);
+    window.visualViewport?.addEventListener("resize", schedule);
+    window.visualViewport?.addEventListener("scroll", schedule);
+    schedule();
+    return () => {
+      if (frame !== undefined) window.cancelAnimationFrame(frame);
+      observer.disconnect();
+      window.removeEventListener("scroll", schedule);
+      window.visualViewport?.removeEventListener("resize", schedule);
+      window.visualViewport?.removeEventListener("scroll", schedule);
+      list.style.removeProperty("max-height");
+    };
+  }, [showResults]);
 
   function editQuery(value: string) {
     setQuery(value);
@@ -106,6 +148,7 @@ export function StationSearch({ disabled, onStationChange }: StationSearchProps)
       <div className={styles.locationInput}>
         <MapPin aria-hidden="true" />
         <input
+          ref={inputRef}
           id="room-location"
           type="text"
           role="combobox"
@@ -138,7 +181,7 @@ export function StationSearch({ disabled, onStationChange }: StationSearchProps)
       </p>
 
       {showResults && (
-        <ul id={listboxId} className={styles.stationResults} role="listbox" aria-label="駅の候補">
+        <ul ref={listRef} id={listboxId} className={styles.stationResults} role="listbox" aria-label="駅の候補">
           {results.map((station, index) => (
             <li
               id={`${listboxId}-option-${station.id}`}

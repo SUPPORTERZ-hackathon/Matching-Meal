@@ -10,6 +10,8 @@
 
 ニックネーム・駅検索の文字入力を16pxとし、既存の入力高さ・候補選択・viewport設定を維持する。主仕様と検証結果は[mobile-genre-flow-ux.md](mobile-genre-flow-ux.md)を参照する。
 
+文字入力中の固定作成ボタンと駅候補の可視範囲は[fixed-bottom-keyboard.md](../components/fixed-bottom-keyboard.md)を参照する。
+
 ## 目的と対象範囲
 
 ホストがニックネーム、店舗検索の中心地点、検索範囲を指定し、ルームを作成できるようにする。検索中心は次のいずれか一方で確定する。
