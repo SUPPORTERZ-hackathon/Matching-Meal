@@ -8,6 +8,8 @@ import { GenreResultRankings } from "./genre-result-rankings";
 import { ResultReveal } from "./result-reveal";
 import { ResultBottomAction } from "./result-bottom-action";
 import styles from "./genre-result.module.css";
+import { useEffect } from "react";
+import { useGenreResultSound } from "./use-genre-result-sound";
 
 export type GenreResultScreenProps = {
   result: GenreResultData;
@@ -20,8 +22,24 @@ export type GenreResultScreenProps = {
   children?: ReactNode;
 };
 
-export function GenreResultScreen({ result, genres, roomId, isPrototype = false, replayKey = 0, onFindShops, bottomAction, children }: GenreResultScreenProps) {
+export function GenreResultScreen({
+  result,
+  genres,
+  roomId,
+  isPrototype = false,
+  replayKey = 0,
+  onFindShops,
+  bottomAction,
+  children,
+}: GenreResultScreenProps) {
+  const { playSound } = useGenreResultSound();
+
   const view = resolveGenreResult(result, genres);
+  useEffect(() => {
+    if (!view) return;
+
+    playSound();
+  }, [view?.genre.id, replayKey, playSound]);
   return (
     <div className={styles.background}>
       <PageContainer className={styles.page} header={<AppHeader roomNumber={roomId} className={styles.header} />} bottomAction={view ? bottomAction ?? <ResultBottomAction key={view.genre.id} genre={view.genre} onFindShops={onFindShops} /> : undefined}>
