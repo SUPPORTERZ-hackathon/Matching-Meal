@@ -48,15 +48,17 @@ export function parseRestaurantCandidate(value: JsonValue): RestaurantCandidate 
   if (!raw || typeof raw.id !== "string" || !raw.id.trim() || typeof raw.name !== "string" || !raw.name.trim()
     || raw.source !== "hotpepper") return;
   const photo = nullableText(raw.photoUrl ?? null), openingHours = nullableText(raw.openingHours ?? null);
+  const address = nullableText(raw.address ?? null);
   const closedDays = nullableText(raw.closedDays ?? null), dinnerBudget = nullableText(raw.dinnerBudget ?? null);
   const access = nullableText(raw.access ?? null), stationName = nullableText(raw.stationName ?? null);
   const detail = nullableText(raw.detailUrl ?? null), coordinates = parseCoordinates(raw.coordinates ?? null);
-  if ([photo, openingHours, closedDays, dinnerBudget, access, stationName, detail, coordinates].includes(null)) return;
+  if ([photo, openingHours, address, closedDays, dinnerBudget, access, stationName, detail, coordinates].includes(null)) return;
   if (photo && safeRestaurantPhotoUrl(photo) !== photo) return;
   if (detail && safeRestaurantDetailUrl(detail) !== detail) return;
   return {
     id: raw.id.trim(), name: raw.name.trim(), source: "hotpepper",
     ...(photo ? { photoUrl: photo } : {}), ...(openingHours ? { openingHours } : {}),
+    ...(address ? { address } : {}),
     ...(closedDays ? { closedDays } : {}), ...(dinnerBudget ? { dinnerBudget } : {}),
     ...(access ? { access } : {}), ...(stationName ? { stationName } : {}),
     ...(detail ? { detailUrl: detail } : {}), ...(coordinates ? { coordinates } : {}),

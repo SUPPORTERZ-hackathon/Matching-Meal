@@ -3,6 +3,7 @@ package domain
 import (
 	"errors"
 	"slices"
+	"sort"
 	"time"
 )
 
@@ -17,6 +18,7 @@ const (
 	GenreDecisionRandomTie        GenreDecisionMethod = "random_tie"
 	GenreDecisionRandomAllSkipped GenreDecisionMethod = "random_all_skipped"
 	GenreCount                                        = 16
+	GenreRankingLimit                                 = 3
 )
 
 var (
@@ -35,11 +37,21 @@ type GenreVote struct {
 }
 
 type GenreVoteResult struct {
-	RoomID         string
-	GenreID        string
-	LikeCount      int
-	DecisionMethod GenreDecisionMethod
-	DecidedAt      time.Time
+	RoomID                 string
+	GenreID                string
+	LikeCount              int
+	DecisionMethod         GenreDecisionMethod
+	DecidedAt              time.Time
+	Rankings               []GenreVoteRanking
+	RankingTieBreakApplied bool
+}
+
+type GenreVoteRanking struct {
+	RoomID          string
+	Rank            int16
+	GenreID         string
+	LikeCount       int
+	TieBreakApplied bool
 }
 
 type GenreVotingParticipant struct {
@@ -117,4 +129,33 @@ func GenreWinnerCandidates(likeCounts map[string]int) ([]string, int, GenreDecis
 		decisionMethod = GenreDecisionRandomTie
 	}
 	return candidates, maximum, decisionMethod, nil
+}
+
+func GenreRankingCandidates(likeCounts map[string]int, winnerID string) ([]GenreVoteRanking, error) {
+	if len(likeCounts) != GenreCount {
+		return nil, ErrInvalidGenreVotes
+	}
+	winnerKnown := false
+	remaining := make([]GenreVoteRanking, 0, GenreCount-1)
+	var winner GenreVoteRanking
+	for _, genreID := range genreIDs {
+		count, exists := likeCounts[genreID]
+		if !exists || count < 0 {
+			return nil, ErrInvalidGenreVotes
+		}
+		candidate := GenreVoteRanking{GenreID: genreID, LikeCount: count}
+		if genreID == winnerID {
+			winner = candidate
+			winnerKnown = true
+			continue
+		}
+		remaining = append(remaining, candidate)
+	}
+	if !winnerKnown {
+		return nil, ErrInvalidGenreVotes
+	}
+	sort.SliceStable(remaining, func(left int, right int) bool {
+		return remaining[left].LikeCount > remaining[right].LikeCount
+	})
+	return append([]GenreVoteRanking{winner}, remaining...), nil
 }

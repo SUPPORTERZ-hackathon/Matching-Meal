@@ -1,9 +1,9 @@
 # 店舗投票結果画面・静的フロントエンドプロトタイプ
 
 - Status: Verified
-- Last updated: 2026-11-04
+- Last updated: 2026-11-06
 - Related issue: None
-- Related specifications: restaurant-voting-api-integration.md, restaurant-vote.md, restaurant-vote-waiting.md, genre-result.md, ../themes/design-system.md, ../components/common-ui.md
+- Related specifications: restaurant-voting-api-integration.md, ../services/restaurant-map-location.md, restaurant-vote.md, restaurant-vote-waiting.md, genre-result.md, ../themes/design-system.md, ../components/common-ui.md
 - Implementation files: frontend/src/app/restaurant-result/, frontend/src/app/ui-preview/restaurant-result/, frontend/src/features/restaurant-result/, frontend/src/features/restaurant-vote/route-data.ts, frontend/src/app/restaurant-vote/page.tsx, frontend/src/features/restaurant-vote-waiting/restaurant-vote-waiting-preview.tsx
 
 ## UI統合の現行契約（2026-10-31）
@@ -13,6 +13,10 @@
 ## 実API連携の現行契約（2026-11-04）
 
 主仕様は[restaurant-voting-api-integration.md](restaurant-voting-api-integration.md)。実roomでは保存済み決定店舗、候補APIのジャンル、like数、参加人数を表示し、既存Google Maps URL生成へAPI座標を渡す。通常URLの未接続表示は本契約へ更新し、モック結果と実結果を混在させない。
+
+## Google Maps位置修正の現行契約（2026-11-06）
+
+住所保存とMaps検索条件の主仕様は[restaurant-map-location.md](../services/restaurant-map-location.md)。実店舗の名前とHot Pepper住所がある場合は「店舗名＋住所」をMapsの`query`へ使い、住所がない既存候補は座標へフォールバックする。住所も有効座標もない場合だけ無効表示とする。後段の「座標だけを使い、店名や住所を使わない」という記録は、この現行契約により更新する。
 
 ## 目的・承認・範囲
 
@@ -42,6 +46,8 @@
 
 ## Progress（現行）
 
+- 完了：Hot Pepper住所をAPIから受け取り、店舗名＋住所を優先してGoogle Maps検索URLを生成するよう変更。住所欠損時の座標フォールバックと、両方欠損時の無効表示を維持。
+- 検証：Maps URLの店舗名＋住所優先、URLエンコード、座標フォールバック、座標境界値・欠損を単体テストで確認。Docker内のlint、typecheck、関連テスト、buildに成功。
 - 完了：既存未コミット変更/資料/バッジの実体/確定計算式/モックを確認。Docker応答の復旧を確認。
 - 完了：計算分離・静的マッチ率バッジ・demo opt-in導線・全ケースの単体/ブラウザーテスト。
 - Docker検証：lint成功（既存home-previewの未使用Plus警告1件・エラー0）、typecheck成功、フロントエンド35テスト成功、最終CSSを含むbuild成功。NodeのMODULE_TYPELESS_PACKAGE_JSONは既存構成由来の警告で、module設定は変更しない。

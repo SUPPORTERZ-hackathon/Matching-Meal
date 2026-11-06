@@ -1,9 +1,9 @@
 # 現在地による店舗候補検索サービス
 
 - Status: Implemented
-- Last updated: 2026-10-31
+- Last updated: 2026-11-06
 - Related issue: None
-- Related specifications: ../models/restaurant-candidates.md, ../models/rooms-and-participants.md, ../models/genre-votes.md, room-lifecycle.md, ../screens/room-create-screen.md, ../screens/restaurant-vote.md
+- Related specifications: ../models/restaurant-candidates.md, restaurant-map-location.md, ../models/rooms-and-participants.md, ../models/genre-votes.md, room-lifecycle.md, ../screens/room-create-screen.md, ../screens/restaurant-vote.md
 - Implementation files: ../../backend/cmd/api/main.go, ../../backend/internal/domain/room.go, ../../backend/internal/domain/restaurant_candidate.go, ../../backend/internal/hotpepper/client.go, ../../backend/internal/repository/room.go, ../../backend/internal/repository/restaurant_search.go, ../../backend/internal/repository/postgres/room.go, ../../backend/internal/repository/postgres/restaurant_search.go, ../../backend/internal/service/room.go, ../../backend/internal/service/restaurant_search.go, ../../backend/internal/transport/http/room.go, ../../backend/internal/transport/http/restaurant_search.go, ../../backend/migrations/000004_create_room_search_conditions.up.sql, ../../backend/migrations/000004_create_room_search_conditions.down.sql, ../../backend/migrations/000005_create_restaurant_candidates.up.sql, ../../backend/migrations/000005_create_restaurant_candidates.down.sql, ../../api/openapi.yaml
 
 ## 目的と対象範囲
@@ -149,6 +149,7 @@
       {
         "id": "J001234567",
         "name": "店舗名",
+        "address": "東京都渋谷区...",
         "photoUrl": "https://...",
         "openingHours": "月〜日 11:00〜23:00",
         "closedDays": "なし",
@@ -165,6 +166,8 @@
 ```
 
 候補は1〜5件で、保存済み`position`昇順とする。
+
+Hot Pepperの`address`の保存、`address: string | null`のAPI契約、既存候補の扱いは`restaurant-map-location.md`を主仕様とする。
 
 ## API 2: 店舗候補取得
 
@@ -265,6 +268,8 @@ None。上記ジャンル検索条件を採用することはユーザー承認�
 - 検証: Hot Pepper公式ジャンルマスタAPI version 1.30でジャンルコードを確認。実グルメサーチAPIで現在地・range・ジャンル検索の正常応答と使用フィールドを確認。
 - 検証: Clientの正常・欠損・危険URL・HTTPエラー・不正JSON・APIエラー・タイムアウト、Serviceの100/50件条件・重複排除・抽選・権限・状態・再送、Handlerの成功・主要エラーを自動テストで確認。
 - 検証: Docker内の`go test ./...`、`go vet ./...`、`go test -race ./...`、実PostgreSQL統合テスト、マイグレーションupと再up、OpenAPI検証に成功。
+- 完了: Hot Pepperの`address`を候補へ変換し、検索・取得・決定結果APIで`address: string | null`を返す処理とOpenAPI契約を実装。
+- 検証: 住所あり・欠損のクライアントテスト、Handlerテスト、実PostgreSQL統合テスト、Docker内の全Goテスト・vetに成功。
 - 未実施: マイグレーションdownは実行許可が得られなかったため未検証。
 - 残作業: マイグレーションdown検証後のStatus `Verified`化。フロントエンドAPI接続と店舗投票保存は別仕様。
 - ブロッカー: マイグレーションdownの実行許可なし。

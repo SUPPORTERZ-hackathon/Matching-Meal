@@ -96,7 +96,8 @@ func TestRegisterRestaurantSearchRoutes(t *testing.T) {
 
 func TestRestaurantSearchHandlerSearch(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	candidates := []domain.RestaurantCandidate{{RestaurantID: "J001", Name: "店舗", Source: "hotpepper"}}
+	address := "東京都渋谷区東1-2-3"
+	candidates := []domain.RestaurantCandidate{{RestaurantID: "J001", Name: "店舗", Address: &address, Source: "hotpepper"}}
 	handler := newRestaurantHandler(domain.ParticipantRoleHost, candidates, nil)
 	router := gin.New()
 	router.POST("/api/v1/rooms/:roomKey/restaurant-candidates/search", handler.Search)
@@ -108,7 +109,7 @@ func TestRestaurantSearchHandlerSearch(t *testing.T) {
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("status = %d body = %s", recorder.Code, recorder.Body.String())
 	}
-	if body := recorder.Body.String(); !containsAll(body, `"id":"J001"`, `"status":"restaurant_voting"`, `"coordinates":null`, `"source":"hotpepper"`) {
+	if body := recorder.Body.String(); !containsAll(body, `"id":"J001"`, `"address":"東京都渋谷区東1-2-3"`, `"status":"restaurant_voting"`, `"coordinates":null`, `"source":"hotpepper"`) {
 		t.Fatalf("body = %s", body)
 	}
 }

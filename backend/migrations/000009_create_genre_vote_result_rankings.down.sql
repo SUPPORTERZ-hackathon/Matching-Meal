@@ -1,0 +1,1 @@
+DROP TABLE genre_vote_result_rankings;

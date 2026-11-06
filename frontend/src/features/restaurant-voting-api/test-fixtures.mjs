@@ -6,8 +6,8 @@ export const host = { id: hostId, nickname: "同じ名前", role: "host" };
 export const member = { id: memberId, nickname: "同じ名前", role: "member" };
 export const session = { room, participant: host, sessionToken: "unit-test-only-token" };
 export const restaurants = [
-  { id: "J001", name: "店舗1", photoUrl: "https://img.example.test/1.jpg", openingHours: "11:00〜23:00", closedDays: null, dinnerBudget: "3000円", access: "徒歩3分", stationName: "渋谷", detailUrl: "https://www.hotpepper.jp/strJ001/", coordinates: { latitude: 35.5, longitude: 139.7 }, source: "hotpepper" },
-  { id: "J002", name: "店舗2", photoUrl: null, openingHours: null, closedDays: null, dinnerBudget: null, access: null, stationName: null, detailUrl: null, coordinates: null, source: "hotpepper" },
+  { id: "J001", name: "店舗1", address: "東京都渋谷区東1-2-3", photoUrl: "https://img.example.test/1.jpg", openingHours: "11:00〜23:00", closedDays: null, dinnerBudget: "3000円", access: "徒歩3分", stationName: "渋谷", detailUrl: "https://www.hotpepper.jp/strJ001/", coordinates: { latitude: 35.5, longitude: 139.7 }, source: "hotpepper" },
+  { id: "J002", name: "店舗2", address: null, photoUrl: null, openingHours: null, closedDays: null, dinnerBudget: null, access: null, stationName: null, detailUrl: null, coordinates: null, source: "hotpepper" },
 ];
 export const candidateResponse = { data: { room: { id: roomId, status: "restaurant_voting", version: 7, expiresAt: room.expiresAt }, genreId: "ramen", restaurants } };
 export function votingResponse({ submitted = false, complete = false } = {}) {

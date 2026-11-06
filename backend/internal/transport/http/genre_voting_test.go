@@ -89,6 +89,38 @@ func TestGenreVotingHandlerSubmit(t *testing.T) {
 	}
 }
 
+func TestNewGenreVotingResponseIncludesFrontendRankings(t *testing.T) {
+	now := time.Date(2026, time.November, 7, 12, 0, 0, 0, time.UTC)
+	state := domain.GenreVotingState{Result: &domain.GenreVoteResult{
+		GenreID: "ramen", LikeCount: 2, DecisionMethod: domain.GenreDecisionRandomTie, DecidedAt: now,
+		Rankings: []domain.GenreVoteRanking{
+			{Rank: 1, GenreID: "ramen", LikeCount: 2, TieBreakApplied: true},
+			{Rank: 2, GenreID: "sushi-seafood", LikeCount: 2, TieBreakApplied: true},
+			{Rank: 3, GenreID: "yakiniku", LikeCount: 1},
+		},
+		RankingTieBreakApplied: true,
+	}}
+	response := newGenreVotingResponse(state)
+	if response.Data.Result == nil || len(response.Data.Result.Rankings) != domain.GenreRankingLimit ||
+		response.Data.Result.Rankings[0].GenreID != "ramen" || response.Data.Result.Rankings[0].Votes != 2 ||
+		!response.Data.Result.RankingTieBreakApplied {
+		t.Fatalf("result = %+v", response.Data.Result)
+	}
+}
+
+func TestNewGenreVotingResponseUsesEmptyRankingsForLegacyResult(t *testing.T) {
+	response := newGenreVotingResponse(domain.GenreVotingState{Result: &domain.GenreVoteResult{
+		GenreID: "ramen", LikeCount: 2, DecisionMethod: domain.GenreDecisionMostLikes,
+	}})
+	encoded, err := json.Marshal(response.Data.Result)
+	if err != nil {
+		t.Fatalf("encode result: %v", err)
+	}
+	if body := string(encoded); !strings.Contains(body, `"rankings":[]`) || !strings.Contains(body, `"rankingTieBreakApplied":false`) {
+		t.Fatalf("result = %s", body)
+	}
+}
+
 func TestGenreVotingHandlerErrors(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	tests := []struct {

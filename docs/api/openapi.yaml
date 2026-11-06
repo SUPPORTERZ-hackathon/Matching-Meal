@@ -820,10 +820,21 @@ components:
       type: string
       enum: [most_likes, random_tie, random_all_skipped]
 
+    GenreVoteRanking:
+      type: object
+      additionalProperties: false
+      required: [genreId, votes]
+      properties:
+        genreId:
+          $ref: "#/components/schemas/GenreId"
+        votes:
+          type: integer
+          minimum: 0
+
     GenreVoteResult:
       type: object
       additionalProperties: false
-      required: [genreId, likeCount, decisionMethod, decidedAt]
+      required: [genreId, likeCount, decisionMethod, decidedAt, rankings, rankingTieBreakApplied]
       properties:
         genreId:
           $ref: "#/components/schemas/GenreId"
@@ -835,6 +846,15 @@ components:
         decidedAt:
           type: string
           format: date-time
+        rankings:
+          type: array
+          description: 配列順が確定順位。新規結果は3件、順位保存前の既存結果は0件。
+          minItems: 0
+          maxItems: 3
+          items:
+            $ref: "#/components/schemas/GenreVoteRanking"
+        rankingTieBreakApplied:
+          type: boolean
 
     GenreVotingResponse:
       type: object
@@ -904,6 +924,7 @@ components:
       required:
         - id
         - name
+        - address
         - photoUrl
         - openingHours
         - closedDays
@@ -920,6 +941,8 @@ components:
         name:
           type: string
           minLength: 1
+        address:
+          type: [string, "null"]
         photoUrl:
           type: [string, "null"]
           format: uri
@@ -1228,6 +1251,14 @@ components:
             likeCount: 1
             decisionMethod: random_tie
             decidedAt: "2026-10-30T12:02:00Z"
+            rankings:
+              - genreId: sushi-seafood
+                votes: 1
+              - genreId: ramen
+                votes: 1
+              - genreId: yakiniku
+                votes: 0
+            rankingTieBreakApplied: true
     RestaurantVotingWaiting:
       value:
         data:
@@ -1279,6 +1310,7 @@ components:
             restaurant:
               id: J001234567
               name: 店舗名
+              address: 東京都渋谷区東1-2-3
               photoUrl: null
               openingHours: 月〜日 11:00〜23:00
               closedDays: なし

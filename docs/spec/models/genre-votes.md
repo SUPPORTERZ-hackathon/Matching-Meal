@@ -1,14 +1,16 @@
 # ジャンル投票モデル
 
 - Status: Verified
-- Last updated: 2026-10-30
+- Last updated: 2026-11-07
 - Related issue: None
-- Related specifications: ../services/genre-voting.md, rooms-and-participants.md, ../screens/genre-vote.md, ../screens/genre-vote-waiting.md
-- Implementation files: ../../backend/internal/domain/genre_vote.go, ../../backend/internal/repository/genre_voting.go, ../../backend/internal/repository/postgres/genre_voting.go, ../../backend/migrations/000003_create_genre_votes.up.sql, ../../backend/migrations/000003_create_genre_votes.down.sql
+- Related specifications: ../services/genre-voting.md, ../services/genre-vote-rankings.md, rooms-and-participants.md, ../screens/genre-vote.md, ../screens/genre-vote-waiting.md
+- Implementation files: ../../backend/internal/domain/genre_vote.go, ../../backend/internal/repository/genre_voting.go, ../../backend/internal/repository/postgres/genre_voting.go, ../../backend/migrations/000003_create_genre_votes.up.sql, ../../backend/migrations/000003_create_genre_votes.down.sql, ../../backend/migrations/000009_create_genre_vote_result_rankings.up.sql, ../../backend/migrations/000009_create_genre_vote_result_rankings.down.sql
 
 ## 目的と対象範囲
 
 参加者固定済みのルームで、各参加者が16ジャンルへ行った`like`または`skip`を一括保存し、全員の提出完了後にジャンルを1つ決定するためのデータモデルを定義する。最多`like`が同数の場合は同数候補からランダムに1件を選び、全員が全件`skip`した場合は16ジャンルすべてからランダムに1件を選ぶ。
+
+上位3件の保存モデルと既存1位との関係は`../services/genre-vote-rankings.md`を主仕様とする。
 
 ## 対象外
 
@@ -180,6 +182,8 @@ None。`restaurant_searching`状態の追加を含め、最多同数と全員ski
 - 検証: Domainテストで16ジャンルとフロントエンド定義の一致、不足・重複・未知ID・不正choice、同数候補、全件0票を確認。
 - 検証: 実PostgreSQLで2人の同時提出、32票・結果1件、`restaurant_searching`遷移、version、同一再送、異内容再送を確認。
 - 検証: マイグレーションのup、down、再upに成功。
+- 完了: 上位3件の保存モデルを追加し、1位との一致、順位・ジャンル一意性、0票を含む3件保存、既存結果の順位0件互換を実装。
+- 検証: 新規順位マイグレーションのup、down、再up、再実行とRepository統合テストに成功。
 - 残作業: なし。
 - ブロッカー: なし。
 - 関連Issue・PR・コミット: 本変更コミット。PR未作成。

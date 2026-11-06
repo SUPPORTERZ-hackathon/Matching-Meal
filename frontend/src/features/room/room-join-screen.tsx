@@ -58,7 +58,7 @@ export function RoomJoinScreen({ joinCode }: RoomJoinScreenProps) {
     if (existing) forgetRoomSession(existing.room.id);
     setError(""); setPhase("form");
   }
-  return <div className={styles.background}><PageContainer className={styles.page} header={<AppHeader roomNumber={code} />} bottomAction={code && phase === "form" ? <RoomFixedAction note="参加すると、このルームのメンバーに名前が表示されます"><Button type="submit" form="join-room-form" variant="primary" size="meal" disabled={!validNickname(nickname) || joining} loading={joining}>参加する<ChevronRight aria-hidden="true" /></Button></RoomFixedAction> : undefined}>
+  return <div className={styles.background}><PageContainer className={styles.page} header={<AppHeader roomNumber={code} />} bottomAction={code && phase === "form" ? <RoomFixedAction hideOnKeyboard note="参加すると、このルームのメンバーに名前が表示されます"><Button type="submit" form="join-room-form" variant="primary" size="meal" disabled={!validNickname(nickname) || joining} loading={joining}>参加する<ChevronRight aria-hidden="true" /></Button></RoomFixedAction> : undefined}>
     <div className={styles.content}>
       {!code ? <section className={`meal-card ${styles.message}`} role="alert"><h1>招待リンクが正しくありません</h1><p>送信者に招待リンクをもう一度確認してください。</p><Link href="/home-preview">ホームに戻る</Link></section>
         : phase === "checking" ? <section className={styles.message} role="status"><h1>参加情報を確認しています</h1></section>

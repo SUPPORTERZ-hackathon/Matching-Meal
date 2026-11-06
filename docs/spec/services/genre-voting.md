@@ -1,9 +1,9 @@
 # ジャンル投票サービス
 
 - Status: Verified
-- Last updated: 2026-10-30
+- Last updated: 2026-11-07
 - Related issue: None
-- Related specifications: ../models/genre-votes.md, ../models/rooms-and-participants.md, room-lifecycle.md, ../screens/genre-vote.md, ../screens/genre-vote-waiting.md
+- Related specifications: ../models/genre-votes.md, genre-vote-rankings.md, ../models/rooms-and-participants.md, room-lifecycle.md, ../screens/genre-vote.md, ../screens/genre-vote-waiting.md
 - Implementation files: ../../backend/internal/service/genre_voting.go, ../../backend/internal/transport/http/genre_voting.go, ../../backend/internal/repository/postgres/genre_voting.go, ../../backend/internal/security/random.go, ../../backend/cmd/api/main.go
 
 ## 目的と対象範囲
@@ -221,6 +221,8 @@ None。`restaurant_searching`状態の追加を含め、2段階投票、ジャ�
 - 検証: Service・Handlerテストで部分提出、同数、全skip、同一・異内容再送、inactive、入力・認証・競合・内部エラーを確認。
 - 検証: 実HTTPでルーム作成、同一ニックネーム参加、開始、2人同時提出、結果取得、同一再送、異内容再送まで成功。
 - 検証: Docker Compose内で`go test ./...`、統合テスト、`go vet ./...`、`go test -race ./...`に成功。
+- 完了: 既存の1位決定を維持して2位・3位を同一トランザクションで抽選・保存し、R5/R6へ確定順で返す処理を実装。
+- 検証: 同率1位、2・3位同率、3位境界、上位3件同率、全skip、再送時非再抽選をService・実API結合テストで確認。
 - 残作業: なし。Hot Pepper Gourmet API検索と`restaurant_voting`遷移は別仕様・次PRの対象。
 - ブロッカー: なし。
 - 関連Issue・PR・コミット: 本変更コミット。PR未作成。

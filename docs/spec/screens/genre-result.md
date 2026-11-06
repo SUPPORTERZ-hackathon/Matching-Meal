@@ -1,10 +1,14 @@
 # ジャンル投票結果画面・UIプロトタイプ
 
 - Status: Implemented
-- Last updated: 2026-11-01
+- Last updated: 2026-11-07
 - Related issue: None
-- Related specifications: genre-vote.md, genre-vote-waiting.md, ../themes/design-system.md, ../components/common-ui.md, ../services/room-lifecycle.md
+- Related specifications: genre-vote.md, genre-vote-waiting.md, ../themes/design-system.md, ../components/common-ui.md, ../services/room-lifecycle.md, mobile-genre-flow-ux.md
 - Implementation files: frontend/src/app/genre-result/, frontend/src/app/ui-preview/genre-result/, frontend/src/features/genre-result/, frontend/src/features/genre-vote-waiting/genre-vote-waiting-preview.tsx, frontend/src/features/genre-vote-waiting/genre-vote-waiting-screen.tsx, frontend/package.json
+
+## 実ルームの参加者待機（2026-11-07）
+
+参加者には店舗検索CTAの代わりに非操作の固定待機領域を表示する。既存R3で店舗候補の準備完了を検知してから店舗投票へ遷移する。ホストと開発用demoのCTAは維持する。主仕様と検証結果は[mobile-genre-flow-ux.md](mobile-genre-flow-ux.md)を参照する。
 
 ## 上位3位の表示準備（2026-11-01）
 

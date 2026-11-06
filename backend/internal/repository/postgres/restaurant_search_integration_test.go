@@ -95,6 +95,9 @@ func TestRestaurantCandidatesConcurrencyIntegration(t *testing.T) {
 		if candidate.Position != int16(index+1) || candidate.RoomID != created.Room.ID {
 			t.Fatalf("candidate %d = %+v", index, candidate)
 		}
+		if candidate.Address == nil || *candidate.Address != fmt.Sprintf("東京都店舗%s%d", candidate.RestaurantID[1:2], index) {
+			t.Fatalf("candidate address %d = %v", index, candidate.Address)
+		}
 	}
 
 	_, err = pool.Exec(ctx, `
@@ -109,9 +112,11 @@ func TestRestaurantCandidatesConcurrencyIntegration(t *testing.T) {
 func integrationRestaurantCandidates(prefix string) []domain.RestaurantCandidate {
 	candidates := make([]domain.RestaurantCandidate, 0, domain.MaxRestaurantCandidates)
 	for index := 0; index < domain.MaxRestaurantCandidates; index++ {
+		address := fmt.Sprintf("東京都店舗%s%d", prefix, index)
 		candidates = append(candidates, domain.RestaurantCandidate{
 			RestaurantID: fmt.Sprintf("J%s%03d", prefix, index),
 			Name:         fmt.Sprintf("店舗%s%d", prefix, index),
+			Address:      &address,
 			Source:       "hotpepper",
 		})
 	}

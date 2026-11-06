@@ -32,6 +32,7 @@ test("実API: 2人の提出・1/2待機・同一結果・同一再送・異内�
   const last = await submitGenreAnswers(guest, guestVotes); assert(last.ok); assert.equal(last.data.room.status, "restaurant_searching");
   const [a, b] = await Promise.all([getGenreVoting(host), getGenreVoting(guest)]); assert(a.ok && b.ok);
   assert.deepEqual(a.data.result, b.data.result); assert.equal(a.data.result.genreId, "italian"); assert.equal(a.data.result.likeCount, 2); assert.equal(a.data.result.decisionMethod, "most_likes");
+  assert.equal(a.data.result.rankings.length, 3); assert.equal(a.data.result.rankings[0].genreId, "italian"); assert.equal(a.data.result.rankings[0].votes, 2);
   const path = `${base}/api/v1/rooms/${host.room.id}/genre-votes`;
   const headers = { Authorization: `Bearer ${host.sessionToken}`, "Content-Type": "application/json" };
   const again = await http(path, { method: "PUT", headers, body: JSON.stringify({ votes: hostVotes }) }); assert.equal(again.status, 200);
@@ -45,12 +46,14 @@ test("実API: 同時提出・同票はサーバー抽選の同じ確定値を取
   const responses = await Promise.all([submitGenreAnswers(host, votes), submitGenreAnswers(guest, votes)]); assert(responses.every(response => response.ok));
   const a = await getGenreVoting(host), b = await getGenreVoting(guest); assert(a.ok && b.ok); assert.deepEqual(a.data.result, b.data.result);
   assert.equal(a.data.result.decisionMethod, "random_tie"); assert.equal(a.data.result.likeCount, 2); assert(["ramen", "cafe"].includes(a.data.result.genreId));
+  assert.equal(a.data.result.rankings.length, 3); assert.equal(a.data.result.rankings[0].genreId, a.data.result.genreId); assert.equal(a.data.result.rankingTieBreakApplied, true);
 });
 test("実API: 全員skipでも全員が同じ永続化された決定ジャンルを見る", { skip: !enabled }, async t => {
   const { host, guest } = await makeRoom(relativeFetch(t)); const votes = answers([]);
   assert((await submitGenreAnswers(host, votes)).ok); assert((await submitGenreAnswers(guest, votes)).ok);
   const a = await getGenreVoting(host), b = await getGenreVoting(guest); assert(a.ok && b.ok); assert.deepEqual(a.data.result, b.data.result);
   assert.equal(a.data.result.likeCount, 0); assert.equal(a.data.result.decisionMethod, "random_all_skipped"); assert(GENRES.some(genre => genre.id === a.data.result.genreId));
+  assert.equal(a.data.result.rankings.length, 3); assert.equal(new Set(a.data.result.rankings.map(row => row.genreId)).size, 3); assert.equal(a.data.result.rankingTieBreakApplied, true);
 });
 
 for (const lastRole of ["host", "guest"]) {

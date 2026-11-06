@@ -1,10 +1,10 @@
 # 店舗検索条件・候補店舗モデル
 
 - Status: Implemented
-- Last updated: 2026-10-31
+- Last updated: 2026-11-06
 - Related issue: None
-- Related specifications: ../services/restaurant-search.md, rooms-and-participants.md, genre-votes.md, ../screens/room-create-screen.md, ../screens/restaurant-vote.md
-- Implementation files: ../../backend/internal/domain/room.go, ../../backend/internal/domain/restaurant_candidate.go, ../../backend/internal/repository/room.go, ../../backend/internal/repository/restaurant_search.go, ../../backend/internal/repository/postgres/room.go, ../../backend/internal/repository/postgres/restaurant_search.go, ../../backend/migrations/000004_create_room_search_conditions.up.sql, ../../backend/migrations/000004_create_room_search_conditions.down.sql, ../../backend/migrations/000005_create_restaurant_candidates.up.sql, ../../backend/migrations/000005_create_restaurant_candidates.down.sql
+- Related specifications: ../services/restaurant-search.md, ../services/restaurant-map-location.md, rooms-and-participants.md, genre-votes.md, ../screens/room-create-screen.md, ../screens/restaurant-vote.md
+- Implementation files: ../../backend/internal/domain/room.go, ../../backend/internal/domain/restaurant_candidate.go, ../../backend/internal/repository/room.go, ../../backend/internal/repository/restaurant_search.go, ../../backend/internal/repository/postgres/room.go, ../../backend/internal/repository/postgres/restaurant_search.go, ../../backend/migrations/000004_create_room_search_conditions.up.sql, ../../backend/migrations/000004_create_room_search_conditions.down.sql, ../../backend/migrations/000005_create_restaurant_candidates.up.sql, ../../backend/migrations/000005_create_restaurant_candidates.down.sql, ../../backend/migrations/000008_add_restaurant_candidate_address.up.sql, ../../backend/migrations/000008_add_restaurant_candidate_address.down.sql
 
 ## 目的と対象範囲
 
@@ -64,6 +64,7 @@ genre_vote_results 1 ── 0..5 restaurant_candidates
 | `restaurantId` | string | `VARCHAR(32)` | 必須 | Hot Pepper Gourmetの店舗ID |
 | `position` | int/number | `SMALLINT` | 必須 | 1〜5、ルーム内で一意 |
 | `name` | string | `TEXT` | 必須 | 空文字不可 |
+| `address` | *string/string \| null | `TEXT` | 任意 | Hot Pepperの`address`。前後空白除去後、空なら`null` |
 | `photoUrl` | *string/string \| null | `TEXT` | 任意 | HTTPS URL |
 | `openingHours` | *string/string \| null | `TEXT` | 任意 | APIの`open` |
 | `closedDays` | *string/string \| null | `TEXT` | 任意 | APIの`close` |
@@ -86,6 +87,7 @@ genre_vote_results 1 ── 0..5 restaurant_candidates
 {
   "id": "J001234567",
   "name": "店舗名",
+  "address": "東京都渋谷区...",
   "photoUrl": "https://...",
   "openingHours": "月〜日 11:00〜23:00",
   "closedDays": "なし",
@@ -102,6 +104,7 @@ genre_vote_results 1 ── 0..5 restaurant_candidates
 ```
 
 - APIの`id`はDBの`restaurantId`に対応する。
+- 住所保存とGoogle Mapsでの利用は`../services/restaurant-map-location.md`を主仕様とする。既存行は新規マイグレーション適用後も`address = NULL`とし、バックフィルしない。
 - `coordinates`は緯度と経度が両方有効な場合だけ返し、片方だけの値は保存・返却しない。
 - 任意文字列が空または空白だけの場合は`null`として保存し、レスポンスでは`null`とする。
 - 候補配列は`position`昇順で返す。
@@ -194,6 +197,8 @@ None。最大100件を抽選母集団とすること、最大5件を重複なし
 - 完了: 候補店舗モデル、1〜5件保存、最大100件からの重複なし抽選、同時保存の一意確定、`restaurant_voting`遷移を実装。
 - 検証: 1/5/6/10件の境界、複合検索の重複除外、再送時の非再抽選、DB制約、同時保存、CASCADEを単体・実PostgreSQL統合テストで確認。
 - 検証: 000004・000005のマイグレーションupとup再実行に成功。downは実行許可が得られなかったため未検証。
+- 完了: Hot Pepperの住所を任意項目として保存・取得する`000008`と候補モデルを実装。
+- 検証: `000008`のup、down、再up、既存11行の`address IS NULL`、住所保存・取得の実PostgreSQL統合テストに成功。
 - 残作業: マイグレーションdown検証後のStatus `Verified`化。
 - ブロッカー: マイグレーションdownの実行許可なし。
 - 関連Issue・PR・コミット: None。

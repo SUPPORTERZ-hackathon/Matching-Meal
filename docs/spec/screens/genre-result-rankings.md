@@ -1,20 +1,24 @@
 # S09・確定済み上位3位の表示準備
 
-- Status: Implemented
-- Last updated: 2026-11-01
+- Status: Verified
+- Last updated: 2026-11-07
 - Related issue: None
-- Related specifications: genre-result.md, genre-voting-api-integration.md, ../services/genre-voting.md, ../models/genre-votes.md
-- Implementation files: frontend/src/features/genre-result/{result-data.ts,genre-result-screen.tsx,genre-result-rankings.tsx,prototype-data.ts,genre-result-preview.tsx,result-data.test.mjs}
+- Related specifications: genre-result.md, genre-voting-api-integration.md, ../services/genre-voting.md, ../services/genre-vote-rankings.md, ../models/genre-votes.md
+- Implementation files: frontend/src/features/genre-result/{result-data.ts,genre-result-screen.tsx,genre-result-rankings.tsx,prototype-data.ts,genre-result-preview.tsx,result-data.test.mjs}, frontend/src/features/genre-voting-api/genre-voting-data.ts
 
 ## 目的・承認・今回の完成範囲
 
-今回の明示依頼の「API不足時はフロント受け口と既存デモまで進める」を承認根拠とする。既存の順位UIを共通表示部品へ切り出し、実データ供給時も決定方法・票数の要約と併せて表示できるようにする。現在のR6から存在しない票数/順位を生成しない。実APIの上位3位表示・同票順位の確定/共有は未完成で、バックエンド契約合意と実装後の別作業。
+既存の順位UIを共通表示部品として再利用し、実APIの確定済み上位3件を決定方法・票数の要約と併せて表示する。順位はサーバー保存済みの配列順を使用し、フロントエンドでは生成・並べ替え・再抽選しない。
+
+## バックエンド連携の現行契約（2026-11-07）
+
+主仕様は[genre-vote-rankings.md](../services/genre-vote-rankings.md)。APIは`rankings: [{genreId, votes}]`を確定順で返し、フロントエンドは既存表示型へそのまま渡す。新規結果は3件、既存結果は空配列とし、`rankingTieBreakApplied`を既存の同票説明へ接続する。後段の未承認バックエンド案は、この承認済み契約により更新する。
 
 ## 前提・調査・既存との差異
 
 - ブランチはfeature/genre-voting-api-integration、HEAD/main/origin/mainは6d88938。既存の未コミット26ファイルをハッシュ記録して保護する。PR18はマージ済み。GitHub検索で現ブランチのPRは見つからない。切替/コミット/プッシュ/PR作成なし。
 - Figma 09-genre-result.png、旧プロトタイプ、result-data.ts/結果コンポーネント、OpenAPI/R6 Handler/Service/Repository/DB定義を確認。
-- R6 resultはgenreId/likeCount/decisionMethod/decidedAtのみ。Repositoryは全16ジャンルの票数を内部集計するが、DBのgenre_vote_resultsは勝者1件だけを保存し、下位順位や抽選結果は未保存。APIの現行契約と実装はこの点で一致。
+- R5/R6 resultはgenreId/likeCount/decisionMethod/decidedAtに加え、`rankings`と`rankingTieBreakApplied`を返す。新規結果は上位3件、既存結果は空配列となる。
 - 現UIはdecisionがあると順位UIを表示しない排他的分岐。要約と順位の表示を分離して、将来確定順位が渡された場合にも両方を表示できるようにする。
 - 旧テストは決定IDと先頭順位の不一致を許容していたが、今回の「1位は決定ジャンルと必ず一致」を優先する。並べ替えで補正せず、不整合データを拒否する。
 
@@ -24,11 +28,11 @@ R5保存/R6のレスポンス解釈やルーティング/ポーリングの変�
 
 ## フロント表示の入力・責務
 
-- 既存GenreResultData.rankingsの{genreId,votes}を再利用する。配列は供給元が確定した順位順という表示用契約で、APIの新フィールドを承認/実装したことにはしない。0件なら順位を表示しない。3件超の確定配列を受け取った場合は先頭3件だけ表示する。
+- 既存GenreResultData.rankingsの{genreId,votes}を再利用する。配列はAPIが確定した順位順で、0件なら順位を表示しない。新規API結果は3件に限定し、表示部品も先頭3件だけを表示する。
 - 名前・画像は渡された既存genresから解決し、二重管理しない。表示部品GenreResultRankingsはServer Componentで、状態/通信/並べ替え/乱数を持たない。順位番号は入力の確定順を1〜3として表示するだけ。
 - データ解決時に既知ID/重複なし/非負整数票/参加者数以下を検証し、空配列を除き先頭ID=decidedGenreId、票数が降順、decisionありなら先頭票=decision.likeCountも検証する。不整合は既存の結果エラー表示にし、別の勝者や票数を補完しない。
-- 任意のrankingTieBreakApplied?: booleanを表示用モデルに追加する。供給元が同票順位を抽選で確定したことを明示したときだけ「同票の順位は抽選で決定しています。」と表示する。可視3件だけでは3位境界の同票を判定できないため推測しない。R6アダプターには未接続。
-- decisionの要約カードと確定順位は共存可能。現在の実ルームはrankings=[]なので、従来どおり決定ジャンルの票数/方法だけを表示する。モックへのフォールバックなし。
+- `rankingTieBreakApplied`をR5/R6から表示用モデルへ渡し、真の場合だけ「同票の順位は抽選で決定しています。」と表示する。可視3件から同票を推測しない。
+- decisionの要約カードと確定順位は共存する。順位未保存の既存結果は`rankings=[]`として従来どおり決定ジャンルの票数/方法だけを表示し、モックへフォールバックしない。
 
 ## 見た目・操作・状態
 
@@ -36,9 +40,9 @@ Figma/旧UIのカード・金色1位/グレー2〜3位の番号・赤い票数�
 
 開発プレビューは既存操作/初期モックを保持し、「異なる票数」「1位同票」「2/3位同票」「3位境界の同票」「上位3件同票」「全16件0票」「実API相当・順位なし」を追加する。抽選済み順序を模した固定の仮データであり、実投票/実抽選として扱わない。再描画/再読み込みで新たに順位を抽選しない。デモのmock注記と本番アクセス制限を維持する。
 
-## バックエンド担当者への依頼案（未承認・未実装）
+## 過去のバックエンド依頼案（現行契約で置換済み）
 
-推奨はサーバーで確定した上位3件を一度保存し、全参加者へ同じ順で返す方式。以下は合意を求める案であり、現行OpenAPI/Go/DBは変更しない。
+以下は実装前の検討記録である。現在の正式な構造・JSON名・既存結果の扱いは`../services/genre-vote-rankings.md`を優先する。
 
 1. 最終提出の既存トランザクションで、現行どおり勝者を決定する。既存の勝者は変更せず1位に固定する。
 2. 既存AggregateLikeCountsの全16件から勝者を除き、票数ごとのグループを降順にする。2/3位の順序や採用候補にかかる同票グループだけを既存の安全な乱数源で偏りなく並べ、先頭2件を2/3位にする。表示する上位3件の順序/採用に抽選が影響した場合にrankingTieBreakAppliedをtrueとする。0票を含め常に3件埋める案、全skipでは勝者以外の15件から重複なく2件を選ぶ案を確認する。
@@ -67,13 +71,13 @@ Figma/旧UIのカード・金色1位/グレー2〜3位の番号・赤い票数�
 ## 受け入れ条件・検証方法
 
 1. 純粋な入力検証テストで、上記6ケースの確定済み順序を維持し、勝者と先頭ID/票の不一致、重複、逆順、不正票を拒否する。0票の割合はNaNにしない。表示上位3件を制限し、入力を変更/再抽選しない。
-2. 実API結果は従来の実要約のみ、上位3件なしのまま。既存のR5/R6結合テストで投票保存と同じ勝者の取得を回帰確認する。
-3. デモの上位3件/同票説明/0票/写真/ハート/演出/固定ボタンとレスポンシブをブラウザー確認する。実機/別ブラウザー/実データ順位が未検証なら区別する。
+2. 実API結果の上位3件と同票フラグを既存UIへ渡し、複数参加者・再取得・同一再送で順序が変わらないことを確認する。既存結果は空順位のままとする。
+3. デモの上位3件/同票説明/0票/写真/ハート/演出/固定ボタンとレスポンシブを維持し、今回のデータ接続でレイアウトを変更しない。
 4. Docker Composeでlint/typecheck/既存・新規テスト/buildとgit diff --check。開始時の変更ハッシュと比較し、対象外の既存差分/禁止領域を維持する。
 
 ## 未決定事項
 
-フロント表示準備の実装に必要な未決定事項なし。バックエンドの応答配置/抽選結果保存/既存結果の扱い/0票の順位候補化は依頼案として未合意であり、実API接続は着手しない。
+None。バックエンドの応答配置、抽選結果保存、既存結果、0票の扱いは`../services/genre-vote-rankings.md`で承認済み。
 
 ## Progress
 
@@ -85,12 +89,13 @@ Figma/旧UIのカード・金色1位/グレー2〜3位の番号・赤い票数�
 - 未検証：文字サイズ200%（使用中のブラウザー操作では拡大を反映できず）、実機、OSの動き軽減設定の切替、別ブラウザーでの実ランキング一致。既存reduced-motion CSSと発表演出ファイルは変更なし。フロントの確定順不変テストは複数ブラウザーで実API順位が共有される証明ではない。
 - 差分確認：git diff --check成功。開始時26ファイルのうち今回対象の4ファイル以外の22ファイルはSHA256一致。今回の変更は結果画面6ファイルと関連画面仕様3ファイルだけで、バックエンド/DB/API仕様/Docker/環境変数/PWA/README/共通UI/既存演出への変更なし。
 - 既存の非阻害警告：NodeのMODULE_TYPELESS_PACKAGE_JSONがテスト時に出る。今回のためにpackage.jsonのモジュール方式は変更しない。
-- 実APIの上位3位・2/3位抽選/共有：未実装。バックエンド契約と実装が必要。
+- 実APIの上位3位・2/3位抽選/共有：実装・検証済み。新規結果3件と既存結果0件を区別して表示する。
+- 2026-11-07 検証：実API結合5ケース、フロント解析テスト、lint・typecheck・buildに成功。保存済み順位をフロントで並べ替えず表示用モデルへ渡すことを確認。
 - コミット/プッシュ/PR/バックエンド変更：なし。
 
 ## Self-Review
 
 - Score: 97/100
-- Review date: 2026-11-01
-- Reasons for deductions: 実API契約の合意と順位保存実装は別担当のため、本作業では実データ順位の結合検証ができない（3点）。
-- Revisions made: 表示用入力と未承認API提案を区別し、勝者一致/票数降順/抽選済み順序/欠損時非表示/既存結果互換を明記。
+- Review date: 2026-11-07
+- Reasons for deductions: 実機・別ブラウザーでの実ランキング表示は未検証のため3点減点。
+- Revisions made: 承認済みAPI契約、勝者一致、票数降順、抽選済み順序、既存結果の空順位、実API結合結果へ更新。

@@ -10,6 +10,8 @@ test("候補と店舗投票応答を検証して表示データへ変換する",
   const candidates = data.parseRestaurantCandidatesResponse(candidateResponse);
   assert.equal(candidates?.restaurants.length, 2);
   assert.equal(candidates?.restaurants[0].coordinates.latitude, 35.5);
+  assert.equal(candidates?.restaurants[0].address, "東京都渋谷区東1-2-3");
+  assert.equal(candidates?.restaurants[1].address, undefined);
   assert.equal(candidates?.restaurants[1].photoUrl, undefined);
   const waiting = data.parseRestaurantVotingResponse(votingResponse({ submitted: true }));
   assert.equal(data.restaurantVotingStage(waiting), "waiting");
@@ -25,6 +27,7 @@ test("不正な候補・投票応答を拒否する", () => {
     (value) => { value.data.restaurants.push(value.data.restaurants[0]); },
     (value) => { value.data.restaurants[0].source = "mock"; },
     (value) => { value.data.restaurants[0].coordinates.latitude = 91; },
+    (value) => { value.data.restaurants[0].address = 123; },
     (value) => { value.data.restaurants[0].detailUrl = "https://evil.example/strJ001/"; },
   ]) {
     const value = structuredClone(candidateResponse); change(value);

@@ -164,7 +164,7 @@ func restaurantCandidateToResponse(candidate domain.RestaurantCandidate) restaur
 		coordinates = &restaurantCoordinatesResponse{Latitude: *candidate.Latitude, Longitude: *candidate.Longitude}
 	}
 	return restaurantCandidateResponse{
-		ID: candidate.RestaurantID, Name: candidate.Name, PhotoURL: candidate.PhotoURL,
+		ID: candidate.RestaurantID, Name: candidate.Name, Address: candidate.Address, PhotoURL: candidate.PhotoURL,
 		OpeningHours: candidate.OpeningHours, ClosedDays: candidate.ClosedDays,
 		DinnerBudget: candidate.DinnerBudget, Access: candidate.Access, StationName: candidate.StationName,
 		DetailURL: candidate.DetailURL, Coordinates: coordinates, Source: candidate.Source,

@@ -10,6 +10,8 @@
 
 主仕様は[frontend-ui-integration.md](frontend-ui-integration.md)。固定2481/ゆうき/渋谷の旧フォームは廃止し、実API版features/room/room-join-screen.tsxのデザイン・12文字制限・エラー・連打防止・sessionStorage復元を唯一の実装とする。/room-join?joinCode=有効コードは/j/{joinCode}へ転送する。欠損・不正コードは同じ部品の無効招待表示とし、偽の成功やルーム情報を表示しない。作成者の名前欄とQR読取画面は別用途として維持する。下部参加ボタンとヘッダーは共通固定処理を利用する。状態/エラー/受け入れ条件/検証/Progress/Self-Reviewは主仕様とルームAPI主仕様を参照し、未決定事項なし。
 
+文字入力中の固定参加ボタンの表示制御は[fixed-bottom-keyboard.md](../components/fixed-bottom-keyboard.md)を参照する。
+
 2026-11-06の参加POSTの冪等キー、保存セッションの再確認、進行済みルームへの復帰は[frontend-location-and-flow.md](frontend-location-and-flow.md)を正とする。既存セッションはGETの実状態に応じて復帰し、認証・通信エラーでは参加情報を勝手に破棄しない。検証結果も同仕様へ集約する。
 
 以下は旧プロトタイプの調査記録であり、上記と異なるルート・固定値・ローカル参加処理は現行仕様ではない。

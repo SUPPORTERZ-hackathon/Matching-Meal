@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 	"time"
 
@@ -54,6 +55,7 @@ type genreVotingTransactionStub struct {
 	incrementCalls        int
 	advanceCalls          int
 	insertedResult        domain.GenreVoteResult
+	insertedRankings      []domain.GenreVoteRanking
 }
 
 func (stub *genreVotingTransactionStub) FindRoomByIDForUpdate(context.Context, string) (domain.Room, error) {
@@ -79,6 +81,10 @@ func (stub *genreVotingTransactionStub) InsertResult(_ context.Context, result d
 	stub.insertedResult = result
 	return result, nil
 }
+func (stub *genreVotingTransactionStub) InsertRankings(_ context.Context, rankings []domain.GenreVoteRanking) error {
+	stub.insertedRankings = append([]domain.GenreVoteRanking(nil), rankings...)
+	return nil
+}
 func (stub *genreVotingTransactionStub) IncrementRoomVersion(context.Context, string) (domain.Room, error) {
 	stub.incrementCalls++
 	return stub.room, nil
@@ -92,16 +98,23 @@ func (stub *genreVotingTransactionStub) FindState(context.Context, string, strin
 }
 
 type randomIndexSelectorStub struct {
-	index      int
-	error      error
-	upperBound int
-	calls      int
+	index       int
+	indexes     []int
+	error       error
+	upperBound  int
+	upperBounds []int
+	calls       int
 }
 
 func (stub *randomIndexSelectorStub) SelectIndex(upperBound int) (int, error) {
+	selectedIndex := stub.index
+	if stub.calls < len(stub.indexes) {
+		selectedIndex = stub.indexes[stub.calls]
+	}
 	stub.calls++
 	stub.upperBound = upperBound
-	return stub.index, stub.error
+	stub.upperBounds = append(stub.upperBounds, upperBound)
+	return selectedIndex, stub.error
 }
 
 func genreVotes(choice domain.GenreVoteChoice) []domain.GenreVote {
@@ -110,6 +123,81 @@ func genreVotes(choice domain.GenreVoteChoice) []domain.GenreVote {
 		votes = append(votes, domain.GenreVote{GenreID: genreID, Choice: choice})
 	}
 	return votes
+}
+
+func genreLikeCounts(values map[string]int) map[string]int {
+	counts := make(map[string]int, domain.GenreCount)
+	for _, genreID := range domain.GenreIDs() {
+		counts[genreID] = values[genreID]
+	}
+	return counts
+}
+
+func TestGenreVotingServiceSelectGenreRankings(t *testing.T) {
+	roomID := "550e8400-e29b-41d4-a716-446655440000"
+	tests := []struct {
+		name        string
+		winnerID    string
+		method      domain.GenreDecisionMethod
+		counts      map[string]int
+		indexes     []int
+		wantIDs     []string
+		wantBounds  []int
+		wantTieRows []bool
+	}{
+		{name: "different counts", winnerID: "ramen", method: domain.GenreDecisionMostLikes,
+			counts:  map[string]int{"ramen": 5, "sushi-seafood": 4, "yakiniku": 3},
+			wantIDs: []string{"ramen", "sushi-seafood", "yakiniku"}, wantTieRows: []bool{false, false, false}},
+		{name: "second and third tie", winnerID: "ramen", method: domain.GenreDecisionMostLikes,
+			counts: map[string]int{"ramen": 5, "sushi-seafood": 3, "yakiniku": 3}, indexes: []int{1},
+			wantIDs: []string{"ramen", "yakiniku", "sushi-seafood"}, wantBounds: []int{2}, wantTieRows: []bool{false, true, true}},
+		{name: "third place boundary tie", winnerID: "ramen", method: domain.GenreDecisionMostLikes,
+			counts: map[string]int{"ramen": 5, "sushi-seafood": 4, "yakiniku": 2, "steak-hamburg": 2}, indexes: []int{1},
+			wantIDs: []string{"ramen", "sushi-seafood", "steak-hamburg"}, wantBounds: []int{2}, wantTieRows: []bool{false, false, true}},
+		{name: "top three tie", winnerID: "ramen", method: domain.GenreDecisionRandomTie,
+			counts: map[string]int{"ramen": 3, "sushi-seafood": 3, "yakiniku": 3}, indexes: []int{1},
+			wantIDs: []string{"ramen", "yakiniku", "sushi-seafood"}, wantBounds: []int{2}, wantTieRows: []bool{true, true, true}},
+		{name: "winner tie leaves fixed second", winnerID: "sushi-seafood", method: domain.GenreDecisionRandomTie,
+			counts:  map[string]int{"ramen": 3, "sushi-seafood": 3, "yakiniku": 2},
+			wantIDs: []string{"sushi-seafood", "ramen", "yakiniku"}, wantTieRows: []bool{true, true, false}},
+		{name: "all skipped", winnerID: "cafe", method: domain.GenreDecisionRandomAllSkipped,
+			counts: map[string]int{}, indexes: []int{0, 0}, wantIDs: []string{"cafe", "ramen", "sushi-seafood"},
+			wantBounds: []int{15, 14}, wantTieRows: []bool{true, true, true}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			selector := &randomIndexSelectorStub{indexes: test.indexes}
+			service := &GenreVotingService{selector: selector}
+			rankings, err := service.selectGenreRankings(roomID, test.winnerID, test.method, genreLikeCounts(test.counts))
+			if err != nil {
+				t.Fatalf("selectGenreRankings() error = %v", err)
+			}
+			for index, ranking := range rankings {
+				if ranking.Rank != int16(index+1) || ranking.GenreID != test.wantIDs[index] ||
+					ranking.TieBreakApplied != test.wantTieRows[index] {
+					t.Fatalf("rankings = %+v", rankings)
+				}
+			}
+			if !slices.Equal(selector.upperBounds, test.wantBounds) {
+				t.Fatalf("upper bounds = %v, want %v", selector.upperBounds, test.wantBounds)
+			}
+		})
+	}
+}
+
+func TestGenreVotingServiceSelectGenreRankingsRejectsSelectorFailure(t *testing.T) {
+	counts := genreLikeCounts(map[string]int{"ramen": 3, "sushi-seafood": 2, "yakiniku": 2})
+	for name, selector := range map[string]*randomIndexSelectorStub{
+		"error":        {error: errors.New("random failed")},
+		"out of range": {index: 2},
+	} {
+		t.Run(name, func(t *testing.T) {
+			service := &GenreVotingService{selector: selector}
+			if _, err := service.selectGenreRankings("room", "ramen", domain.GenreDecisionMostLikes, counts); err == nil {
+				t.Fatal("selectGenreRankings() unexpectedly succeeded")
+			}
+		})
+	}
 }
 
 func validGenreVotingState(room domain.Room, participant domain.Participant, submittedCount int, result *domain.GenreVoteResult) domain.GenreVotingState {
@@ -166,7 +254,7 @@ func TestGenreVotingServiceSubmitFinalTie(t *testing.T) {
 		participantCount: 2, submissionCount: 2, counts: counts,
 		state: validGenreVotingState(resultRoom, participant, 2, winner),
 	}
-	selector := &randomIndexSelectorStub{index: 1}
+	selector := &randomIndexSelectorStub{indexes: []int{1, 0}}
 	service := NewGenreVotingService(
 		&genreVotingRepositoryStub{transaction: transaction},
 		&genreRoomRepositoryStub{participant: participant}, selector, clockStub{now: now},
@@ -176,8 +264,15 @@ func TestGenreVotingServiceSubmitFinalTie(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Submit() error = %v", err)
 	}
-	if selector.calls != 1 || selector.upperBound != 2 || transaction.insertedResult.GenreID != "sushi-seafood" {
+	if selector.calls != 2 || !slices.Equal(selector.upperBounds, []int{2, 14}) || transaction.insertedResult.GenreID != "sushi-seafood" {
 		t.Fatalf("selector = %+v, result = %+v", selector, transaction.insertedResult)
+	}
+	if len(transaction.insertedRankings) != domain.GenreRankingLimit ||
+		transaction.insertedRankings[0].GenreID != "sushi-seafood" ||
+		transaction.insertedRankings[1].GenreID != "ramen" ||
+		transaction.insertedRankings[2].GenreID != "yakiniku" ||
+		!transaction.insertedRankings[0].TieBreakApplied || !transaction.insertedRankings[2].TieBreakApplied {
+		t.Fatalf("rankings = %+v", transaction.insertedRankings)
 	}
 	if transaction.insertedResult.DecisionMethod != domain.GenreDecisionRandomTie || transaction.advanceCalls != 1 || transaction.incrementCalls != 0 {
 		t.Fatalf("transaction = %+v", transaction)
@@ -200,14 +295,18 @@ func TestGenreVotingServiceSubmitAllSkippedSelectsFromAllGenres(t *testing.T) {
 		room: room, submissionError: repository.ErrGenreSubmissionNotFound, participantCount: 2,
 		submissionCount: 2, counts: counts, state: validGenreVotingState(resultRoom, participant, 2, result),
 	}
-	selector := &randomIndexSelectorStub{index: domain.GenreCount - 1}
+	selector := &randomIndexSelectorStub{indexes: []int{domain.GenreCount - 1, 0, 0}}
 	service := NewGenreVotingService(&genreVotingRepositoryStub{transaction: transaction}, &genreRoomRepositoryStub{participant: participant}, selector, clockStub{now: now})
 
 	if _, err := service.Submit(context.Background(), roomID, "token", genreVotes(domain.GenreVoteChoiceSkip)); err != nil {
 		t.Fatalf("Submit() error = %v", err)
 	}
-	if selector.upperBound != domain.GenreCount || transaction.insertedResult.GenreID != "cafe" || transaction.insertedResult.DecisionMethod != domain.GenreDecisionRandomAllSkipped {
+	if !slices.Equal(selector.upperBounds, []int{domain.GenreCount, domain.GenreCount - 1, domain.GenreCount - 2}) || transaction.insertedResult.GenreID != "cafe" || transaction.insertedResult.DecisionMethod != domain.GenreDecisionRandomAllSkipped {
 		t.Fatalf("selector = %+v, result = %+v", selector, transaction.insertedResult)
+	}
+	if len(transaction.insertedRankings) != domain.GenreRankingLimit || transaction.insertedRankings[0].GenreID != "cafe" ||
+		transaction.insertedRankings[1].GenreID != "ramen" || transaction.insertedRankings[2].GenreID != "sushi-seafood" {
+		t.Fatalf("rankings = %+v", transaction.insertedRankings)
 	}
 }
 
