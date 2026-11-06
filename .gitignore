@@ -5,6 +5,7 @@ node_modules/
 .next/
 *.tsbuildinfo
 backend/tmp/
+frontend/.station-source/
 .DS_Store
 
 .next-build/
