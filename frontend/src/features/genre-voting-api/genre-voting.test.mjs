@@ -33,13 +33,34 @@ test("R6人数・本人・提出日時・既知ID・roomと結果の矛盾を成
     const input = state({ submitted: true, complete: true }); Object.assign(input.data.result, change); assert.equal(parse(input), undefined);
   }
 });
-test("全skip/同票/単独最多はAPIの決定値をそのまま表示し、全順位を作らない", () => {
+test("全skip/同票/単独最多はAPIの決定値と確定順位をそのまま表示する", () => {
   for (const [method, count] of [["random_all_skipped", 0], ["random_tie", 1], ["most_likes", 2]]) {
     const input = parse(state({ submitted: true, complete: true, method, genreId: "italian", count }));
     const result = resultPresentation(input), view = resolveGenreResult(result, GENRES);
-    assert.equal(view.genre.name, "イタリアン"); assert.deepEqual(view.rankings, []);
+    assert.equal(view.genre.name, "イタリアン"); assert.equal(view.rankings.length, 3);
+    assert.equal(view.rankings[0].genre.id, "italian"); assert.equal(view.rankings[0].votes, count);
     assert.equal(view.decision.likeCount, count); assert.equal(view.decision.decisionMethod, method);
+    assert.equal(view.rankingTieBreakApplied, method !== "most_likes");
   }
+});
+
+test("順位の件数・ID・重複・降順・1位一致・抽選フラグを検証する", () => {
+  const mutations = [
+    value => { value.data.result.rankings = value.data.result.rankings.slice(0, 2); },
+    value => { value.data.result.rankings.push({ genreId: "cafe", votes: 0 }); },
+    value => { value.data.result.rankings[1].genreId = "unknown"; },
+    value => { value.data.result.rankings[1].genreId = value.data.result.rankings[0].genreId; },
+    value => { value.data.result.rankings[1].votes = 3; },
+    value => { value.data.result.rankings[0].genreId = "cafe"; },
+    value => { value.data.result.rankings[0].votes = 1; },
+    value => { value.data.result.rankingTieBreakApplied = "true"; },
+  ];
+  for (const mutate of mutations) {
+    const value = state({ submitted: true, complete: true }); mutate(value); assert.equal(parse(value), undefined);
+  }
+  const legacy = state({ submitted: true, complete: true });
+  delete legacy.data.result.rankings; delete legacy.data.result.rankingTieBreakApplied;
+  assert.deepEqual(parse(legacy).result.rankings, []);
 });
 test("UUID付き実画面URLへ正規化し、トークンやdemoを付与しない", () => {
   for (const step of ["vote", "waiting", "result", "lobby"]) {

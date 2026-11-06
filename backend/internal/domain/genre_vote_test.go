@@ -94,3 +94,40 @@ func TestGenreWinnerCandidates(t *testing.T) {
 		t.Fatalf("all skipped result = %v, %d, %q, %v", candidates, maximum, method, err)
 	}
 }
+
+func TestGenreRankingCandidatesKeepsWinnerFirstAndSortsRemaining(t *testing.T) {
+	counts := make(map[string]int, GenreCount)
+	for _, id := range GenreIDs() {
+		counts[id] = 0
+	}
+	counts["ramen"] = 3
+	counts["sushi-seafood"] = 3
+	counts["yakiniku"] = 2
+	counts["cafe"] = 1
+
+	rankings, err := GenreRankingCandidates(counts, "sushi-seafood")
+	if err != nil {
+		t.Fatalf("GenreRankingCandidates() error = %v", err)
+	}
+	if len(rankings) != GenreCount || rankings[0].GenreID != "sushi-seafood" || rankings[0].LikeCount != 3 {
+		t.Fatalf("rankings = %+v", rankings)
+	}
+	expected := []GenreVoteRanking{
+		{GenreID: "ramen", LikeCount: 3},
+		{GenreID: "yakiniku", LikeCount: 2},
+		{GenreID: "cafe", LikeCount: 1},
+	}
+	for index, row := range expected {
+		if rankings[index+1] != row {
+			t.Fatalf("rankings[%d] = %+v, want %+v", index+1, rankings[index+1], row)
+		}
+	}
+
+	if _, err := GenreRankingCandidates(counts, "unknown"); !errors.Is(err, ErrInvalidGenreVotes) {
+		t.Fatalf("unknown winner error = %v", err)
+	}
+	delete(counts, "cafe")
+	if _, err := GenreRankingCandidates(counts, "ramen"); !errors.Is(err, ErrInvalidGenreVotes) {
+		t.Fatalf("missing count error = %v", err)
+	}
+}

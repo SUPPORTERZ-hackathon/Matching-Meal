@@ -210,10 +210,66 @@ func (service *GenreVotingService) decideGenre(
 			return ErrGenreVotingInconsistent
 		}
 	}
+	winnerID := candidates[winnerIndex]
 	_, err = transaction.InsertResult(ctx, domain.GenreVoteResult{
-		RoomID: roomID, GenreID: candidates[winnerIndex], LikeCount: likeCount, DecisionMethod: method,
+		RoomID: roomID, GenreID: winnerID, LikeCount: likeCount, DecisionMethod: method,
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	rankings, err := service.selectGenreRankings(roomID, winnerID, method, counts)
+	if err != nil {
+		return err
+	}
+	return transaction.InsertRankings(ctx, rankings)
+}
+
+func (service *GenreVotingService) selectGenreRankings(
+	roomID string,
+	winnerID string,
+	method domain.GenreDecisionMethod,
+	counts map[string]int,
+) ([]domain.GenreVoteRanking, error) {
+	candidates, err := domain.GenreRankingCandidates(counts, winnerID)
+	if err != nil || len(candidates) != domain.GenreCount {
+		return nil, ErrGenreVotingInconsistent
+	}
+	rankings := []domain.GenreVoteRanking{{
+		RoomID: roomID, Rank: 1, GenreID: winnerID, LikeCount: candidates[0].LikeCount,
+		TieBreakApplied: method != domain.GenreDecisionMostLikes,
+	}}
+	for cursor := 1; cursor < len(candidates) && len(rankings) < domain.GenreRankingLimit; {
+		end := cursor + 1
+		for end < len(candidates) && candidates[end].LikeCount == candidates[cursor].LikeCount {
+			end++
+		}
+		group := append([]domain.GenreVoteRanking(nil), candidates[cursor:end]...)
+		groupWasTied := len(group) > 1 ||
+			(method != domain.GenreDecisionMostLikes && group[0].LikeCount == candidates[0].LikeCount)
+		for len(group) > 0 && len(rankings) < domain.GenreRankingLimit {
+			selectedIndex := 0
+			if len(group) > 1 {
+				selectedIndex, err = service.selector.SelectIndex(len(group))
+				if err != nil {
+					return nil, fmt.Errorf("select genre ranking: %w", err)
+				}
+				if selectedIndex < 0 || selectedIndex >= len(group) {
+					return nil, ErrGenreVotingInconsistent
+				}
+			}
+			selected := group[selectedIndex]
+			selected.RoomID = roomID
+			selected.Rank = int16(len(rankings) + 1)
+			selected.TieBreakApplied = groupWasTied
+			rankings = append(rankings, selected)
+			group = append(group[:selectedIndex], group[selectedIndex+1:]...)
+		}
+		cursor = end
+	}
+	if len(rankings) != domain.GenreRankingLimit {
+		return nil, ErrGenreVotingInconsistent
+	}
+	return rankings, nil
 }
 
 func validateGenreVotingState(state domain.GenreVotingState) error {
@@ -229,6 +285,38 @@ func validateGenreVotingState(state domain.GenreVotingState) error {
 	switch state.Room.Status {
 	case domain.RoomStatusRestaurantSearching, domain.RoomStatusRestaurantVoting, domain.RoomStatusDecided:
 		if state.Result == nil {
+			return ErrGenreVotingInconsistent
+		}
+	}
+	if state.Result != nil && len(state.Result.Rankings) != 0 {
+		if len(state.Result.Rankings) != domain.GenreRankingLimit {
+			return ErrGenreVotingInconsistent
+		}
+		knownGenres := make(map[string]struct{}, domain.GenreCount)
+		for _, genreID := range domain.GenreIDs() {
+			knownGenres[genreID] = struct{}{}
+		}
+		seen := make(map[string]struct{}, domain.GenreRankingLimit)
+		previousCount := state.TotalParticipantCount + 1
+		tieBreakApplied := false
+		for index, ranking := range state.Result.Rankings {
+			if ranking.RoomID != state.Room.ID || ranking.Rank != int16(index+1) || ranking.LikeCount < 0 ||
+				ranking.LikeCount > state.TotalParticipantCount || ranking.LikeCount > previousCount {
+				return ErrGenreVotingInconsistent
+			}
+			if _, exists := knownGenres[ranking.GenreID]; !exists {
+				return ErrGenreVotingInconsistent
+			}
+			if _, exists := seen[ranking.GenreID]; exists {
+				return ErrGenreVotingInconsistent
+			}
+			seen[ranking.GenreID] = struct{}{}
+			previousCount = ranking.LikeCount
+			tieBreakApplied = tieBreakApplied || ranking.TieBreakApplied
+		}
+		if state.Result.Rankings[0].GenreID != state.Result.GenreID ||
+			state.Result.Rankings[0].LikeCount != state.Result.LikeCount ||
+			state.Result.RankingTieBreakApplied != tieBreakApplied {
 			return ErrGenreVotingInconsistent
 		}
 	}

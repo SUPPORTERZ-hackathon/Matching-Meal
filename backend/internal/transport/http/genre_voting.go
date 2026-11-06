@@ -38,10 +38,17 @@ type genreVotingParticipantResponse struct {
 }
 
 type genreVoteResultResponse struct {
-	GenreID        string                     `json:"genreId"`
-	LikeCount      int                        `json:"likeCount"`
-	DecisionMethod domain.GenreDecisionMethod `json:"decisionMethod"`
-	DecidedAt      time.Time                  `json:"decidedAt"`
+	GenreID                string                     `json:"genreId"`
+	LikeCount              int                        `json:"likeCount"`
+	DecisionMethod         domain.GenreDecisionMethod `json:"decisionMethod"`
+	DecidedAt              time.Time                  `json:"decidedAt"`
+	Rankings               []genreVoteRankingResponse `json:"rankings"`
+	RankingTieBreakApplied bool                       `json:"rankingTieBreakApplied"`
+}
+
+type genreVoteRankingResponse struct {
+	GenreID string `json:"genreId"`
+	Votes   int    `json:"votes"`
 }
 
 type genreVotingResponse struct {
@@ -148,6 +155,13 @@ func newGenreVotingResponse(state domain.GenreVotingState) genreVotingResponse {
 		response.Data.Result = &genreVoteResultResponse{
 			GenreID: state.Result.GenreID, LikeCount: state.Result.LikeCount,
 			DecisionMethod: state.Result.DecisionMethod, DecidedAt: state.Result.DecidedAt,
+			Rankings:               make([]genreVoteRankingResponse, 0, len(state.Result.Rankings)),
+			RankingTieBreakApplied: state.Result.RankingTieBreakApplied,
+		}
+		for _, ranking := range state.Result.Rankings {
+			response.Data.Result.Rankings = append(response.Data.Result.Rankings, genreVoteRankingResponse{
+				GenreID: ranking.GenreID, Votes: ranking.LikeCount,
+			})
 		}
 	}
 	return response

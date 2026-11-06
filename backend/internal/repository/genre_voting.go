@@ -23,6 +23,7 @@ type GenreVotingTransaction interface {
 	CountSubmissions(ctx context.Context, roomID string) (int, error)
 	AggregateLikeCounts(ctx context.Context, roomID string) (map[string]int, error)
 	InsertResult(ctx context.Context, result domain.GenreVoteResult) (domain.GenreVoteResult, error)
+	InsertRankings(ctx context.Context, rankings []domain.GenreVoteRanking) error
 	IncrementRoomVersion(ctx context.Context, roomID string) (domain.Room, error)
 	AdvanceToRestaurantSearching(ctx context.Context, roomID string) (domain.Room, error)
 	FindState(ctx context.Context, roomID string, currentParticipantID string) (domain.GenreVotingState, error)
