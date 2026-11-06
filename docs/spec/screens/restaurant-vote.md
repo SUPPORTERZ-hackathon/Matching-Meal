@@ -1,14 +1,18 @@
 # 店舗投票画面・フロントエンドプロトタイプ
 
 - Status: Verified
-- Last updated: 2026-10-31
+- Last updated: 2026-11-04
 - Related issue: None
-- Related specifications: restaurant-vote-waiting.md, genre-result.md, ../services/restaurant-search.md, ../models/restaurant-candidates.md, ../components/common-ui.md, ../themes/design-system.md
+- Related specifications: restaurant-voting-api-integration.md, restaurant-vote-waiting.md, genre-result.md, ../services/restaurant-search.md, ../models/restaurant-candidates.md, ../components/common-ui.md, ../themes/design-system.md
 - Implementation files: frontend/src/app/restaurant-vote/, frontend/src/app/ui-preview/restaurant-vote/, frontend/src/features/restaurant-vote/, frontend/src/features/genre-result/genre-result-prototype.tsx
 
 ## UI統合の現行契約（2026-10-31）
 
 主仕様は[frontend-ui-integration.md](frontend-ui-integration.md)。既存ボタン投票・切替演出は開発環境の明示demo=1で維持する。通常URLは実候補/保存未接続を表示し、仮候補を供給しない。既存genreにdemoを加えて待機へ引き継ぐ。 後段の従来ルート/固定処理/モック供給の記録は、相違する部分のみ本契約へ更新する。検証結果は主仕様のProgressへ集約する。
+
+## 実API連携の現行契約（2026-11-04）
+
+主仕様は[restaurant-voting-api-integration.md](restaurant-voting-api-integration.md)。実roomでは保存済み候補1〜5件を取得し、候補順の回答を下書き保持して全件を一括提出する。通常URLの未接続表示は本契約へ更新し、`demo=1`の既存モックとカード演出は維持する。
 
 ## 目的・承認・範囲
 

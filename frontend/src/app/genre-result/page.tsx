@@ -1,6 +1,6 @@
-import type { Metadata, Viewport } from "next";
+import type { Metadata } from "next";
 import { GENRES } from "@/features/genre-vote/genres";
-import { GENRE_ICON_PATH, GENRE_THEME_COLOR, PROTOTYPE_ROOM_ID } from "@/features/genre-vote/prototype-config";
+import { PROTOTYPE_ROOM_ID } from "@/features/genre-vote/prototype-config";
 import { GenreResultPrototype } from "@/features/genre-result/genre-result-prototype";
 import { MOCK_GENRE_RESULT } from "@/features/genre-result/prototype-data";
 import { notFound } from "next/navigation";
@@ -15,9 +15,7 @@ import { normalizeVotingRoomId } from "@/features/genre-voting-api/genre-voting-
 export const metadata: Metadata = {
   title: "ジャンル投票結果 | メシマッチ",
   description: "決定した料理ジャンルを発表するUIプロトタイプ。",
-  icons: { apple: `${GENRE_ICON_PATH}/apple-180.png`, icon: `${GENRE_ICON_PATH}/icon-192.png` },
 };
-export const viewport: Viewport = { themeColor: GENRE_THEME_COLOR };
 
 type GenreResultPageProps = { searchParams: Promise<{ demo?: QueryValue; room?: QueryValue }> };
 export default async function GenreResultPage({ searchParams }: GenreResultPageProps) {

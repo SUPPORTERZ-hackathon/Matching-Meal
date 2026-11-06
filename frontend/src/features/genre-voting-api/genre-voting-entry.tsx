@@ -27,6 +27,7 @@ export function GenreVotingEntry({ roomId, screen }: GenreVotingEntryProps) {
     if (target && target !== screen) router.replace(genreVotingUrl(target, view.snapshot.room.id));
   }, [view, target, screen, router]);
   const saved = useCallback(() => { if (roomId) router.replace(genreVotingUrl("waiting", roomId)); }, [roomId, router]);
+  const findShops = useCallback(() => { if (roomId) router.push(`/restaurant-vote?room=${encodeURIComponent(roomId)}`); }, [roomId, router]);
   const roomNumber = view.kind === "ready" ? view.snapshot.room.joinCode : undefined;
   if (view.kind !== "ready" || target !== screen) return <PageContainer className={styles.page} header={<AppHeader roomNumber={roomNumber} />}><StepProgress currentStep="genre" />
     <section className={styles.content} role={view.kind === "error" ? "alert" : "status"}><h1>{view.kind === "error" ? "投票情報を確認できません" : "投票状況を確認しています"}</h1>
@@ -37,5 +38,5 @@ export function GenreVotingEntry({ roomId, screen }: GenreVotingEntryProps) {
   const stale = view.staleError ? <div className={styles.error} role="alert"><p>{view.staleError.message} 最後に取得した投票状況を表示しています。</p><Button type="button" variant="outline" onClick={retry}>再取得する</Button></div> : undefined;
   if (screen === "waiting") return <GenreVoteWaitingScreen participants={waitingParticipants(view.snapshot)} roomId={roomNumber}>{stale}</GenreVoteWaitingScreen>;
   const result = resultPresentation(view.snapshot);
-  return result ? <GenreResultScreen result={result} genres={GENRES} roomId={roomNumber}>{stale}</GenreResultScreen> : null;
+  return result ? <GenreResultScreen result={result} genres={GENRES} roomId={roomNumber} onFindShops={findShops}>{stale}</GenreResultScreen> : null;
 }

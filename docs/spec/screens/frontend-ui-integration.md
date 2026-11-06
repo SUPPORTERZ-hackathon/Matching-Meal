@@ -1,12 +1,14 @@
 # フロントエンド全画面のUI・導線統合
 
 - Status: Implemented
-- Last updated: 2026-10-31
+- Last updated: 2026-11-06
 - Related issue: None
 - Related specifications: room-waiting-invite.md, room-join-screen.md, room-create-screen.md, home-screen.md, qr-scan-screen.md, genre-vote.md, genre-vote-waiting.md, genre-result.md, restaurant-vote.md, restaurant-vote-waiting.md, restaurant-result.md, ../components/common-ui.md, ../themes/design-system.md
 - Implementation files: frontend/src/components/common/, frontend/src/app/globals.css, frontend/src/app/{room-join,genre-vote,genre-vote-waiting,genre-result,restaurant-vote,restaurant-vote-waiting,restaurant-result,ui-preview}/, frontend/src/features/{ui-flow,home-preview,room-create,room,qr-scan,genre-vote,genre-vote-waiting,genre-result,restaurant-vote,restaurant-vote-waiting,restaurant-result}/
 
 ## 目的・範囲・承認
+
+2026-11-06のS-04正式実装により、QR読取の「準備中・デコーダー対象外」という旧条件は[qr-scan-screen.md](qr-scan-screen.md)で置き換える。S-04は同一originの招待を端末内解析して既存/j/{joinCode}へ渡し、新しいニックネームフォームや参加API処理を作らない。後段の旧QR条件・検証ログはUI統合時点の履歴として保持する。
 
 2026-11-01の[実API連携仕様](genre-voting-api-integration.md)により、S07〜09の実ルームに対する「保存/待機/結果未接続」は更新する。本書の旧検証記録は履歴として保持し、店舗API未接続と開発demoの境界は引き続き維持する。
 

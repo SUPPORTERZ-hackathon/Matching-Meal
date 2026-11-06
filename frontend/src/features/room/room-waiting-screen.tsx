@@ -9,7 +9,7 @@ import { PageContainer } from "@/components/common/page-container";
 import { ParticipantAvatar } from "@/components/common/participant-avatar";
 import { StepProgress } from "@/components/common/step-progress";
 import { Button } from "@/components/ui/button";
-import { ROOM_CONFIG, inviteUrl, roomGenreUrl } from "./room-data";
+import { ROOM_CONFIG, inviteUrl, roomGenreUrl, roomResumeUrl } from "./room-data";
 import { startRoomVoting } from "./room-api";
 import { useRoomState } from "./use-room-state";
 import { InviteCard } from "./invite-card";
@@ -25,7 +25,9 @@ export function RoomWaitingScreen({ roomId }: RoomWaitingScreenProps) {
   const [startError, setStartError] = useState<string>("");
   const locked = useRef<boolean>(false);
   useEffect(() => {
-    if (view.kind === "ready" && !view.staleError && view.snapshot.room.status === "genre_voting") router.replace(roomGenreUrl(view.snapshot.room.id));
+    if (view.kind !== "ready" || view.staleError || view.snapshot.room.status === "lobby") return;
+    const destination = roomResumeUrl(view.snapshot.room);
+    if (destination) router.replace(destination);
   }, [view, router]);
 
   const snapshot = view.kind === "ready" ? view.snapshot : undefined;
@@ -62,7 +64,7 @@ export function RoomWaitingScreen({ roomId }: RoomWaitingScreenProps) {
                 <span className={styles.joined}><i aria-hidden="true" /><span className="sr-only">参加済み</span></span>
               </li>)}</ul>
             </section>
-            {view.session.localSearch && <p className={styles.localNote}>集合場所・検索範囲はホスト端末内のみの保存です。サーバーにはまだ連携していません。</p>}
+            {view.session.localSearch && <p className={styles.localNote}>ルーム作成時の現在地と検索範囲を使って、お店を探します。</p>}
             {startError && <p className={styles.error} role="alert">{startError}</p>}
           </>}
     </div>

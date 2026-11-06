@@ -88,6 +88,13 @@ export function parseStoredSessions(value: JsonValue): RoomSession[] {
 }
 export function roomWaitingUrl(roomId: string): string { return `/room-waiting?room=${encodeURIComponent(roomId)}`; }
 export function roomGenreUrl(roomId: string): string { return `/genre-vote?room=${encodeURIComponent(roomId)}`; }
+// 本人の提出状態による細かな振り分けは、各投票画面の既存API取得処理へ任せる。
+export function roomResumeUrl(room: Pick<Room, "id" | "status">): string | undefined {
+  if (!isRoomId(room.id)) return;
+  const paths: Partial<Record<RoomStatus, string>> = { lobby: "/room-waiting", genre_voting: "/genre-vote", restaurant_searching: "/genre-result", restaurant_voting: "/restaurant-vote", decided: "/restaurant-result" };
+  const path = Object.hasOwn(paths, room.status) ? paths[room.status] : undefined;
+  return path ? `${path}?room=${encodeURIComponent(room.id.toLowerCase())}` : undefined;
+}
 export function inviteUrl(origin: string, rawCode: string): string | undefined {
   const code = normalizeJoinCode(rawCode);
   if (!code) return;

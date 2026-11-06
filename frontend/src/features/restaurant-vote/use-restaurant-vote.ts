@@ -15,11 +15,13 @@ function subscribeMotion(notify: () => void) {
 const getMotion = () => window.matchMedia(MOTION_QUERY).matches;
 const getServerMotion = () => false;
 
-export function useRestaurantVote(restaurants: readonly RestaurantCandidate[]) {
-  const [votes, setVotes] = useState<readonly RestaurantVote[]>([]);
-  const [phase, setPhase] = useState<RestaurantVotePhase>("idle");
-  const phaseRef = useRef<RestaurantVotePhase>("idle");
-  const votesRef = useRef<readonly RestaurantVote[]>([]);
+export function useRestaurantVote(restaurants: readonly RestaurantCandidate[], initialVotes: readonly RestaurantVote[] = []) {
+  const restored = initialVotes.length <= restaurants.length && initialVotes.every((vote, index) => vote.restaurantId === restaurants[index]?.id && (vote.choice === "like" || vote.choice === "skip")) ? initialVotes : [];
+  const initialPhase: RestaurantVotePhase = restored.length > 0 && restored.length === restaurants.length ? "complete" : "idle";
+  const [votes, setVotes] = useState<readonly RestaurantVote[]>(restored);
+  const [phase, setPhase] = useState<RestaurantVotePhase>(initialPhase);
+  const phaseRef = useRef<RestaurantVotePhase>(initialPhase);
+  const votesRef = useRef<readonly RestaurantVote[]>(restored);
   const pendingRef = useRef<RestaurantVote | null>(null);
   const reducedMotion = useSyncExternalStore(subscribeMotion, getMotion, getServerMotion);
   const valid = hasValidRestaurantCandidates(restaurants);

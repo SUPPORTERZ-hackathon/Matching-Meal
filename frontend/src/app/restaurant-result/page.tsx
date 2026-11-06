@@ -8,16 +8,20 @@ import { RestaurantResultScreen } from "@/features/restaurant-result/restaurant-
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { isDevelopmentDemo } from "@/features/ui-flow/development-demo";
+import { RestaurantVotingEntry } from "@/features/restaurant-voting-api/restaurant-voting-entry";
+import { isRoomId } from "@/features/room/room-data";
 
-export const metadata: Metadata = { title: "お店が決定！ | メシマッチ", description: "決定した店舗を表示する静的UIプロトタイプ。", robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: "お店が決定！ | メシマッチ", description: "投票で決定した店舗を表示します。", robots: { index: false, follow: false } };
 type RestaurantResultPageProps = { searchParams: Promise<{ genre?: string | string[]; restaurant?: string | string[]; demo?: string | string[]; room?: string | string[] }> };
 
 export default async function RestaurantResultPage({ searchParams }: RestaurantResultPageProps) {
   const query = await searchParams;
+  if (query.room !== undefined) return <RestaurantVotingEntry key={typeof query.room === "string" ? query.room : "invalid"}
+    roomId={typeof query.room === "string" && isRoomId(query.room) ? query.room.toLowerCase() : undefined} screen="result" />;
   const genre = resolveRestaurantGenre(query.genre, GENRES);
   if (query.room === undefined && query.demo === "1" && process.env.NODE_ENV !== "development") notFound();
   const demo = isDevelopmentDemo(query.demo, process.env.NODE_ENV, query.room);
-  // 正式な結果取得は未実装。明示デモ以外ではモックを正式結果として供給しない。
+  // 明示デモ以外ではモックを結果として供給しない。実ルームは上のAPI入口へ渡す。
   const result = demo && genre && typeof query.restaurant === "string" && query.restaurant ? createMockRestaurantResult(genre.id, query.restaurant) : null;
-  return <RestaurantResultScreen result={result} genres={GENRES} restaurants={genre && demo ? createMockRestaurants(genre) : []} roomId={demo ? PROTOTYPE_ROOM_ID : undefined} isPrototype={demo}>{!demo && <p className="meal-flow-notice">正式な店舗結果の取得は準備中です。<Link href="/home-preview">ホームに戻る</Link></p>}</RestaurantResultScreen>;
+  return <RestaurantResultScreen result={result} genres={GENRES} restaurants={genre && demo ? createMockRestaurants(genre) : []} roomId={demo ? PROTOTYPE_ROOM_ID : undefined} isPrototype={demo}>{!demo && <p className="meal-flow-notice">参加したタブからルームの結果を開いてください。<Link href="/home-preview">ホームに戻る</Link></p>}</RestaurantResultScreen>;
 }

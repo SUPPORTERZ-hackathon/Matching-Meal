@@ -4,12 +4,13 @@ import assert from "node:assert/strict";
 const { GENRES } = await import("../genre-vote/genres.ts");
 const { getGenreVoting, submitGenreAnswers } = await import("./genre-voting-api.ts");
 const { parseGenreVotingResponse } = await import("./genre-voting-data.ts");
+const { createGenreVotingPoller } = await import("./genre-voting-poller.ts");
 const base = process.env.GENRE_VOTING_API_BASE;
 const enabled = base === "http://localhost:3000";
 
 // 明示したローカル開発環境だけで実行し、このテストが作成したルーム以外を操作しない。
 async function makeRoom(http) {
-  const create = await http(`${base}/api/v1/rooms`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ nickname: "API結合確認ホスト" }) });
+  const create = await http(`${base}/api/v1/rooms`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ nickname: "API結合確認ホスト", searchLocation: { latitude: 35.658, longitude: 139.7016 }, searchRange: 3 }) });
   assert.equal(create.status, 201); const host = (await create.json()).data;
   const join = await http(`${base}/api/v1/rooms/${host.room.joinCode}/participants`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ nickname: "API結合確認ゲスト" }) });
   assert.equal(join.status, 201); const guest = (await join.json()).data;
@@ -51,3 +52,35 @@ test("実API: 全員skipでも全員が同じ永続化された決定ジャン�
   const a = await getGenreVoting(host), b = await getGenreVoting(guest); assert(a.ok && b.ok); assert.deepEqual(a.data.result, b.data.result);
   assert.equal(a.data.result.likeCount, 0); assert.equal(a.data.result.decisionMethod, "random_all_skipped"); assert(GENRES.some(genre => genre.id === a.data.result.genreId));
 });
+
+for (const lastRole of ["host", "guest"]) {
+  test(`実API: ${lastRole}が最後に提出すると、先に待つ側のポーリングが再読み込みなしで確定結果を受け取る`, { skip: !enabled, timeout: 15000 }, async t => {
+    const { host, guest } = await makeRoom(relativeFetch(t));
+    const earlier = lastRole === "host" ? guest : host;
+    const later = lastRole === "host" ? host : guest;
+    const first = await submitGenreAnswers(earlier, answers(["italian"]));
+    assert(first.ok); assert.equal(first.data.result, null);
+    const views = [];
+    let resolveResult;
+    const completed = new Promise(resolve => { resolveResult = resolve; });
+    const poller = createGenreVotingPoller({
+      roomId: earlier.room.id, polling: true, loadSession: () => earlier, getState: getGenreVoting,
+      isHidden: () => false, schedule: (callback, delay) => setTimeout(callback, delay),
+      cancel: timer => clearTimeout(timer),
+      onView: view => { views.push(view); if (view.kind === "ready" && view.snapshot.result) resolveResult(view.snapshot); },
+    });
+    t.after(() => poller.dispose());
+    await poller.refresh(true);
+    assert.equal(views.at(-1).kind, "ready");
+    assert.equal(views.at(-1).snapshot.result, null);
+    const finalSubmission = await submitGenreAnswers(later, answers(["italian"]));
+    assert(finalSubmission.ok); assert(finalSubmission.data.result);
+    let timeout;
+    try {
+      const received = await Promise.race([completed, new Promise((_, reject) => { timeout = setTimeout(() => reject(new Error("R6の確定結果を待機側が取得できませんでした")), 8000); })]);
+      assert.deepEqual(received.result, finalSubmission.data.result);
+      assert.equal(received.room.version, finalSubmission.data.room.version);
+      assert.equal(views.at(-1).kind, "ready");
+    } finally { clearTimeout(timeout); poller.dispose(); }
+  });
+}
