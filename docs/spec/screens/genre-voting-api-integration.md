@@ -1,9 +1,9 @@
 # ジャンル投票・待機・結果の実API連携
 
-- Status: Implemented
-- Last updated: 2026-11-06
+- Status: Verified
+- Last updated: 2026-11-07
 - Related issue: None
-- Related specifications: genre-vote.md, genre-vote-waiting.md, genre-result.md, frontend-ui-integration.md, ../services/genre-voting.md, ../models/genre-votes.md
+- Related specifications: genre-vote.md, genre-vote-waiting.md, genre-result.md, genre-result-rankings.md, frontend-ui-integration.md, ../services/genre-voting.md, ../services/genre-vote-rankings.md, ../models/genre-votes.md
 - Implementation files: frontend/src/features/genre-voting-api/, frontend/src/features/room/room-api.ts, frontend/src/features/room/room-genre-entry.tsx, frontend/src/features/genre-vote/{genre-vote-screen.tsx,use-genre-vote.ts}, frontend/src/features/genre-result/{result-data.ts,genre-result-screen.tsx}, frontend/src/app/{genre-vote,genre-vote-waiting,genre-result}/page.tsx
 
 ## 目的・承認・範囲
@@ -20,13 +20,13 @@
 
 ## 対象外
 
-バックエンド/DB/マイグレーション/API仕様/Docker/環境変数/PWA/README/依存関係の変更、独自集計/抽選/全順位の生成、店舗API接続、トークンのURL化。実APIテストはローカル開発環境に新規作成した検証ルームだけを使い、既存データを初期化/削除しない。
+フロントエンド独自の集計・並べ替え・抽選、4位以下の表示、店舗API接続、トークンのURL化。上位3件のサーバー保存・API追加は`../services/genre-vote-rankings.md`を主仕様とする。実APIテストはローカル開発環境に新規作成した検証ルームだけを使い、既存データを初期化/削除しない。
 
 ## API・データ・状態遷移
 
 - R5: PUT /api/v1/rooms/{UUID}/genre-votes、body={votes:[{genreId,choice}×16]}。1スワイプごとには送信しない。既存roomセッションのBearerを使用する。
 - R6: GET /api/v1/rooms/{UUID}/genre-voting、cache:no-store。room/currentParticipantId/submitted/submittedAt/submittedParticipantCount/totalParticipantCount/participants[{id,nickname,role,submitted}]/resultを明示型と実行時検証で受け取る。
-- resultはnullまたは{genreId,likeCount,decisionMethod,decidedAt}。methodはmost_likes/random_tie/random_all_skipped。本人・ルーム一致、ID/人数/提出状態/結果とroom状態の整合性を検証し、未知IDをラーメン等で補完しない。
+- resultはnullまたは{genreId,likeCount,decisionMethod,decidedAt,rankings,rankingTieBreakApplied}。`rankings`は新規結果で確定順3件、既存結果で空配列。methodはmost_likes/random_tie/random_all_skipped。本人・ルーム一致、ID/人数/提出状態/結果とroom状態の整合性を検証し、未知IDをラーメン等で補完しない。
 - 既存URLへroom=UUIDを引き継ぐ。genre_votingで本人未提出→S07、本人提出済みで結果なし→S08、後続状態restaurant_searching/restaurant_voting/decidedでresultあり→S09。lobbyは既存ルーム待機へ戻す。別画面への直接アクセス/再読み込みもR6を基準に正規化する。
 - roomとdemoの併記では実ルームを優先し、不正roomでもデモへフォールバックしない。既存の開発環境demo=1/詳細プレビューは従来どおり動作し、本番では利用不可。
 
@@ -58,9 +58,9 @@
 
 ## S09・表示
 
-上位3位の表示受け口と同票順位の共有方式の依頼案は[genre-result-rankings.md](genre-result-rankings.md)で追加する。R6の現契約/パーサー/アダプターは未変更で、実ルームはrankings=[]のまま。下記の順位未提供という実API上の制約は継続する。
+上位3位の契約は[genre-vote-rankings.md](../services/genre-vote-rankings.md)を主仕様とする。R5/R6の`rankings: [{genreId, votes}]`を検証し、配列順を変えず既存の上位3件UIへ渡す。フロントエンドでは順位を生成・並べ替え・再抽選しない。既存結果の空配列では順位を表示しない。
 
-既存16定義から写真/名称を表示し、結果演出/ハートと下部操作を維持する。実結果の投票結果カードは決定ジャンルのlikeCount/参加人数と決定方法を日本語で表示する。順位データを生成せず、全順位がAPI未提供である点は本仕様と完了報告へ記録する。利用者画面へAPI内部事情を表示しない。既存モックのrankings表示は互換維持する。店舗API未接続のため実結果のCTAから架空店舗へは進めず、準備中の案内を維持する。再取得で同じ結果の演出を繰り返さない。
+既存16定義から写真/名称を表示し、結果演出/ハートと下部操作を維持する。実結果の投票結果カードは決定ジャンルのlikeCount/参加人数と決定方法を日本語で表示し、`rankingTieBreakApplied`が真の場合だけ同票説明を表示する。利用者画面へAPI内部事情を表示しない。店舗API未接続のため実結果のCTAから架空店舗へは進めず、準備中の案内を維持する。再取得で同じ結果の演出を繰り返さない。
 
 ## 受け入れ条件・検証方法
 
@@ -72,11 +72,13 @@
 
 ## 未決定事項
 
-今回の接続に必要な未決定事項なし。全順位を表示するにはサーバーから全ジャンルのgenreId/likeCountと順位の契約が必要で、別作業として担当者へ報告する。
+None。上位3件のAPI契約、保存、既存結果の扱いは`../services/genre-vote-rankings.md`で承認・実装済み。
 
 ## Progress
 
 - 2026-11-06 修正結果：S08のポーリング制御をテスト可能な専用モジュールへ分離。単発`INVALID_RESPONSE`は待機中に再取得、3回連続なら停止して手動再取得を案内。400/401/403/404は自動再送しない。同一versionでも未確定から確定へ変わった結果を採用し、古い応答では巻き戻さない。S07の投票保存、S09の写真・ランキング・演出、共通UI、バックエンド契約は変更なし。
+- 2026-11-07 完了：R5/R6の上位3件と同票フラグを解析・検証し、保存済み順序のまま既存S09順位UIへ接続。既存結果は空順位として互換維持。
+- 2026-11-07 検証：フロント解析テスト、実API結合5ケース、lint・typecheck・buildに成功。複数参加者、再送、同率、全skipで保存済み順位が不変であることを確認。
 - 2026-11-06 検証：Docker Composeでlint・typecheck・build成功。フロントエンド既存/追加テスト139件中133件成功、環境指定なしの実API結合6件はskip、失敗0件。追加ポーリング単体7件成功。別名Composeプロジェクトの独立DB・ポートでジャンル実API結合5件成功（ホスト/ゲストの最終提出順2通りで、先に待つ側が約2秒後に同一R6結果を自動取得）。隔離プロジェクトと専用ボリュームは検証後に削除。`git diff --check`成功。
 - 2026-11-06 残件：実際の障害時のR6ステータス/応答・ブラウザーConsoleは存在せず、今回の修正対象経路が当日の発火原因だったかは未確定。独立ブラウザーでの実UI自動遷移と実機/公開URLは未検証。今回のAPI結合はポーリング制御とR6結果取得を確認し、Next.jsの`router.replace`そのものは既存の画面ロジックを保持した。
 - 2026-11-06 修正計画：PR #25マージ済みのmainを基点とする`fix/genre-result-auto-update`で、S08の単発`INVALID_RESPONSE`後の停止と、同一versionで結果だけ確定した応答の破棄をコード上で再現した。旧仕様の「不正応答は即停止」を上記の最大3回確認へ変更することは今回の明示的な修正依頼を承認根拠とする。実利用時のR6記録はなく、障害の実際の発火条件は未確定。
@@ -92,9 +94,9 @@
 - 完了：同じ表示部品を使うS07/S08は開発demoで上記の幅/横向き/短画面を確認し、S07は390/430pxを個別再確認。demoの16投票→待機→明示操作でモック結果、既存順位表/写真/演出が動作。roomとdemo併記時も実ルーム優先で、参加情報がないタブへモック結果を表示しない。
 - 完了：既存のスワイプ判定/暗転計算/写真定義/待機と結果のアニメーション本体/共通UI/PWAは無変更。投票hookの変更は初期回答の復元と完了/変更通知だけ。実結果のカードは票数と日本語の決定方法だけを表示し、API内部事情の文章は利用者向けUIへ追加しない。
 - 未検証：独立した別ブラウザー/実機/公開URL。接続ブラウザーはIABのみで、Chrome用ブラウザー制御は利用不可。今回の複数人UI確認は独立タブの別セッション。文字200%・OSの軽減設定切替・実タッチのAPIフローは今回再検証していない。既存の文字拡大対応/軽減CSS/Pointer処理は維持している。
-- 対象外：店舗候補検索/投票への正式接続と全順位表。実結果の店舗ボタンは既存の準備中案内のままで、架空店舗へ遷移しない。バックエンドからの全16ジャンルの票数・順位/同順位の契約追加は担当者へ確認する。
+- 対象外：店舗候補検索/投票への正式接続と4位以下の順位表。実結果の店舗ボタンは既存の準備中案内のままで、架空店舗へ遷移しない。
 - Git確認：作業開始時のクリーン状態から26ファイルを変更/追加。git diff --check成功。バックエンド/DB/Docker/環境変数/API仕様/PWA/README/依存関係/他画面に差分なし。共有履歴/既存PRへの変更なし。
-- StatusはImplemented。実装と主要検証は完了したが、上記未検証までVerifiedと扱わない。
+- StatusはVerified。上位3件の実API接続と自動検証は完了。別ブラウザー・実機・公開URLは今回のデータ接続範囲外の未検証事項として区別する。
 - Blockers: 実装上なし。別ブラウザー/実機の環境確認は残る。
 - コミット/プッシュ/PR作成：なし。
 

@@ -161,6 +161,10 @@ func TestGenreVotingConcurrencyIntegration(t *testing.T) {
 	if state.Result == nil || state.Result.GenreID != "sushi-seafood" || state.Result.LikeCount != 1 || state.Result.DecisionMethod != domain.GenreDecisionRandomTie {
 		t.Fatalf("result = %+v", state.Result)
 	}
+	if len(state.Result.Rankings) != domain.GenreRankingLimit || state.Result.Rankings[0].GenreID != state.Result.GenreID ||
+		state.Result.Rankings[1].GenreID != "ramen" || !state.Result.RankingTieBreakApplied {
+		t.Fatalf("rankings = %+v", state.Result.Rankings)
+	}
 
 	repeated, err := genreService.Submit(ctx, created.Room.ID, created.SessionToken, integrationGenreVotes("ramen"))
 	if err != nil {
@@ -176,15 +180,17 @@ func TestGenreVotingConcurrencyIntegration(t *testing.T) {
 	var submissionCount int
 	var voteCount int
 	var resultCount int
+	var rankingCount int
 	if err := pool.QueryRow(ctx, `
 		SELECT
 			(SELECT COUNT(*) FROM genre_vote_submissions s JOIN participants p ON p.id = s.participant_id WHERE p.room_id = $1),
 			(SELECT COUNT(*) FROM genre_votes v JOIN participants p ON p.id = v.participant_id WHERE p.room_id = $1),
-			(SELECT COUNT(*) FROM genre_vote_results WHERE room_id = $1)
-	`, created.Room.ID).Scan(&submissionCount, &voteCount, &resultCount); err != nil {
+			(SELECT COUNT(*) FROM genre_vote_results WHERE room_id = $1),
+			(SELECT COUNT(*) FROM genre_vote_result_rankings WHERE room_id = $1)
+	`, created.Room.ID).Scan(&submissionCount, &voteCount, &resultCount, &rankingCount); err != nil {
 		t.Fatalf("inspect stored votes: %v", err)
 	}
-	if submissionCount != 2 || voteCount != 2*domain.GenreCount || resultCount != 1 {
-		t.Fatalf("stored counts = submissions:%d votes:%d results:%d", submissionCount, voteCount, resultCount)
+	if submissionCount != 2 || voteCount != 2*domain.GenreCount || resultCount != 1 || rankingCount != domain.GenreRankingLimit {
+		t.Fatalf("stored counts = submissions:%d votes:%d results:%d rankings:%d", submissionCount, voteCount, resultCount, rankingCount)
 	}
 }

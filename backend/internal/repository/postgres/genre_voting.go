@@ -191,6 +191,18 @@ func (transaction *genreVotingTransaction) InsertResult(ctx context.Context, res
 	return result, nil
 }
 
+func (transaction *genreVotingTransaction) InsertRankings(ctx context.Context, rankings []domain.GenreVoteRanking) error {
+	for _, ranking := range rankings {
+		if _, err := transaction.tx.Exec(ctx, `
+			INSERT INTO genre_vote_result_rankings (room_id, rank, genre_id, like_count, tie_break_applied)
+			VALUES ($1, $2, $3, $4, $5)
+		`, ranking.RoomID, ranking.Rank, ranking.GenreID, ranking.LikeCount, ranking.TieBreakApplied); err != nil {
+			return fmt.Errorf("insert genre vote result ranking: %w", err)
+		}
+	}
+	return nil
+}
+
 func (transaction *genreVotingTransaction) IncrementRoomVersion(ctx context.Context, roomID string) (domain.Room, error) {
 	return updateGenreVotingRoom(ctx, transaction.tx, `
 		UPDATE rooms SET version = version + 1, updated_at = NOW() WHERE id = $1
@@ -280,8 +292,44 @@ func findGenreVotingState(ctx context.Context, queryer rowsQueryer, roomID strin
 	if err := rows.Err(); err != nil {
 		return domain.GenreVotingState{}, fmt.Errorf("read genre voting state: %w", err)
 	}
+	rows.Close()
 	if len(state.Participants) == 0 {
 		return domain.GenreVotingState{}, repository.ErrRoomNotFound
 	}
+	if state.Result != nil {
+		rankings, err := listGenreVoteRankings(ctx, queryer, roomID)
+		if err != nil {
+			return domain.GenreVotingState{}, err
+		}
+		state.Result.Rankings = rankings
+		for _, ranking := range rankings {
+			state.Result.RankingTieBreakApplied = state.Result.RankingTieBreakApplied || ranking.TieBreakApplied
+		}
+	}
 	return state, nil
+}
+
+func listGenreVoteRankings(ctx context.Context, queryer rowsQueryer, roomID string) ([]domain.GenreVoteRanking, error) {
+	rows, err := queryer.Query(ctx, `
+		SELECT room_id, rank, genre_id, like_count, tie_break_applied
+		FROM genre_vote_result_rankings
+		WHERE room_id = $1
+		ORDER BY rank ASC
+	`, roomID)
+	if err != nil {
+		return nil, fmt.Errorf("query genre vote result rankings: %w", err)
+	}
+	defer rows.Close()
+	rankings := make([]domain.GenreVoteRanking, 0, domain.GenreRankingLimit)
+	for rows.Next() {
+		var ranking domain.GenreVoteRanking
+		if err := rows.Scan(&ranking.RoomID, &ranking.Rank, &ranking.GenreID, &ranking.LikeCount, &ranking.TieBreakApplied); err != nil {
+			return nil, fmt.Errorf("scan genre vote result ranking: %w", err)
+		}
+		rankings = append(rankings, ranking)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("read genre vote result rankings: %w", err)
+	}
+	return rankings, nil
 }
