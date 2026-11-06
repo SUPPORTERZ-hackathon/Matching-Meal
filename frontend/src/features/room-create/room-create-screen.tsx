@@ -256,7 +256,7 @@ export function RoomCreateScreen() {
           {createError && <p className={styles.locationStatus}>同じ内容で再試行できます。入力内容を変更すると新しい作成操作になります。作成結果が不明な間は再読み込みを避けてください。</p>}
         </section>
 
-        <FixedBottomAction><BottomAction>
+        <FixedBottomAction hideOnKeyboard><BottomAction>
           <Button
             type="button"
             variant="primary"

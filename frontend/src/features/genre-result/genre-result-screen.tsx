@@ -16,14 +16,15 @@ export type GenreResultScreenProps = {
   isPrototype?: boolean;
   replayKey?: number;
   onFindShops?: (genreId: string) => void;
+  bottomAction?: ReactNode;
   children?: ReactNode;
 };
 
-export function GenreResultScreen({ result, genres, roomId, isPrototype = false, replayKey = 0, onFindShops, children }: GenreResultScreenProps) {
+export function GenreResultScreen({ result, genres, roomId, isPrototype = false, replayKey = 0, onFindShops, bottomAction, children }: GenreResultScreenProps) {
   const view = resolveGenreResult(result, genres);
   return (
     <div className={styles.background}>
-      <PageContainer className={styles.page} header={<AppHeader roomNumber={roomId} className={styles.header} />} bottomAction={view ? <ResultBottomAction key={view.genre.id} genre={view.genre} onFindShops={onFindShops} /> : undefined}>
+      <PageContainer className={styles.page} header={<AppHeader roomNumber={roomId} className={styles.header} />} bottomAction={view ? bottomAction ?? <ResultBottomAction key={view.genre.id} genre={view.genre} onFindShops={onFindShops} /> : undefined}>
         <StepProgress currentStep="genre" />
         <div className={styles.content}>
           {view ? <>
