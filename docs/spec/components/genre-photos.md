@@ -6,6 +6,8 @@
 - Related specifications: ../screens/home-screen.md, ../screens/genre-vote.md, ../screens/genre-result.md, ../themes/design-system.md
 - Implementation files: frontend/src/features/genre-vote/genres.ts, frontend/src/features/genre-vote/genre-image.ts, frontend/src/features/genre-vote/genre-artwork.tsx, frontend/src/features/genre-result/result-artwork.tsx, frontend/src/features/home-preview/, frontend/public/images/genres/README.md
 
+2026-11-07以降のホームの5枚カルーセルと演出は[home-motion-and-tap-effects.md](home-motion-and-tap-effects.md)を主仕様とする。以下の固定3枚・新規演出なしは写真導入時の記録。16ジャンルと画像URLの一元管理は引き続き本仕様に従う。
+
 ## 目的・範囲・承認
 
 ユーザーの16ジャンル写真追加指示を承認根拠とする。IDに対応する画像URLを一元管理し、既存ジャンル投票・ホーム・ジャンル結果の画像領域で共有する。画面URLや投票処理を変えない表示部品の主仕様を本書に置く。ホームの写真は左カフェ/中央ラーメン/右寿司・海鮮で固定。
