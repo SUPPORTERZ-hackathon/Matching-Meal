@@ -1,10 +1,12 @@
 # メシマッチ共通UIコンポーネント仕様
 
 - Status: Verified
-- Last updated: 2026-10-28
+- Last updated: 2026-11-07
 - Related issue: None
-- Related specifications: ../themes/design-system.md, ../screens/ui-preview.md
+- Related specifications: ../themes/design-system.md, ../screens/ui-preview.md, ../providers/app-audio-experience.md
 - Implementation files: frontend/src/components/common/, frontend/src/components/ui/button.tsx
+
+2026-11-07のヘッダー音声メニューとルーム番号の左寄せは[共通サウンド仕様](../providers/app-audio-experience.md)を主仕様とする。既存のロゴ・戻る操作・sticky・Safe Areaは維持する。後段の従来配置の記録と異なる場合はこの契約を優先する。
 
 ## UI統合の現行契約（2026-10-31）
 

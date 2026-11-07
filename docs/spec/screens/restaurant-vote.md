@@ -1,10 +1,12 @@
 # 店舗投票画面・フロントエンドプロトタイプ
 
 - Status: Verified
-- Last updated: 2026-11-04
+- Last updated: 2026-11-07
 - Related issue: None
-- Related specifications: restaurant-voting-api-integration.md, restaurant-vote-waiting.md, genre-result.md, ../services/restaurant-search.md, ../models/restaurant-candidates.md, ../components/common-ui.md, ../themes/design-system.md
+- Related specifications: restaurant-voting-api-integration.md, restaurant-vote-waiting.md, genre-result.md, ../services/restaurant-search.md, ../models/restaurant-candidates.md, ../components/common-ui.md, ../themes/design-system.md, ../providers/app-audio-experience.md
 - Implementation files: frontend/src/app/restaurant-vote/, frontend/src/app/ui-preview/restaurant-vote/, frontend/src/features/restaurant-vote/, frontend/src/features/genre-result/genre-result-prototype.tsx
+
+「ここがいい」「見送り」に店舗投票専用SEを1回試みる。ジャンル投票SEは使用しない。音源が再生失敗しても投票を妨げない。詳細は[共通サウンド仕様](../providers/app-audio-experience.md)。
 
 ## UI統合の現行契約（2026-10-31）
 

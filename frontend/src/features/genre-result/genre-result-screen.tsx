@@ -15,6 +15,7 @@ export type GenreResultScreenProps = {
   result: GenreResultData;
   genres: readonly Genre[];
   roomId?: string;
+  soundResultKey?: string;
   isPrototype?: boolean;
   replayKey?: number;
   onFindShops?: (genreId: string) => void;
@@ -26,20 +27,22 @@ export function GenreResultScreen({
   result,
   genres,
   roomId,
+  soundResultKey,
   isPrototype = false,
   replayKey = 0,
   onFindShops,
   bottomAction,
   children,
 }: GenreResultScreenProps) {
-  const { playSound } = useGenreResultSound();
+  const { playSound, ready } = useGenreResultSound();
 
   const view = resolveGenreResult(result, genres);
+  const viewGenreId = view?.genre.id;
   useEffect(() => {
-    if (!view) return;
+    if (!viewGenreId || !ready) return;
 
-    playSound();
-  }, [view?.genre.id, replayKey, playSound]);
+    playSound(`${soundResultKey ?? roomId ?? "demo"}:${viewGenreId}:${replayKey}`);
+  }, [viewGenreId, soundResultKey, roomId, replayKey, playSound, ready]);
   return (
     <div className={styles.background}>
       <PageContainer className={styles.page} header={<AppHeader roomNumber={roomId} className={styles.header} />} bottomAction={view ? bottomAction ?? <ResultBottomAction key={view.genre.id} genre={view.genre} onFindShops={onFindShops} /> : undefined}>

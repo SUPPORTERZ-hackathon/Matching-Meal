@@ -3,8 +3,10 @@
 - Status: Implemented
 - Last updated: 2026-11-07
 - Related issue: None
-- Related specifications: genre-vote.md, genre-vote-waiting.md, ../themes/design-system.md, ../components/common-ui.md, ../services/room-lifecycle.md, mobile-genre-flow-ux.md
+- Related specifications: genre-vote.md, genre-vote-waiting.md, ../themes/design-system.md, ../components/common-ui.md, ../providers/app-audio-experience.md, ../services/room-lifecycle.md, mobile-genre-flow-ux.md
 - Implementation files: frontend/src/app/genre-result/, frontend/src/app/ui-preview/genre-result/, frontend/src/features/genre-result/, frontend/src/features/genre-vote-waiting/genre-vote-waiting-preview.tsx, frontend/src/features/genre-vote-waiting/genre-vote-waiting-screen.tsx, frontend/package.json
+
+結果SEは投票などの通常操作で有効化した共通Web Audioから自動再生を試みる。再生専用ボタンは設けない。端末の自動再生制限と失敗時の扱いは[共通サウンド仕様](../providers/app-audio-experience.md)を主仕様とする。結果写真・図形の演出は維持する。
 
 ## 実ルームの参加者待機（2026-11-07）
 

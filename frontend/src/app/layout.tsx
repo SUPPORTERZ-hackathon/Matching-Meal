@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Kiwi_Maru, Noto_Sans_JP } from "next/font/google";
 import { APP_APPLE_ICON_SIZE, APP_FAVICON_SIZE, APP_PWA } from "@/features/pwa/pwa-config";
 import { TapParticles } from "@/components/common/tap-particles";
+import { AudioProvider } from "@/features/audio/audio-provider";
 import "./globals.css";
 
 const notoSansJp = Noto_Sans_JP({
@@ -35,5 +36,5 @@ export const metadata: Metadata = {
   },
 };
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="ja" className={`${notoSansJp.variable} ${kiwiMaru.variable}`}><body>{children}<TapParticles /></body></html>;
+  return <html lang="ja" className={`${notoSansJp.variable} ${kiwiMaru.variable}`}><body><AudioProvider>{children}</AudioProvider><TapParticles /></body></html>;
 }

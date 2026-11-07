@@ -10,6 +10,7 @@ import { GENRES } from "../genre-vote/genres";
 import { getHomeCarouselGenres } from "./home-food-data";
 import { HomeFoodCarousel } from "./home-food-carousel";
 import { HomeLaunch, type HomeLaunchPhase } from "./home-launch";
+import { useAudio } from "../audio/audio-provider";
 import "./home-preview.css"
 
 const HOME_GENRES = getHomeCarouselGenres(GENRES);
@@ -21,6 +22,7 @@ let launchedWithoutStorage = false;
 
 export function HomePreviewScreen() {
   const router = useRouter();
+  const { settings, blockedTrack, failedTrack, setBgmEnabled, startHomeBgm } = useAudio();
   const [launch, setLaunch] = useState<HomeLaunchPhase>("ready");
   const decision = useRef<boolean | null>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -77,6 +79,11 @@ export function HomePreviewScreen() {
         </section>
 
         <div className="home-preview-actions">
+          {(!settings.bgm || blockedTrack === "home-bgm" || failedTrack === "home-bgm") && (
+            <button type="button" className="home-preview-sound-start" onClick={() => settings.bgm ? startHomeBgm() : setBgmEnabled(true)}>
+              音ありで楽しむ
+            </button>
+          )}
           <Button variant="primary" size="meal" type="button" data-tap-particles="accent" onClick={() => router.push("/room-create")}>
             <span className="home-preview-action-label">
               ルームを作成する

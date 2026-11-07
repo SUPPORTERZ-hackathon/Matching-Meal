@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { cn } from "cn";
 import { AppLogo } from "./app-logo";
+import { SoundMenu } from "@/features/audio/sound-menu";
 
 export type AppHeaderProps = {
   roomNumber?: string;
@@ -17,8 +18,8 @@ export function AppHeader({ roomNumber, layout = "default", leading, className, 
     <header className={cn("meal-header", className)} data-layout={layout} data-sticky={sticky}>
       {layout === "centered" && <div className="meal-header-leading">{leading}</div>}
       <AppLogo compact />
-      {layout === "centered" && <span aria-hidden="true" />}
       {room && <span className="meal-room-chip" aria-label={`ルーム番号 ${room}`}>Room #{room}</span>}
+      <SoundMenu />
     </header>
   );
 }
