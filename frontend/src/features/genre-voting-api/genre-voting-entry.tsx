@@ -39,7 +39,7 @@ export function GenreVotingEntry({ roomId, screen }: GenreVotingEntryProps) {
   const stale = view.staleError ? <div className={styles.error} role="alert"><p>{view.staleError.message} 最後に取得した投票状況を表示しています。</p><Button type="button" variant="outline" onClick={retry}>再取得する</Button></div> : undefined;
   if (screen === "waiting") return <GenreVoteWaitingScreen participants={waitingParticipants(view.snapshot)} roomId={roomNumber}>{stale}</GenreVoteWaitingScreen>;
   const result = resultPresentation(view.snapshot);
-  return result ? <GenreResultScreen result={result} genres={GENRES} roomId={roomNumber}
+  return result ? <GenreResultScreen result={result} genres={GENRES} roomId={roomNumber} soundResultKey={view.snapshot.room.id}
     onFindShops={view.session.participant.role === "host" ? findShops : undefined}
     bottomAction={view.session.participant.role === "member" ? <GuestResultWaiting roomId={view.snapshot.room.id} /> : undefined}>{stale}</GenreResultScreen> : null;
 }

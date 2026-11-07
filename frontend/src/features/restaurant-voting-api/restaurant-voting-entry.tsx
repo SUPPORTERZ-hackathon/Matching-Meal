@@ -37,5 +37,5 @@ export function RestaurantVotingEntry({ roomId, screen }: RestaurantVotingEntryP
   if (screen === "waiting") return <RestaurantVoteWaitingScreen participants={waitingRestaurantParticipants(view.voting)} roomId={roomNumber}>{stale}</RestaurantVoteWaitingScreen>;
   const result = restaurantResultPresentation(view.voting, view.candidates);
   const restaurant = view.voting.result?.restaurant;
-  return result && restaurant ? <RestaurantResultScreen result={result} genres={GENRES} restaurants={[restaurant]} roomId={roomNumber}>{stale}</RestaurantResultScreen> : null;
+  return result && restaurant ? <RestaurantResultScreen result={result} genres={GENRES} restaurants={[restaurant]} roomId={roomNumber} soundResultKey={view.voting.room.id}>{stale}</RestaurantResultScreen> : null;
 }

@@ -1,12 +1,13 @@
 # ホーム画面仕様書
 
 - Status: Implemented
-- Last updated: 2026-10-31
+- Last updated: 2026-11-07
 - Related issue: None
-- Related specifications: ../components/genre-photos.md, ../components/common-ui.md, ../themes/design-system.md
+- Related specifications: ../components/genre-photos.md, ../components/common-ui.md, ../themes/design-system.md, ../providers/app-audio-experience.md
 - Implementation files: frontend/src/features/home-preview/, frontend/src/app/home-preview/page.tsx
 
 2026-11-07の起動演出・5枚の料理カルーセル・共通タップエフェクトは[home-motion-and-tap-effects.md](../components/home-motion-and-tap-effects.md)を主仕様とする。下記の固定3枚・アニメーションなしの記述は従来仕様の記録であり、初期の左カフェ・中央ラーメン・右寿司の見え方を保つ範囲で更新する。
+ホームBGMの再生・ヘッダーのBGM設定による開始・設定保存・画面離脱時停止は[共通サウンド仕様](../providers/app-audio-experience.md)を主仕様とする。主操作ボタンの前に「音ありで楽しむ」を表示し、BGMがOFFまたは再生に失敗したときに開始・再試行できる。
 - 対象ルート: `/home-preview`
 - 対象画面: メシマッチのホーム画面
 - 関連仕様: `docs/spec/components/common-ui.md`、`docs/spec/themes/design-system.md`

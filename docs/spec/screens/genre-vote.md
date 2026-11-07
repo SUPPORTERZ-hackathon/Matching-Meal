@@ -3,8 +3,10 @@
 - Status: Verified
 - Last updated: 2026-11-07
 - Related issue: None
-- Related specifications: ../components/common-ui.md, ../themes/design-system.md, genre-vote-waiting.md, ../providers/pwa.md, mobile-genre-flow-ux.md
+- Related specifications: ../components/common-ui.md, ../themes/design-system.md, genre-vote-waiting.md, ../providers/pwa.md, ../providers/app-audio-experience.md, mobile-genre-flow-ux.md
 - Implementation files: frontend/src/app/genre-vote/, frontend/src/features/genre-vote/, frontend/public/genres/, frontend/public/genre-vote/
+
+投票・取り消しSEの共有管理、再生失敗時の回復と操作継続は[共通サウンド仕様](../providers/app-audio-experience.md)を主仕様とする。
 
 ## モバイルカード操作（2026-11-07）
 

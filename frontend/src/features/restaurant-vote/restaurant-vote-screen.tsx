@@ -15,6 +15,7 @@ import { RESTAURANT_VOTE_MOTION } from "./vote-config";
 import { RestaurantPhoto } from "./restaurant-photo";
 import { RestaurantDetails } from "./restaurant-details";
 import styles from "./restaurant-vote.module.css";
+import { useAudio } from "../audio/audio-provider";
 
 type RestaurantVoteScreenProps = {
   genre?: Genre;
@@ -29,6 +30,7 @@ type RestaurantVoteScreenProps = {
 type MotionStyle = CSSProperties & { "--restaurant-exit-duration": string; "--restaurant-enter-duration": string };
 
 export function RestaurantVoteScreen({ genre, restaurants, roomId, onComplete, initialVotes = [], onVotesChange, children, notice }: RestaurantVoteScreenProps) {
+  const { playSe } = useAudio();
   const { votes, phase, vote, finishAnimation, currentRestaurant: restaurant, complete, locked, valid } = useRestaurantVote(restaurants, initialVotes);
   const skipRef = useRef<HTMLButtonElement>(null);
   const likeRef = useRef<HTMLButtonElement>(null);
@@ -60,7 +62,7 @@ export function RestaurantVoteScreen({ genre, restaurants, roomId, onComplete, i
 
   function choose(choice: RestaurantVoteChoice, event: MouseEvent<HTMLButtonElement>) {
     if (event.detail === 0) resumeFocus.current = choice;
-    vote(choice);
+    if (vote(choice)) void playSe("restaurant-vote");
   }
 
   return <div className={styles.background}>

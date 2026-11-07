@@ -46,11 +46,12 @@ export function useRestaurantVote(restaurants: readonly RestaurantCandidate[], i
   }, [phase, reducedMotion, finishAnimation]);
 
   function vote(choice: RestaurantVoteChoice) {
-    if (phaseRef.current !== "idle" || !valid) return;
+    if (phaseRef.current !== "idle" || !valid) return false;
     const restaurant = restaurants[votesRef.current.length];
-    if (!restaurant) return;
+    if (!restaurant) return false;
     pendingRef.current = { restaurantId: restaurant.id, choice };
     changePhase("exiting");
+    return true;
   }
 
   return {

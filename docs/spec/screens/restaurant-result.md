@@ -1,10 +1,12 @@
 # 店舗投票結果画面・静的フロントエンドプロトタイプ
 
 - Status: Verified
-- Last updated: 2026-11-06
+- Last updated: 2026-11-07
 - Related issue: None
-- Related specifications: restaurant-voting-api-integration.md, ../services/restaurant-map-location.md, restaurant-vote.md, restaurant-vote-waiting.md, genre-result.md, ../themes/design-system.md, ../components/common-ui.md
+- Related specifications: restaurant-voting-api-integration.md, ../services/restaurant-map-location.md, restaurant-vote.md, restaurant-vote-waiting.md, genre-result.md, ../themes/design-system.md, ../components/common-ui.md, ../providers/app-audio-experience.md
 - Implementation files: frontend/src/app/restaurant-result/, frontend/src/app/ui-preview/restaurant-result/, frontend/src/features/restaurant-result/, frontend/src/features/restaurant-vote/route-data.ts, frontend/src/app/restaurant-vote/page.tsx, frontend/src/features/restaurant-vote-waiting/restaurant-vote-waiting-preview.tsx
+
+決定SEは通常操作で有効化した共通Web Audioから自動再生を試み、終了後は無音とする。結果BGMと再生専用ボタンは設けない。端末の自動再生制限は[共通サウンド仕様](../providers/app-audio-experience.md)を主仕様とする。結果本体は従来どおり静的表示とする。
 
 ## UI統合の現行契約（2026-10-31）
 

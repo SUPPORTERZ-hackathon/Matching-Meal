@@ -125,12 +125,12 @@ body {
   }
 
   .meal-header {
-    display: flex;
+    position: relative;
+    display: grid;
     flex: 0 0 auto;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 12px;
+    grid-template-columns: minmax(0, 1fr) 44px;
+    align-items: center;
+    gap: 6px 12px;
     min-height: calc(64px + var(--meal-safe-top));
     padding: calc(var(--meal-safe-top) + 8px) max(20px, env(safe-area-inset-right, 0px)) 15px max(20px, env(safe-area-inset-left, 0px));
     border-bottom: 1px solid var(--border);
@@ -151,16 +151,29 @@ body {
   .meal-flow-notice { margin: 16px var(--meal-page-gutter); padding: 12px; border: 1px solid var(--border); border-radius: 12px; color: var(--muted-foreground); font-size: .75rem; line-height: 1.8; overflow-wrap: anywhere; }
 
   .meal-header[data-layout="centered"] {
-    display: grid;
-    grid-template-columns: 40px minmax(0, 1fr) 40px;
+    grid-template-columns: 40px minmax(0, 1fr) 44px;
     column-gap: 8px;
   }
 
   .meal-header[data-layout="centered"] .meal-logo { justify-self: center; }
   .meal-header[data-layout="centered"] .meal-room-chip {
     grid-column: 1 / -1;
-    justify-self: center;
+    justify-self: start;
   }
+  .meal-header[data-layout="centered"] .meal-sound-menu { grid-column: 3; grid-row: 1; }
+  .meal-header[data-layout="default"] .meal-room-chip { grid-column: 1 / -1; grid-row: 2; justify-self: start; }
+  .meal-sound-menu { position: relative; grid-column: 2; grid-row: 1; justify-self: end; }
+  .meal-sound-trigger { display: grid; width: 44px; height: 44px; place-items: center; border: 1px solid var(--border); border-radius: 14px; background: var(--card); color: var(--primary); cursor: pointer; }
+  .meal-sound-trigger svg { width: 22px; height: 22px; }
+  .meal-sound-trigger:focus-visible, .meal-sound-switch:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+  .meal-sound-panel { position: absolute; top: calc(100% + 8px); right: 0; z-index: 50; width: min(280px, calc(100vw - 40px)); padding: 18px; border: 1px solid var(--border); border-radius: 18px; background: var(--card); box-shadow: 0 14px 32px rgb(54 38 32 / 14%); animation: meal-sound-open 160ms ease-out both; }
+  .meal-sound-panel > strong { display: block; margin-bottom: 12px; font-size: 15px; }
+  .meal-sound-switch { display: flex; width: 100%; min-height: 48px; align-items: center; justify-content: space-between; gap: 14px; padding: 8px 0; border-top: 1px solid var(--border); text-align: left; cursor: pointer; }
+  .meal-sound-switch-state { display: grid; min-width: 48px; height: 28px; place-items: center; border-radius: 99px; background: var(--soft); color: var(--muted-foreground); font-size: 12px; font-weight: 700; }
+  .meal-sound-switch[aria-checked="true"] .meal-sound-switch-state { background: var(--primary-pale); color: var(--primary-dark); }
+  .meal-sound-error { margin-top: 10px; color: var(--primary-dark); font-size: 12px; line-height: 1.6; }
+  @keyframes meal-sound-open { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+  @media (prefers-reduced-motion: reduce) { .meal-sound-panel { animation: none; } }
 
   .meal-header-leading { display: flex; align-items: center; }
   .meal-room-chip {

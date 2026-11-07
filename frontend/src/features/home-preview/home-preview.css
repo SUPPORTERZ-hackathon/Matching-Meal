@@ -189,6 +189,20 @@
   gap: 12px;
 }
 
+.home-preview-sound-start {
+  min-height: 44px;
+  align-self: center;
+  padding: 8px 18px;
+  border: 1px solid var(--primary);
+  border-radius: 999px;
+  background: var(--primary-pale);
+  color: var(--primary-dark);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.home-preview-sound-start:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+
 .home-preview-footer {
   color: #a8a29e;
   font-size: 10px;

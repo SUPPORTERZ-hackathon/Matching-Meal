@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect } from "react";
 import type { ReactNode } from "react";
 import { Heart, Map, MapPin, JapaneseYen } from "lucide-react";
 import { AppHeader } from "@/components/common/app-header";
@@ -10,20 +13,27 @@ import { resolveRestaurantResult, type RestaurantResultData } from "./result-dat
 import { ResultPhoto } from "./result-photo";
 import { ResultMapAction } from "./result-map-action";
 import styles from "./restaurant-result.module.css";
+import { useAudio } from "../audio/audio-provider";
 
 export type RestaurantResultScreenProps = {
   result: RestaurantResultData | null;
   genres: readonly Genre[];
   restaurants: readonly RestaurantCandidate[];
   roomId?: string;
+  soundResultKey?: string;
   isPrototype?: boolean;
   children?: ReactNode;
 };
 const HOTPEPPER_CREDIT_URL = "https://webservice.recruit.co.jp/";
 
-export function RestaurantResultScreen({ result, genres, restaurants, roomId, isPrototype = false, children }: RestaurantResultScreenProps) {
+export function RestaurantResultScreen({ result, genres, restaurants, roomId, soundResultKey, isPrototype = false, children }: RestaurantResultScreenProps) {
+  const { ready, playRestaurantDecision } = useAudio();
   const view = resolveRestaurantResult(result, genres, restaurants);
   const restaurant = view?.restaurant;
+  const restaurantId = restaurant?.id;
+  useEffect(() => {
+    if (ready && restaurantId) playRestaurantDecision(`${soundResultKey ?? roomId ?? "room"}:${restaurantId}`);
+  }, [restaurantId, roomId, soundResultKey, ready, playRestaurantDecision]);
   const votes = view?.votes;
   const hasVotes = votes && votes.total > 0;
   const matchLabel = view?.matchRate === null || view?.matchRate === undefined ? "集計待ち" : `${view.matchRate}%`;
