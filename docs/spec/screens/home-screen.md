@@ -5,6 +5,8 @@
 - Related issue: None
 - Related specifications: ../components/genre-photos.md, ../components/common-ui.md, ../themes/design-system.md
 - Implementation files: frontend/src/features/home-preview/, frontend/src/app/home-preview/page.tsx
+
+2026-11-07の起動演出・5枚の料理カルーセル・共通タップエフェクトは[home-motion-and-tap-effects.md](../components/home-motion-and-tap-effects.md)を主仕様とする。下記の固定3枚・アニメーションなしの記述は従来仕様の記録であり、初期の左カフェ・中央ラーメン・右寿司の見え方を保つ範囲で更新する。
 - 対象ルート: `/home-preview`
 - 対象画面: メシマッチのホーム画面
 - 関連仕様: `docs/spec/components/common-ui.md`、`docs/spec/themes/design-system.md`

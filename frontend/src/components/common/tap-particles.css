@@ -1,0 +1,27 @@
+.meal-tap-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  overflow: hidden;
+  pointer-events: none;
+  contain: layout style paint;
+}
+
+.meal-tap-burst { position: absolute; width: 0; height: 0; pointer-events: none; }
+.meal-tap-particle { position: absolute; left: -4px; top: -4px; width: 8px; height: 8px; animation: meal-tap-fly 540ms cubic-bezier(.18,.65,.24,1) both; }
+.meal-tap-shape { display: block; width: 100%; height: 100%; background: var(--particle-color); }
+.meal-tap-shape[data-shape="dot"] { border-radius: 50%; box-shadow: 0 0 5px var(--particle-color); }
+.meal-tap-shape[data-shape="star"] { clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); }
+.meal-tap-shape[data-shape="heart"] { position: relative; width: 7px; height: 7px; transform: rotate(-45deg); border-radius: 1px; }
+.meal-tap-shape[data-shape="heart"]::before,
+.meal-tap-shape[data-shape="heart"]::after { content: ""; position: absolute; width: 7px; height: 7px; border-radius: 50%; background: var(--particle-color); }
+.meal-tap-shape[data-shape="heart"]::before { top: -3.5px; left: 0; }
+.meal-tap-shape[data-shape="heart"]::after { top: 0; left: 3.5px; }
+
+@keyframes meal-tap-fly {
+  0% { opacity: 0; transform: translate3d(0, 0, 0) scale(.55) rotate(0); }
+  16% { opacity: .95; }
+  100% { opacity: 0; transform: translate3d(var(--dx), var(--dy), 0) scale(.85) rotate(var(--turn)); }
+}
+
+@media (prefers-reduced-motion: reduce) { .meal-tap-particle { animation: none; display: none; } }
